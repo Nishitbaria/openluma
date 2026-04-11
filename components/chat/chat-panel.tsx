@@ -19,6 +19,7 @@ import {
   Link2,
   Edit,
   Plus,
+  SquarePen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -28,7 +29,6 @@ import {
   Conversation,
   ConversationContent,
   ConversationScrollButton,
-  ConversationEmptyState,
 } from "@/components/ai-elements/conversation";
 import {
   Message,
@@ -51,16 +51,17 @@ import {
   PromptInputBody,
   PromptInputFooter,
   PromptInputSubmit,
+  PromptInputTools,
   type PromptInputMessage,
 } from "@/components/ai-elements/prompt-input";
 import type { UIMessage } from "ai";
 import { toast } from "sonner";
 
 const suggestions = [
-  "Create a tech meetup for next Friday at 6pm",
-  "List my upcoming events",
-  "Search for events about AI",
-  "How many people are attending my latest event?",
+  { icon: Plus, label: "Create a tech meetup for next Friday at 6pm" },
+  { icon: Calendar, label: "List my upcoming events" },
+  { icon: Globe, label: "Search for events about AI" },
+  { icon: Users, label: "How many people are attending my latest event?" },
 ];
 
 export function ChatPanel() {
@@ -78,223 +79,226 @@ export function ChatPanel() {
   }
 
   const isLoading = status === "streaming" || status === "submitted";
+  const isEmpty = messages.length === 0;
 
   return (
-    <div className="flex flex-1 flex-col rounded-lg border bg-background h-full">
-      {messages.length > 0 && (
-        <div className="flex items-center justify-end px-4 py-2 border-b">
+    <div className="flex h-full flex-col bg-background">
+      {/* Header — only show New Chat when there are messages */}
+      {!isEmpty && (
+        <div className="flex items-center justify-end border-b px-4 py-2">
           <button
             type="button"
             onClick={() => setMessages([])}
-            className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors rounded-md px-2 py-1 hover:bg-accent"
+            className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
-            <Plus className="h-3.5 w-3.5" />
-            New Chat
+            <SquarePen className="size-3.5" />
+            New chat
           </button>
         </div>
       )}
-      <div className="flex flex-col flex-1 min-h-0">
-        <Conversation>
-          <ConversationContent>
-            {messages.length === 0 && (
-              <ConversationEmptyState
-                title="OpenLuma AI Assistant"
-                description="I can help you create events, manage RSVPs, send invitations, and more."
-                icon={<Bot className="h-8 w-8 text-primary" />}
-              >
-                <div className="grid grid-cols-2 gap-2 mt-4 max-w-lg mx-auto">
-                  {suggestions.map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => handleSuggestion(s)}
-                      className="text-left text-sm rounded-lg border px-3 py-2 hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              </ConversationEmptyState>
-            )}
 
-            {messages.map((message: UIMessage, messageIndex: number) => {
-              if (message.role === "user") {
-                const textPart = message.parts.find(
-                  (p) => p.type === "text",
-                ) as { text: string } | undefined;
-                if (!textPart) return null;
+      {/* Messages area */}
+      <div className="relative flex flex-1 flex-col min-h-0">
+        {isEmpty ? (
+          /* Empty state */
+          <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4">
+            <div className="text-center">
+              <Sparkles className="mx-auto mb-3 size-8 text-primary" />
+              <h2 className="text-xl font-semibold">How can I help you?</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Ask me to create events, manage RSVPs, or send invitations.
+              </p>
+            </div>
+            <div className="grid w-full max-w-lg grid-cols-1 gap-2 sm:grid-cols-2">
+              {suggestions.map((s) => (
+                <button
+                  key={s.label}
+                  type="button"
+                  onClick={() => handleSuggestion(s.label)}
+                  className="flex items-start gap-3 rounded-lg border p-3 text-left text-sm transition-colors hover:bg-accent"
+                >
+                  <s.icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                  <span className="text-muted-foreground">{s.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <Conversation>
+            <ConversationContent className="px-4 py-6 max-w-3xl mx-auto w-full">
+              {messages.map((message: UIMessage, messageIndex: number) => {
+                if (message.role === "user") {
+                  const textPart = message.parts.find(
+                    (p) => p.type === "text",
+                  ) as { text: string } | undefined;
+                  if (!textPart) return null;
+                  return (
+                    <div key={message.id} className="flex gap-3 justify-end">
+                      <Message from="user">
+                        <MessageContent>
+                          <p className="whitespace-pre-wrap">{textPart.text}</p>
+                        </MessageContent>
+                      </Message>
+                      <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted">
+                        <User className="size-4 text-muted-foreground" />
+                      </div>
+                    </div>
+                  );
+                }
+
+                const isLast = messageIndex === messages.length - 1;
+                const textParts = message.parts
+                  .map((p, idx) => ({ part: p, idx }))
+                  .filter(
+                    ({ part }) =>
+                      part.type === "text" &&
+                      (part as { text: string }).text?.trim(),
+                  );
+
+                const artifacts = extractArtifacts(message.parts);
+                const hasRunningTool = message.parts.some(
+                  (p) =>
+                    p.type.startsWith("tool-") &&
+                    (p as { state?: string }).state !== "output-available" &&
+                    (p as { state?: string }).state !== "result",
+                );
+                const lastTextIdx =
+                  textParts.length > 0
+                    ? textParts[textParts.length - 1].idx
+                    : -1;
+
                 return (
-                  <div key={message.id} className="flex gap-3 justify-end">
-                    <Message from="user">
-                      <MessageContent>
-                        <p className="whitespace-pre-wrap">{textPart.text}</p>
-                      </MessageContent>
-                    </Message>
-                    <div className="h-8 w-8 shrink-0 rounded-full bg-muted flex items-center justify-center mt-1">
-                      <User className="h-4 w-4 text-muted-foreground" />
+                  <div key={message.id} className="flex gap-3 items-start">
+                    <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary">
+                      <Bot className="size-4 text-primary-foreground" />
+                    </div>
+                    <div className="flex-1 min-w-0 space-y-3">
+                      {hasRunningTool && isLast && (
+                        <div className="flex items-center gap-2 text-xs text-muted-foreground animate-pulse">
+                          <Sparkles className="size-3" />
+                          <span>Working on it...</span>
+                        </div>
+                      )}
+                      {textParts.map(({ part, idx }) => {
+                        const text = (part as { text: string }).text;
+                        const isLastText = idx === lastTextIdx;
+                        const isStreaming =
+                          status === "streaming" && isLast && isLastText;
+
+                        return (
+                          <Fragment key={`${message.id}-${idx}`}>
+                            <Message from="assistant">
+                              <MessageContent>
+                                <Streamdown
+                                  plugins={{ code }}
+                                  animated={isStreaming}
+                                  linkSafety={{ enabled: false }}
+                                >
+                                  {text}
+                                </Streamdown>
+                              </MessageContent>
+                            </Message>
+                            {isLastText && artifacts.length > 0 && (
+                              <div className="space-y-2">
+                                {artifacts.map((artifact, aIdx) => (
+                                  <ArtifactCard
+                                    key={`artifact-${aIdx}`}
+                                    artifact={artifact}
+                                  />
+                                ))}
+                              </div>
+                            )}
+                            {isLast &&
+                              isLastText &&
+                              status !== "streaming" &&
+                              status !== "submitted" && (
+                                <MessageActions>
+                                  <MessageAction
+                                    onClick={() => regenerate()}
+                                    tooltip="Regenerate"
+                                  >
+                                    <RefreshCcw className="size-3" />
+                                  </MessageAction>
+                                  <MessageAction
+                                    onClick={() =>
+                                      navigator.clipboard.writeText(text)
+                                    }
+                                    tooltip="Copy"
+                                  >
+                                    <Copy className="size-3" />
+                                  </MessageAction>
+                                </MessageActions>
+                              )}
+                          </Fragment>
+                        );
+                      })}
+                      {isLast &&
+                        textParts.length === 0 &&
+                        isLoading &&
+                        !hasRunningTool && (
+                          <div className="flex items-center gap-2 py-2">
+                            <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                            <span className="text-sm text-muted-foreground">
+                              Processing your request...
+                            </span>
+                          </div>
+                        )}
                     </div>
                   </div>
                 );
-              }
+              })}
 
-              // Assistant message
-              const isLast = messageIndex === messages.length - 1;
-
-              // Collect text parts
-              const textParts = message.parts
-                .map((p, idx) => ({ part: p, idx }))
-                .filter(
-                  ({ part }) =>
-                    part.type === "text" &&
-                    (part as { text: string }).text?.trim(),
-                );
-
-              // Extract artifacts from tool outputs
-              const artifacts = extractArtifacts(message.parts);
-
-              // Check if tools are still running
-              const hasRunningTool = message.parts.some(
-                (p) =>
-                  p.type.startsWith("tool-") &&
-                  (p as { state?: string }).state !== "output-available" &&
-                  (p as { state?: string }).state !== "result",
-              );
-
-              const lastTextIdx =
-                textParts.length > 0
-                  ? textParts[textParts.length - 1].idx
-                  : -1;
-
-              return (
-                <div key={message.id} className="flex gap-3 items-start">
-                  <div className="h-8 w-8 shrink-0 rounded-full bg-primary flex items-center justify-center mt-1">
-                    <Bot className="h-4 w-4 text-primary-foreground" />
+              {status === "submitted" && (
+                <div className="flex gap-3 items-start">
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary">
+                    <Bot className="size-4 text-primary-foreground" />
                   </div>
-                  <div className="flex-1 min-w-0 space-y-3">
-                    {/* Working indicator */}
-                    {hasRunningTool && isLast && (
-                      <div className="flex items-center gap-2 text-xs text-muted-foreground animate-pulse">
-                        <Sparkles className="h-3 w-3" />
-                        <span>Working on it...</span>
-                      </div>
-                    )}
-
-                    {/* Text responses */}
-                    {textParts.map(({ part, idx }) => {
-                      const text = (part as { text: string }).text;
-                      const isLastText = idx === lastTextIdx;
-                      const isStreaming =
-                        status === "streaming" && isLast && isLastText;
-
-                      return (
-                        <Fragment key={`${message.id}-${idx}`}>
-                          <Message from="assistant">
-                            <MessageContent>
-                              <Streamdown
-                                plugins={{ code }}
-                                animated={isStreaming}
-                                linkSafety={{ enabled: false }}
-                              >
-                                {text}
-                              </Streamdown>
-                            </MessageContent>
-                          </Message>
-
-                          {/* Artifacts rendered right after text, before actions */}
-                          {isLastText && artifacts.length > 0 && (
-                            <div className="space-y-2">
-                              {artifacts.map((artifact, aIdx) => (
-                                <ArtifactCard
-                                  key={`artifact-${aIdx}`}
-                                  artifact={artifact}
-                                />
-                              ))}
-                            </div>
-                          )}
-
-                          {isLast &&
-                            isLastText &&
-                            status !== "streaming" &&
-                            status !== "submitted" && (
-                              <MessageActions>
-                                <MessageAction
-                                  onClick={() => regenerate()}
-                                  tooltip="Regenerate"
-                                >
-                                  <RefreshCcw className="size-3" />
-                                </MessageAction>
-                                <MessageAction
-                                  onClick={() =>
-                                    navigator.clipboard.writeText(text)
-                                  }
-                                  tooltip="Copy"
-                                >
-                                  <Copy className="size-3" />
-                                </MessageAction>
-                              </MessageActions>
-                            )}
-                        </Fragment>
-                      );
-                    })}
-
-                    {/* Loading: no text yet */}
-                    {isLast && textParts.length === 0 && isLoading && !hasRunningTool && (
-                      <div className="flex items-center gap-2 py-2">
-                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                        <span className="text-sm text-muted-foreground">
-                          Processing your request...
-                        </span>
-                      </div>
-                    )}
+                  <div className="flex items-center gap-2 rounded-2xl bg-muted px-4 py-3">
+                    <Loader2 className="size-4 animate-spin text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">
+                      Thinking...
+                    </span>
                   </div>
                 </div>
-              );
-            })}
+              )}
+            </ConversationContent>
+            <ConversationScrollButton />
+          </Conversation>
+        )}
+      </div>
 
-            {status === "submitted" && (
-              <div className="flex gap-3 items-start">
-                <div className="h-8 w-8 shrink-0 rounded-full bg-primary flex items-center justify-center">
-                  <Bot className="h-4 w-4 text-primary-foreground" />
-                </div>
-                <div className="flex items-center gap-2 rounded-lg bg-muted px-4 py-3">
-                  <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">
-                    Thinking...
-                  </span>
-                </div>
-              </div>
-            )}
-          </ConversationContent>
-          <ConversationScrollButton />
-        </Conversation>
-
-        <div className="p-4 border-t">
-          <PromptInput
-            onSubmit={handleSubmit}
-            className="w-full max-w-3xl mx-auto"
-          >
-            <PromptInputBody>
-              <PromptInputTextarea
-                value={input}
-                onChange={(e) => setInput(e.currentTarget.value)}
-                placeholder="Ask me anything about your events..."
-              />
-            </PromptInputBody>
-            <PromptInputFooter>
-              <div />
-              <PromptInputSubmit
-                status={isLoading ? "streaming" : "ready"}
-                disabled={!input.trim() && !isLoading}
-              />
-            </PromptInputFooter>
-          </PromptInput>
-        </div>
+      {/* Input */}
+      <div className="shrink-0 border-t px-4 py-3">
+        <PromptInput
+          onSubmit={handleSubmit}
+          className="mx-auto w-full max-w-3xl"
+        >
+          <PromptInputBody>
+            <PromptInputTextarea
+              value={input}
+              onChange={(e) => setInput(e.currentTarget.value)}
+              placeholder="Ask me anything about your events..."
+              className="overflow-x-hidden"
+            />
+          </PromptInputBody>
+          <PromptInputFooter className="border-t-0">
+            <PromptInputTools>
+              <span className="text-xs text-muted-foreground">
+                <kbd className="rounded border px-1 font-mono text-[10px]">Enter</kbd> to send
+              </span>
+            </PromptInputTools>
+            <PromptInputSubmit
+              status={isLoading ? "streaming" : "ready"}
+              disabled={!input.trim() && !isLoading}
+            />
+          </PromptInputFooter>
+        </PromptInput>
       </div>
     </div>
   );
 }
 
-// ─── Artifact Types ──────────────────────────────────────────────────────────
+// ─── Artifact Types ───────────────────────────────────────────────────────────
 
 interface EventData {
   id: string;
@@ -321,55 +325,49 @@ interface EventListArtifactType {
 
 type ChatArtifact = EventCreatedArtifactType | EventListArtifactType;
 
-// ─── Artifact Extraction ─────────────────────────────────────────────────────
-
 function extractArtifacts(parts: UIMessage["parts"]): ChatArtifact[] {
   const artifacts: ChatArtifact[] = [];
-
   for (const part of parts) {
     if (!part.type.startsWith("tool-")) continue;
-
     const toolPart = part as Record<string, unknown>;
     const state = toolPart.state as string | undefined;
     if (state !== "output-available" && state !== "result") continue;
-
-    const output = (toolPart.output ?? toolPart.result) as Record<string, unknown> | undefined;
+    const output = (toolPart.output ?? toolPart.result) as
+      | Record<string, unknown>
+      | undefined;
     if (!output) continue;
-
-    // From orchestrator: output.artifacts array
-    const partArtifacts = output.artifacts as Array<{ type: string; data: unknown }> | undefined;
+    const partArtifacts = output.artifacts as
+      | Array<{ type: string; data: unknown }>
+      | undefined;
     if (partArtifacts) {
       for (const a of partArtifacts) {
-        if (a.type === "event-created" && a.data) {
+        if (a.type === "event-created" && a.data)
           artifacts.push({
             kind: "event-created",
             event: parseEventData(a.data as Record<string, unknown>),
           });
-        }
-        if (a.type === "event-list" && Array.isArray(a.data)) {
+        if (a.type === "event-list" && Array.isArray(a.data))
           artifacts.push({
             kind: "event-list",
             events: (a.data as Record<string, unknown>[]).map(parseEventData),
           });
-        }
       }
     }
-
-    // Direct tool result
-    if (output.success && output.event) {
+    if (output.success && output.event)
       artifacts.push({
         kind: "event-created",
         event: parseEventData(output.event as Record<string, unknown>),
       });
-    }
-    if (output.events && Array.isArray(output.events) && (output.events as unknown[]).length > 0) {
+    if (
+      output.events &&
+      Array.isArray(output.events) &&
+      (output.events as unknown[]).length > 0
+    )
       artifacts.push({
         kind: "event-list",
         events: (output.events as Record<string, unknown>[]).map(parseEventData),
       });
-    }
   }
-
   return artifacts;
 }
 
@@ -387,15 +385,11 @@ function parseEventData(d: Record<string, unknown>): EventData {
   };
 }
 
-// ─── Artifact Cards ──────────────────────────────────────────────────────────
-
 function ArtifactCard({ artifact }: { artifact: ChatArtifact }) {
-  if (artifact.kind === "event-created") {
+  if (artifact.kind === "event-created")
     return <EventCreatedCard event={artifact.event} />;
-  }
-  if (artifact.kind === "event-list") {
+  if (artifact.kind === "event-list")
     return <EventListCard events={artifact.events} />;
-  }
   return null;
 }
 
@@ -493,9 +487,7 @@ function EventListCard({ events }: { events: EventData[] }) {
     <Artifact className="max-w-md">
       <ArtifactHeader>
         <div className="flex-1 min-w-0">
-          <ArtifactTitle>
-            Your Events ({events.length})
-          </ArtifactTitle>
+          <ArtifactTitle>Your Events ({events.length})</ArtifactTitle>
         </div>
       </ArtifactHeader>
       <ArtifactContent className="p-0">
@@ -509,9 +501,9 @@ function EventListCard({ events }: { events: EventData[] }) {
                 href={eventUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-3 px-4 py-3 hover:bg-accent/50 transition-colors"
+                className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/50"
               >
-                <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 shrink-0">
                   <Calendar className="h-5 w-5 text-primary" />
                 </div>
                 <div className="flex-1 min-w-0">

@@ -4,21 +4,16 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { authClient } from "@/lib/auth-client";
+import { cn } from "@/lib/utils";
+import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-} from "@/components/ui/field";
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
+import { AuthDivider } from "@/components/auth-divider";
+import { AtSignIcon, LockIcon, UserIcon, Loader2Icon } from "lucide-react";
 import { toast } from "sonner";
 
 export default function SignUpPage() {
@@ -52,93 +47,127 @@ export default function SignUpPage() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Create an account</CardTitle>
-          <CardDescription>
-            Get started with OpenLuma for free
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit}>
-            <FieldGroup>
-              <Field>
-                <FieldLabel htmlFor="name">Name</FieldLabel>
-                <Input
-                  id="name"
-                  name="name"
-                  placeholder="Your name"
-                  required
-                />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="email">Email</FieldLabel>
-                <Input
-                  id="email"
-                  name="email"
-                  type="email"
-                  placeholder="m@example.com"
-                  required
-                />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="password">Password</FieldLabel>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  placeholder="At least 8 characters"
-                  required
-                  minLength={8}
-                />
-              </Field>
-              <Field>
-                <Button type="submit" className="w-full" disabled={loading}>
-                  {loading ? "Creating account..." : "Sign Up"}
-                </Button>
-                <Button
-                  variant="outline"
-                  type="button"
-                  className="w-full"
-                  onClick={async () => {
-                    await authClient.signIn.social({
-                      provider: "google",
-                      callbackURL: "/dashboard",
-                    });
-                  }}
-                >
-                  <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
-                    <path
-                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"
-                      fill="#4285F4"
-                    />
-                    <path
-                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                      fill="#34A853"
-                    />
-                    <path
-                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                      fill="#FBBC05"
-                    />
-                    <path
-                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                      fill="#EA4335"
-                    />
-                  </svg>
-                  Sign up with Google
-                </Button>
-                <FieldDescription className="text-center">
-                  Already have an account?{" "}
-                  <Link href="/sign-in" className="underline underline-offset-4">
-                    Sign in
-                  </Link>
-                </FieldDescription>
-              </Field>
-            </FieldGroup>
+    <div className="relative w-full overflow-hidden md:h-screen">
+      <div
+        className={cn(
+          "relative mx-auto flex min-h-screen w-full max-w-sm flex-col justify-between p-6 md:p-8",
+        )}
+      >
+        <div className="flex justify-center">
+          <Link href="/">
+            <Logo className="h-4.5" />
+          </Link>
+        </div>
+
+        <div className="fade-in slide-in-from-bottom-4 w-full animate-in space-y-4 duration-600">
+          <div className="flex flex-col space-y-1">
+            <h1 className="font-bold text-2xl tracking-wide">Join Now!</h1>
+            <p className="text-base text-muted-foreground">
+              Create your OpenLuma account to get started.
+            </p>
+          </div>
+          <form onSubmit={handleSubmit} className="space-y-2">
+            <InputGroup>
+              <InputGroupInput
+                placeholder="Your name"
+                type="text"
+                name="name"
+                required
+              />
+              <InputGroupAddon align="inline-start">
+                <UserIcon />
+              </InputGroupAddon>
+            </InputGroup>
+
+            <InputGroup>
+              <InputGroupInput
+                placeholder="your.email@example.com"
+                type="email"
+                name="email"
+                required
+              />
+              <InputGroupAddon align="inline-start">
+                <AtSignIcon />
+              </InputGroupAddon>
+            </InputGroup>
+
+            <InputGroup>
+              <InputGroupInput
+                placeholder="Password (min 8 characters)"
+                type="password"
+                name="password"
+                required
+                minLength={8}
+              />
+              <InputGroupAddon align="inline-start">
+                <LockIcon />
+              </InputGroupAddon>
+            </InputGroup>
+
+            <Button
+              className="w-full"
+              size="sm"
+              type="submit"
+              disabled={loading}
+            >
+              {loading && <Loader2Icon className="mr-2 size-4 animate-spin" />}
+              {loading ? "Creating account..." : "Continue With Email"}
+            </Button>
           </form>
-        </CardContent>
-      </Card>
+          <AuthDivider>OR CONTINUE WITH</AuthDivider>
+          <div className="space-y-2">
+            <Button
+              className="w-full"
+              type="button"
+              variant="outline"
+              onClick={async () => {
+                await authClient.signIn.social({
+                  provider: "google",
+                  callbackURL: "/dashboard",
+                });
+              }}
+            >
+              <GoogleIcon data-icon="inline-start" />
+              Google
+            </Button>
+          </div>
+          <p className="text-center text-sm text-muted-foreground">
+            Already have an account?{" "}
+            <Link
+              href="/sign-in"
+              className="font-medium text-foreground underline underline-offset-4 hover:text-primary"
+            >
+              Sign in
+            </Link>
+          </p>
+        </div>
+
+        <p className="text-center text-muted-foreground text-xs">
+          By continuing, you agree to our{" "}
+          <a
+            className="underline underline-offset-4 hover:text-primary"
+            href="#"
+          >
+            Terms of Service
+          </a>{" "}
+          and{" "}
+          <a
+            className="underline underline-offset-4 hover:text-primary"
+            href="#"
+          >
+            Privacy Policy
+          </a>
+          .
+        </p>
+      </div>
     </div>
   );
 }
+
+const GoogleIcon = (props: React.ComponentProps<"svg">) => (
+  <svg fill="currentColor" viewBox="0 0 24 24" {...props}>
+    <g>
+      <path d="M12.479,14.265v-3.279h11.049c0.108,0.571,0.164,1.247,0.164,1.979c0,2.46-0.672,5.502-2.84,7.669   C18.744,22.829,16.051,24,12.483,24C5.869,24,0.308,18.613,0.308,12S5.869,0,12.483,0c3.659,0,6.265,1.436,8.223,3.307L18.392,5.62   c-1.404-1.317-3.307-2.341-5.913-2.341C7.65,3.279,3.873,7.171,3.873,12s3.777,8.721,8.606,8.721c3.132,0,4.916-1.258,6.059-2.401   c0.927-0.927,1.537-2.251,1.777-4.059L12.479,14.265z" />
+    </g>
+  </svg>
+);

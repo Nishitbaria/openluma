@@ -54,8 +54,9 @@ export function DeleteEventButton({
         <DialogHeader>
           <DialogTitle>Delete Event</DialogTitle>
           <DialogDescription>
-            Are you sure you want to delete &quot;{eventTitle}&quot;? This action
-            cannot be undone. All RSVPs and invitations will also be deleted.
+            Are you sure you want to delete &quot;{eventTitle}&quot;? This
+            action cannot be undone. All RSVPs and invitations will also be
+            deleted.
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
