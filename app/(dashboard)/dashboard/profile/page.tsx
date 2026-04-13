@@ -1,9 +1,8 @@
 "use client";
 
-import { UploadButton } from "@uploadthing/react";
-import { Camera } from "lucide-react";
+import { Loader2, Upload } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -18,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { authClient } from "@/lib/auth-client";
-import type { OurFileRouter } from "@/lib/uploadthing";
+import { useUploadThing } from "@/lib/uploadthing-client";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -26,6 +25,19 @@ export default function ProfilePage() {
   const user = session?.user;
   const [loading, setLoading] = useState(false);
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const { startUpload, isUploading } = useUploadThing("profileAvatar", {
+    onClientUploadComplete: (res) => {
+      if (res?.[0]) {
+        setAvatarUrl(res[0].ufsUrl);
+        toast.success("Avatar uploaded! Save to apply.");
+      }
+    },
+    onUploadError: (error) => {
+      toast.error(`Upload failed: ${error.message}`);
+    },
+  });
 
   const currentAvatar = avatarUrl ?? user?.image ?? null;
   const initials = user?.name
@@ -88,22 +100,45 @@ export default function ProfilePage() {
             <AvatarImage src={currentAvatar ?? undefined} alt={user.name} />
             <AvatarFallback className="text-lg">{initials}</AvatarFallback>
           </Avatar>
-          <UploadButton<OurFileRouter, "profileAvatar">
-            endpoint="profileAvatar"
-            onClientUploadComplete={(res) => {
-              if (res?.[0]) {
-                setAvatarUrl(res[0].ufsUrl);
-                toast.success("Avatar uploaded! Save to apply.");
-              }
-            }}
-            onUploadError={(error) => {
-              toast.error(`Upload failed: ${error.message}`);
-            }}
-            appearance={{
-              button: "bg-primary text-primary-foreground text-sm",
-              allowedContent: "text-xs text-muted-foreground",
-            }}
-          />
+          <div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={isUploading}
+              onClick={() => fileInputRef.current?.click()}
+            >
+              {isUploading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <Upload className="mr-2 h-4 w-4" />
+                  Upload Avatar
+                </>
+              )}
+            </Button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  if (file.size > 2 * 1024 * 1024) {
+                    toast.error("Image must be under 2MB");
+                    return;
+                  }
+                  startUpload([file]);
+                }
+                e.target.value = "";
+              }}
+            />
+            <p className="mt-1 text-xs text-muted-foreground">Max 2MB</p>
+          </div>
         </CardContent>
       </Card>
 

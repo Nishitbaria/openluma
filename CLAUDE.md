@@ -67,7 +67,8 @@ lib/
 - Tool results rendered via `isToolUIPart()` from AI SDK v6
 
 ### Auth Pattern
-- Server-side: `const session = await auth.api.getSession({ headers: await headers() })`
+- Server-side (cached): `const session = await getSession(await headers())` — uses `React.cache()` for per-request dedup
+- Import from `@/lib/auth`: `getSession` (cached, for server components/pages) and `auth` (raw Better Auth instance, for API routes)
 - Client-side: `const { data: session } = authClient.useSession()`
 - Redirect hook: `useRedirectIfAuthenticated("/dashboard")` in auth layout
 
@@ -104,6 +105,14 @@ lib/
 - `(dashboard)` — Authenticated with sidebar layout, auth guard in layout.tsx
 - `(public)` — Public with header/footer layout, auth-aware navbar
 
+### Uploads
+- **Server config**: `lib/uploadthing.ts` — file router with `profileAvatar` and `eventCoverImage` endpoints
+- **Client**: `lib/uploadthing-client.ts` — exports `useUploadThing` hook (no pre-built UI components)
+- **SSR**: `NextSSRPlugin` in root `app/layout.tsx` with `extractRouterConfig(ourFileRouter)`
+- **Cover image picker**: Custom drag-and-drop UI using `useUploadThing("eventCoverImage")` in `components/events/event-cover-image-picker.tsx`
+- **Profile avatar**: Custom upload button using `useUploadThing("profileAvatar")` on profile page
+- No `@uploadthing/react/styles.css` import — all upload UI is custom-built
+
 ## Conventions
 
 - Use Biome for linting/formatting, not ESLint/Prettier
@@ -111,10 +120,14 @@ lib/
 - shadcn/ui components in `components/ui/` (radix-nova style, `components.json`)
 - Server Components by default; add `"use client"` only when needed
 - Use `Link` from `next/link` for navigation, not `<a>` tags
-- Auth client: `authClient` from `@/lib/auth-client`
+- Auth (server): `getSession(await headers())` from `@/lib/auth` — cached per request via `React.cache()`
+- Auth (client): `authClient` from `@/lib/auth-client`
 - Icons: use Lucide React (`lucide-react`)
 - Params in Next.js 16: `params: Promise<{ id: string }>` (must be awaited)
 - Env vars in `.env.local` (gitignored); `.env.example` has placeholders
+- Parallelize independent async operations with `Promise.all()` — never sequential awaits for independent work
+- Use `useMemo` for derived data in client components that filter/map arrays from props
+- Avoid `{number && <JSX>}` — use ternary or `!= null` guard to prevent rendering `"0"`
 
 ## GitHub
 

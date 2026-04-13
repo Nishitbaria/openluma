@@ -16,8 +16,8 @@ export function CalendarExportButton({
   event: {
     title: string;
     description: string | null;
-    startTime: Date | string;
-    endTime: Date | string | null;
+    startTime: string;
+    endTime: string | null;
     location: string | null;
     id: string;
   };

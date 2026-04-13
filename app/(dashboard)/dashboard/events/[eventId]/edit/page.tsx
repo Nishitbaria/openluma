@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { EventForm } from "@/components/events/event-form";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { events } from "@/lib/db/schema";
 
@@ -12,7 +12,7 @@ export default async function EditEventPage({
   params: Promise<{ eventId: string }>;
 }) {
   const { eventId } = await params;
-  const session = await auth.api.getSession({ headers: await headers() });
+  const session = await getSession(await headers());
   if (!session?.user) redirect("/sign-in");
 
   const event = await db.query.events.findFirst({

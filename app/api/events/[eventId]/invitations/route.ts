@@ -87,33 +87,33 @@ export async function POST(
     );
   }
 
-  const results = [];
-
   const failed: string[] = [];
 
-  for (const email of filteredEmails) {
-    const token = nanoid(32);
+  const results = await Promise.all(
+    filteredEmails.map(async (email) => {
+      const token = nanoid(32);
 
-    const [invitation] = await db
-      .insert(invitations)
-      .values({
-        eventId,
-        email,
-        token,
-        role,
-        invitedBy: session.user.id,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-      })
-      .returning();
+      const [invitation] = await db
+        .insert(invitations)
+        .values({
+          eventId,
+          email,
+          token,
+          role,
+          invitedBy: session.user.id,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        })
+        .returning();
 
-    try {
-      await sendInvitationEmail(email, event.title, token, role);
-    } catch (err) {
-      console.error(`Failed to send invitation email to ${email}:`, err);
-      failed.push(email);
-    }
-    results.push(invitation);
-  }
+      // Fire-and-forget email — don't block other invitations
+      sendInvitationEmail(email, event.title, token, role).catch((err) => {
+        console.error(`Failed to send invitation email to ${email}:`, err);
+        failed.push(email);
+      });
+
+      return invitation;
+    }),
+  );
 
   return Response.json(
     {

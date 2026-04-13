@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
+import { EventCoverImagePicker } from "@/components/events/event-cover-image-picker";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -39,6 +40,9 @@ interface EventFormProps {
 export function EventForm({ event }: EventFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [coverImage, setCoverImage] = useState<string | null>(
+    event?.coverImage ?? null,
+  );
   const isEditing = !!event;
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -49,6 +53,7 @@ export function EventForm({ event }: EventFormProps) {
     const data = {
       title: formData.get("title") as string,
       description: formData.get("description") as string,
+      coverImage: coverImage || undefined,
       startTime: formData.get("startTime") as string,
       endTime: (formData.get("endTime") as string) || undefined,
       timezone: formData.get("timezone") as string,
@@ -79,6 +84,15 @@ export function EventForm({ event }: EventFormProps) {
 
       const result = await res.json();
       toast.success(isEditing ? "Event updated!" : "Event created!");
+      if (!isEditing) {
+        import("canvas-confetti").then((mod) =>
+          mod.default({
+            particleCount: 150,
+            spread: 80,
+            origin: { y: 0.6 },
+          }),
+        );
+      }
       router.push(`/dashboard/events/${result.id ?? event?.id}`);
       router.refresh();
     } catch (error) {
@@ -94,6 +108,14 @@ export function EventForm({ event }: EventFormProps) {
     <Card>
       <CardContent className="pt-6">
         <form onSubmit={handleSubmit} className="space-y-6">
+          <div className="space-y-2">
+            <Label>Cover Image</Label>
+            <EventCoverImagePicker
+              value={coverImage}
+              onChange={setCoverImage}
+            />
+          </div>
+
           <div className="space-y-2">
             <Label htmlFor="title">Event Title</Label>
             <Input

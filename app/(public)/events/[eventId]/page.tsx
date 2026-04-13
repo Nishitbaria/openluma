@@ -1,14 +1,14 @@
 import { format } from "date-fns";
 import { and, eq } from "drizzle-orm";
-import { Calendar, Clock, Globe, Lock, MapPin, Users } from "lucide-react";
+import { Calendar, Globe, Lock, MapPin, Users } from "lucide-react";
 import { headers } from "next/headers";
+import Image from "next/image";
 import { notFound } from "next/navigation";
 import { CalendarExportButton } from "@/components/events/calendar-export-button";
 import { RsvpButton } from "@/components/events/rsvp-button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Separator } from "@/components/ui/separator";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { events, rsvps } from "@/lib/db/schema";
 
@@ -42,22 +42,20 @@ export default async function PublicEventDetailPage({
 }) {
   const { eventId } = await params;
 
-  const event = await db.query.events.findFirst({
-    where: eq(events.id, eventId),
-    with: {
-      host: { columns: { id: true, name: true, image: true } },
-      category: true,
-      tags: true,
-      rsvps: { columns: { id: true, status: true } },
-    },
-  });
+  const [event, session] = await Promise.all([
+    db.query.events.findFirst({
+      where: eq(events.id, eventId),
+      with: {
+        host: { columns: { id: true, name: true, image: true } },
+        category: true,
+        tags: true,
+        rsvps: { columns: { id: true, status: true } },
+      },
+    }),
+    getSession(await headers()).catch(() => null),
+  ]);
 
   if (!event) notFound();
-
-  // Check current user's session and RSVP status (needed before private gate)
-  const session = await auth.api
-    .getSession({ headers: await headers() })
-    .catch(() => null);
   let currentRsvpStatus:
     | "pending"
     | "approved"
@@ -98,15 +96,16 @@ export default async function PublicEventDetailPage({
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 sm:px-6 lg:px-8 py-12">
-      {event.coverImage && (
-        <div className="aspect-video overflow-hidden rounded-xl mb-8">
-          <img
+      {event.coverImage ? (
+        <div className="relative aspect-video overflow-hidden rounded-xl mb-8">
+          <Image
             src={event.coverImage}
             alt={event.title}
-            className="h-full w-full object-cover"
+            fill
+            className="object-cover"
           />
         </div>
-      )}
+      ) : null}
 
       <div className="flex items-center gap-2 mb-4">
         <Badge
@@ -163,7 +162,7 @@ export default async function PublicEventDetailPage({
                 <Users className="h-5 w-5 text-primary" />
                 <p className="font-medium">
                   {approvedCount} attending
-                  {event.capacity && ` / ${event.capacity} spots`}
+                  {event.capacity ? ` / ${event.capacity} spots` : null}
                 </p>
               </div>
             </CardContent>
@@ -211,8 +210,8 @@ export default async function PublicEventDetailPage({
                 event={{
                   title: event.title,
                   description: event.description,
-                  startTime: event.startTime,
-                  endTime: event.endTime,
+                  startTime: event.startTime.toISOString(),
+                  endTime: event.endTime?.toISOString() ?? null,
                   location: event.location,
                   id: event.id,
                 }}

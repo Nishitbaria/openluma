@@ -195,25 +195,30 @@ export async function PATCH(
     .returning();
 
   if (updated) {
-    const rsvpUser = await db.query.user.findFirst({
-      where: eq(user.id, updated.userId),
-    });
-    if (rsvpUser?.email) {
-      await sendRsvpConfirmationEmail(
-        rsvpUser.email,
-        event.title,
-        status,
-        status === "approved"
-          ? {
-              id: event.id,
-              title: event.title,
-              startTime: event.startTime,
-              endTime: event.endTime,
-              location: event.location,
-            }
-          : undefined,
-      );
-    }
+    // Fire-and-forget: don't block response on email send
+    db.query.user
+      .findFirst({ where: eq(user.id, updated.userId) })
+      .then((rsvpUser) => {
+        if (rsvpUser?.email) {
+          sendRsvpConfirmationEmail(
+            rsvpUser.email,
+            event.title,
+            status,
+            status === "approved"
+              ? {
+                  id: event.id,
+                  title: event.title,
+                  startTime: event.startTime,
+                  endTime: event.endTime,
+                  location: event.location,
+                }
+              : undefined,
+          ).catch((err) =>
+            console.error("Failed to send RSVP email:", err),
+          );
+        }
+      })
+      .catch((err) => console.error("Failed to fetch user for email:", err));
   }
 
   return Response.json(updated);

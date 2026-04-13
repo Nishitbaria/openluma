@@ -11,7 +11,7 @@ import {
   XCircle,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -182,13 +182,28 @@ export function AttendeeList({
     URL.revokeObjectURL(url);
   }
 
-  const cohostUserIds = new Set(cohosts.map((c) => c.userId));
-  const visibleInvitations = invitations.filter((i) => i.status !== "accepted");
-  const pendingInvitations = visibleInvitations.filter(
-    (i) => i.status === "pending",
+  const cohostUserIds = useMemo(
+    () => new Set(cohosts.map((c) => c.userId)),
+    [cohosts],
   );
-  const otherInvitations = visibleInvitations.filter(
-    (i) => i.status !== "pending",
+  const { visibleInvitations, pendingInvitations, otherInvitations } = useMemo(
+    () => {
+      const visible: Invitation[] = [];
+      const pending: Invitation[] = [];
+      const other: Invitation[] = [];
+      for (const i of invitations) {
+        if (i.status === "accepted") continue;
+        visible.push(i);
+        if (i.status === "pending") pending.push(i);
+        else other.push(i);
+      }
+      return {
+        visibleInvitations: visible,
+        pendingInvitations: pending,
+        otherInvitations: other,
+      };
+    },
+    [invitations],
   );
 
   const statusVariant = (status: string) => {

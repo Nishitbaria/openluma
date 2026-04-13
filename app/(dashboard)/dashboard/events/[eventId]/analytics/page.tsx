@@ -5,7 +5,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { attendeeCheckins, events, rsvps } from "@/lib/db/schema";
 
@@ -14,8 +14,10 @@ export default async function AnalyticsPage({
 }: {
   params: Promise<{ eventId: string }>;
 }) {
-  const { eventId } = await params;
-  const session = await auth.api.getSession({ headers: await headers() });
+  const [{ eventId }, session] = await Promise.all([
+    params,
+    getSession(await headers()),
+  ]);
   if (!session?.user) redirect("/sign-in");
 
   const event = await db.query.events.findFirst({
@@ -31,17 +33,18 @@ export default async function AnalyticsPage({
 
   if (!isHost && !isCohost) notFound();
 
-  const eventRsvps = await db.query.rsvps.findMany({
-    where: eq(rsvps.eventId, eventId),
-  });
+  const [eventRsvps, checkins] = await Promise.all([
+    db.query.rsvps.findMany({ where: eq(rsvps.eventId, eventId) }),
+    db.query.attendeeCheckins.findMany({
+      where: eq(attendeeCheckins.eventId, eventId),
+    }),
+  ]);
 
-  const checkins = await db.query.attendeeCheckins.findMany({
-    where: eq(attendeeCheckins.eventId, eventId),
-  });
-
-  const approved = eventRsvps.filter((r) => r.status === "approved").length;
-  const pending = eventRsvps.filter((r) => r.status === "pending").length;
-  const rejected = eventRsvps.filter((r) => r.status === "rejected").length;
+  const counts = { approved: 0, pending: 0, rejected: 0 };
+  for (const r of eventRsvps) {
+    if (r.status in counts) counts[r.status as keyof typeof counts]++;
+  }
+  const { approved, pending, rejected } = counts;
   const checkedIn = checkins.length;
   const checkInRate =
     approved > 0 ? Math.round((checkedIn / approved) * 100) : 0;

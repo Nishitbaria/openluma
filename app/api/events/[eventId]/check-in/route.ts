@@ -22,9 +22,17 @@ export async function POST(
     return Response.json({ message: "userId required" }, { status: 400 });
   }
 
-  const rsvp = await db.query.rsvps.findFirst({
-    where: and(eq(rsvps.eventId, eventId), eq(rsvps.userId, userId)),
-  });
+  const [rsvp, existing] = await Promise.all([
+    db.query.rsvps.findFirst({
+      where: and(eq(rsvps.eventId, eventId), eq(rsvps.userId, userId)),
+    }),
+    db.query.attendeeCheckins.findFirst({
+      where: and(
+        eq(attendeeCheckins.eventId, eventId),
+        eq(attendeeCheckins.userId, userId),
+      ),
+    }),
+  ]);
 
   if (!rsvp || rsvp.status !== "approved") {
     return Response.json(
@@ -32,13 +40,6 @@ export async function POST(
       { status: 400 },
     );
   }
-
-  const existing = await db.query.attendeeCheckins.findFirst({
-    where: and(
-      eq(attendeeCheckins.eventId, eventId),
-      eq(attendeeCheckins.userId, userId),
-    ),
-  });
 
   if (existing) {
     return Response.json({ message: "Already checked in", checkin: existing });

@@ -26,22 +26,23 @@ export default async function PublicProfilePage({
 }) {
   const { userId } = await params;
 
-  const profile = await db.query.user.findFirst({
-    where: eq(user.id, userId),
-    columns: { id: true, name: true, image: true, bio: true, createdAt: true },
-  });
+  const [profile, hostedEvents] = await Promise.all([
+    db.query.user.findFirst({
+      where: eq(user.id, userId),
+      columns: { id: true, name: true, image: true, bio: true, createdAt: true },
+    }),
+    db.query.events.findMany({
+      where: and(eq(events.hostId, userId), eq(events.visibility, "public")),
+      with: {
+        host: { columns: { id: true, name: true, image: true } },
+        rsvps: { columns: { id: true } },
+      },
+      orderBy: [desc(events.startTime)],
+      limit: 12,
+    }),
+  ]);
 
   if (!profile) notFound();
-
-  const hostedEvents = await db.query.events.findMany({
-    where: and(eq(events.hostId, userId), eq(events.visibility, "public")),
-    with: {
-      host: { columns: { id: true, name: true, image: true } },
-      rsvps: { columns: { id: true } },
-    },
-    orderBy: [desc(events.startTime)],
-    limit: 12,
-  });
 
   const initials = profile.name
     .split(" ")

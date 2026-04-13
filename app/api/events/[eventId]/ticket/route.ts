@@ -18,9 +18,21 @@ export async function GET(
     return Response.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  const rsvp = await db.query.rsvps.findFirst({
-    where: and(eq(rsvps.eventId, eventId), eq(rsvps.userId, session.user.id)),
-  });
+  const [rsvp, event] = await Promise.all([
+    db.query.rsvps.findFirst({
+      where: and(eq(rsvps.eventId, eventId), eq(rsvps.userId, session.user.id)),
+    }),
+    db.query.events.findFirst({
+      where: eq(events.id, eventId),
+      columns: {
+        id: true,
+        title: true,
+        startTime: true,
+        endTime: true,
+        location: true,
+      },
+    }),
+  ]);
 
   if (!rsvp || rsvp.status !== "approved") {
     return Response.json(
@@ -28,17 +40,6 @@ export async function GET(
       { status: 404 },
     );
   }
-
-  const event = await db.query.events.findFirst({
-    where: eq(events.id, eventId),
-    columns: {
-      id: true,
-      title: true,
-      startTime: true,
-      endTime: true,
-      location: true,
-    },
-  });
 
   if (!event) {
     return Response.json({ message: "Event not found" }, { status: 404 });

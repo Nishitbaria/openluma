@@ -6,12 +6,12 @@ import { redirect } from "next/navigation";
 import { EventCard } from "@/components/events/event-card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { auth } from "@/lib/auth";
+import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { eventCohosts, events, rsvps } from "@/lib/db/schema";
 
 export default async function EventsPage() {
-  const session = await auth.api.getSession({ headers: await headers() });
+  const session = await getSession(await headers());
   if (!session?.user) redirect("/sign-in");
 
   const now = new Date();
