@@ -1,11 +1,4 @@
-import {
-  Bot,
-  Calendar,
-  Globe,
-  QrCode,
-  Mail,
-  Users,
-} from "lucide-react";
+import { Bot, Calendar, Globe, Mail, QrCode, Users } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 
 const features = [

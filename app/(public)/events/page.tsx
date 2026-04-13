@@ -1,8 +1,8 @@
-import { db } from "@/lib/db";
-import { events } from "@/lib/db/schema";
-import { eq, and, ilike, desc, gte } from "drizzle-orm";
+import { and, desc, eq, gte, ilike } from "drizzle-orm";
 import { EventCard } from "@/components/events/event-card";
 import { EventFilters } from "@/components/events/event-filters";
+import { db } from "@/lib/db";
+import { events } from "@/lib/db/schema";
 
 export default async function PublicEventsPage({
   searchParams,

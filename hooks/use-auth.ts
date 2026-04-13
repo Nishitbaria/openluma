@@ -1,8 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
+import { authClient } from "@/lib/auth-client";
 
 export function useAuth() {
   const { data: session, isPending } = useQuery({

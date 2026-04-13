@@ -1,26 +1,23 @@
-import Link from "next/link";
-import { notFound } from "next/navigation";
 import { format } from "date-fns";
+import { eq } from "drizzle-orm";
 import {
   Calendar,
-  Clock,
+  Crown,
   Edit,
   Globe,
   Lock,
   MapPin,
-  Trash2,
-  Users,
-  Mail,
   ScanLine,
+  ShieldCheck,
   Ticket,
+  Users,
 } from "lucide-react";
-import { db } from "@/lib/db";
-import { events, rsvps } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
-import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
-import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { DeleteEventButton } from "@/components/events/delete-event-button";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -29,7 +26,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { DeleteEventButton } from "@/components/events/delete-event-button";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { events } from "@/lib/db/schema";
 
 export default async function EventDetailPage({
   params,
@@ -67,6 +66,11 @@ export default async function EventDetailPage({
   const isCohost = event.cohosts.some((c) => c.userId === userId);
   const canManage = isHost || isCohost;
 
+  // Block access to private events for non-host/cohost users
+  if (event.visibility === "private" && !canManage) {
+    notFound();
+  }
+
   // Check if current user has an approved RSVP (for ticket link)
   const userRsvp = userId
     ? event.rsvps.find((r) => r.user.id === userId)
@@ -75,7 +79,9 @@ export default async function EventDetailPage({
 
   const approvedRsvps = event.rsvps.filter((r) => r.status === "approved");
   const pendingCount = event.rsvps.filter((r) => r.status === "pending").length;
-  const waitlistedCount = event.rsvps.filter((r) => r.status === "waitlisted").length;
+  const waitlistedCount = event.rsvps.filter(
+    (r) => r.status === "waitlisted",
+  ).length;
   const approvedCount = approvedRsvps.length;
   const startTime = new Date(event.startTime);
   const endTime = event.endTime ? new Date(event.endTime) : null;
@@ -85,7 +91,9 @@ export default async function EventDetailPage({
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <Badge variant={event.visibility === "public" ? "default" : "secondary"}>
+            <Badge
+              variant={event.visibility === "public" ? "default" : "secondary"}
+            >
               {event.visibility === "public" ? (
                 <Globe className="mr-1 h-3 w-3" />
               ) : (
@@ -143,8 +151,8 @@ export default async function EventDetailPage({
                   </p>
                   <p className="text-sm text-muted-foreground">
                     {format(startTime, "h:mm a")}
-                    {endTime && ` - ${format(endTime, "h:mm a")}`}
-                    {" "}({event.timezone})
+                    {endTime && ` - ${format(endTime, "h:mm a")}`} (
+                    {event.timezone})
                   </p>
                 </div>
               </div>
@@ -220,9 +228,7 @@ export default async function EventDetailPage({
               {canManage ? (
                 /* Host/Cohost view: all RSVPs with emails and statuses */
                 event.rsvps.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    No RSVPs yet.
-                  </p>
+                  <p className="text-sm text-muted-foreground">No RSVPs yet.</p>
                 ) : (
                   <div className="space-y-3">
                     {event.rsvps.slice(0, 5).map((rsvp) => (
@@ -235,7 +241,9 @@ export default async function EventDetailPage({
                             {rsvp.user.name?.[0]?.toUpperCase() ?? "?"}
                           </div>
                           <div>
-                            <p className="text-sm font-medium">{rsvp.user.name}</p>
+                            <p className="text-sm font-medium">
+                              {rsvp.user.name}
+                            </p>
                             <p className="text-xs text-muted-foreground">
                               {rsvp.user.email}
                             </p>
@@ -261,35 +269,64 @@ export default async function EventDetailPage({
                     )}
                   </div>
                 )
+              ) : /* Attendee view: only approved names, no emails */
+              approvedRsvps.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No one has joined yet. Be the first!
+                </p>
               ) : (
-                /* Attendee view: only approved names, no emails */
-                approvedRsvps.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    No one has joined yet. Be the first!
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {approvedRsvps.slice(0, 5).map((rsvp) => (
-                      <div
-                        key={rsvp.id}
-                        className="flex items-center gap-2"
-                      >
-                        <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
-                          {rsvp.user.name?.[0]?.toUpperCase() ?? "?"}
-                        </div>
-                        <p className="text-sm font-medium">{rsvp.user.name}</p>
+                <div className="space-y-3">
+                  {approvedRsvps.slice(0, 5).map((rsvp) => (
+                    <div key={rsvp.id} className="flex items-center gap-2">
+                      <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
+                        {rsvp.user.name?.[0]?.toUpperCase() ?? "?"}
                       </div>
-                    ))}
-                    {approvedRsvps.length > 5 && (
-                      <p className="text-xs text-muted-foreground text-center">
-                        +{approvedRsvps.length - 5} more attending
-                      </p>
-                    )}
-                  </div>
-                )
+                      <p className="text-sm font-medium">{rsvp.user.name}</p>
+                    </div>
+                  ))}
+                  {approvedRsvps.length > 5 && (
+                    <p className="text-xs text-muted-foreground text-center">
+                      +{approvedRsvps.length - 5} more attending
+                    </p>
+                  )}
+                </div>
               )}
             </CardContent>
           </Card>
+
+          {event.cohosts.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Crown className="h-4 w-4" />
+                  Co-hosts ({event.cohosts.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {event.cohosts.map((cohost) => (
+                    <div
+                      key={cohost.user.id}
+                      className="flex items-center gap-2"
+                    >
+                      <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium">
+                        {cohost.user.name?.[0]?.toUpperCase() ?? "?"}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">
+                          {cohost.user.name}
+                        </p>
+                      </div>
+                      <Badge variant="outline">
+                        <ShieldCheck className="mr-1 h-3 w-3" />
+                        Co-host
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>
@@ -298,19 +335,31 @@ export default async function EventDetailPage({
             <CardContent className="space-y-2">
               {canManage && (
                 <>
-                  <Button asChild variant="outline" className="w-full justify-start">
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="w-full justify-start"
+                  >
                     <Link href={`/dashboard/events/${eventId}/attendees`}>
                       <Users className="mr-2 h-4 w-4" />
                       Manage Attendees
                     </Link>
                   </Button>
-                  <Button asChild variant="outline" className="w-full justify-start">
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="w-full justify-start"
+                  >
                     <Link href={`/dashboard/events/${eventId}/check-in`}>
                       <ScanLine className="mr-2 h-4 w-4" />
                       Scan Tickets
                     </Link>
                   </Button>
-                  <Button asChild variant="outline" className="w-full justify-start">
+                  <Button
+                    asChild
+                    variant="outline"
+                    className="w-full justify-start"
+                  >
                     <Link href={`/dashboard/events/${eventId}/edit`}>
                       <Edit className="mr-2 h-4 w-4" />
                       Edit Event
@@ -319,7 +368,11 @@ export default async function EventDetailPage({
                 </>
               )}
               {hasTicket && (
-                <Button asChild variant="default" className="w-full justify-start">
+                <Button
+                  asChild
+                  variant="default"
+                  className="w-full justify-start"
+                >
                   <Link href={`/ticket/${eventId}`}>
                     <Ticket className="mr-2 h-4 w-4" />
                     View My Ticket

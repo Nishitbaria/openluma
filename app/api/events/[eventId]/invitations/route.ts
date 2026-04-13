@@ -1,11 +1,11 @@
+import { and, eq } from "drizzle-orm";
+import { nanoid } from "nanoid";
+import { headers } from "next/headers";
+import type { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { events, invitations } from "@/lib/db/schema";
-import { headers } from "next/headers";
-import { eq, and } from "drizzle-orm";
-import { nanoid } from "nanoid";
 import { sendInvitationEmail } from "@/lib/email";
-import type { NextRequest } from "next/server";
 
 export async function GET(
   _request: NextRequest,
@@ -15,6 +15,23 @@ export async function GET(
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) {
     return Response.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  const event = await db.query.events.findFirst({
+    where: eq(events.id, eventId),
+    with: { cohosts: true },
+    columns: { id: true, hostId: true },
+  });
+
+  if (!event) {
+    return Response.json({ message: "Event not found" }, { status: 404 });
+  }
+
+  const isHost = event.hostId === session.user.id;
+  const isCohost = event.cohosts.some((c) => c.userId === session.user.id);
+
+  if (!isHost && !isCohost) {
+    return Response.json({ message: "Not authorized" }, { status: 403 });
   }
 
   const eventInvitations = await db.query.invitations.findMany({
@@ -55,10 +72,26 @@ export async function POST(
   const emails: string[] = Array.isArray(body.emails)
     ? body.emails
     : [body.email].filter(Boolean);
+  const role: "attendee" | "cohost" =
+    body.role === "cohost" ? "cohost" : "attendee";
+
+  // Filter out the host's own email
+  const filteredEmails = emails.filter(
+    (email) => email.toLowerCase() !== session.user.email?.toLowerCase(),
+  );
+
+  if (filteredEmails.length === 0 && emails.length > 0) {
+    return Response.json(
+      { message: "You cannot invite yourself to your own event" },
+      { status: 400 },
+    );
+  }
 
   const results = [];
 
-  for (const email of emails) {
+  const failed: string[] = [];
+
+  for (const email of filteredEmails) {
     const token = nanoid(32);
 
     const [invitation] = await db
@@ -67,16 +100,28 @@ export async function POST(
         eventId,
         email,
         token,
+        role,
         invitedBy: session.user.id,
         expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
       })
       .returning();
 
-    await sendInvitationEmail(email, event.title, token);
+    try {
+      await sendInvitationEmail(email, event.title, token, role);
+    } catch (err) {
+      console.error(`Failed to send invitation email to ${email}:`, err);
+      failed.push(email);
+    }
     results.push(invitation);
   }
 
-  return Response.json(results, { status: 201 });
+  return Response.json(
+    {
+      invitations: results,
+      ...(failed.length > 0 && { failedEmails: failed }),
+    },
+    { status: 201 },
+  );
 }
 
 export async function DELETE(

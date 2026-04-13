@@ -1,10 +1,10 @@
+import { and, eq } from "drizzle-orm";
+import { headers } from "next/headers";
+import type { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { events, eventCohosts } from "@/lib/db/schema";
+import { eventCohosts, events, rsvps } from "@/lib/db/schema";
 import { updateEventSchema } from "@/lib/validators/event";
-import { headers } from "next/headers";
-import { eq, and } from "drizzle-orm";
-import type { NextRequest } from "next/server";
 
 export async function GET(
   _request: NextRequest,
@@ -40,7 +40,16 @@ export async function GET(
     const isHost = event.hostId === userId;
     const isCohost = event.cohosts.some((c) => c.userId === userId);
 
-    if (!isHost && !isCohost) {
+    let hasApprovedRsvp = false;
+    if (userId) {
+      const userRsvp = await db.query.rsvps.findFirst({
+        where: and(eq(rsvps.eventId, eventId), eq(rsvps.userId, userId)),
+        columns: { status: true },
+      });
+      hasApprovedRsvp = userRsvp?.status === "approved";
+    }
+
+    if (!isHost && !isCohost && !hasApprovedRsvp) {
       return Response.json({ message: "Not authorized" }, { status: 403 });
     }
   }
@@ -92,7 +101,10 @@ export async function PUT(
 
   const { tags, ...updateData } = parsed.data;
 
-  const updates: Record<string, unknown> = { ...updateData, updatedAt: new Date() };
+  const updates: Record<string, unknown> = {
+    ...updateData,
+    updatedAt: new Date(),
+  };
   if (updateData.startTime) updates.startTime = new Date(updateData.startTime);
   if (updateData.endTime) updates.endTime = new Date(updateData.endTime);
 

@@ -1,16 +1,37 @@
+import { and, eq } from "drizzle-orm";
+import { headers } from "next/headers";
+import type { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { events, rsvps, user } from "@/lib/db/schema";
-import { headers } from "next/headers";
-import { eq, and, sql } from "drizzle-orm";
+import { events, invitations, rsvps, user } from "@/lib/db/schema";
 import { sendRsvpConfirmationEmail } from "@/lib/email";
-import type { NextRequest } from "next/server";
 
 export async function GET(
   _request: NextRequest,
   { params }: { params: Promise<{ eventId: string }> },
 ) {
   const { eventId } = await params;
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session?.user) {
+    return Response.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  const event = await db.query.events.findFirst({
+    where: eq(events.id, eventId),
+    with: { cohosts: true },
+    columns: { id: true, hostId: true },
+  });
+
+  if (!event) {
+    return Response.json({ message: "Event not found" }, { status: 404 });
+  }
+
+  const isHost = event.hostId === session.user.id;
+  const isCohost = event.cohosts.some((c) => c.userId === session.user.id);
+
+  if (!isHost && !isCohost) {
+    return Response.json({ message: "Not authorized" }, { status: 403 });
+  }
 
   const eventRsvps = await db.query.rsvps.findMany({
     where: eq(rsvps.eventId, eventId),
@@ -42,6 +63,7 @@ export async function POST(
       hostId: true,
       capacity: true,
       requiresApproval: true,
+      visibility: true,
       startTime: true,
       endTime: true,
       location: true,
@@ -50,6 +72,30 @@ export async function POST(
 
   if (!event) {
     return Response.json({ message: "Event not found" }, { status: 404 });
+  }
+
+  // Host cannot RSVP to their own event
+  if (event.hostId === session.user.id) {
+    return Response.json(
+      { message: "You are the host of this event" },
+      { status: 400 },
+    );
+  }
+
+  // Private events require an accepted invitation to RSVP
+  if (event.visibility === "private" && event.hostId !== session.user.id) {
+    const invitation = await db.query.invitations.findFirst({
+      where: and(
+        eq(invitations.eventId, eventId),
+        eq(invitations.email, session.user.email),
+      ),
+    });
+    if (!invitation || invitation.status !== "accepted") {
+      return Response.json(
+        { message: "This is a private event. You need an invitation to RSVP." },
+        { status: 403 },
+      );
+    }
   }
 
   if (event.capacity && event.rsvps.length >= event.capacity) {
@@ -145,7 +191,7 @@ export async function PATCH(
   const [updated] = await db
     .update(rsvps)
     .set({ status, updatedAt: new Date() })
-    .where(eq(rsvps.id, rsvpId))
+    .where(and(eq(rsvps.id, rsvpId), eq(rsvps.eventId, eventId)))
     .returning();
 
   if (updated) {
@@ -213,9 +259,7 @@ export async function DELETE(
   // User cancelling their own RSVP
   await db
     .delete(rsvps)
-    .where(
-      and(eq(rsvps.eventId, eventId), eq(rsvps.userId, session.user.id)),
-    );
+    .where(and(eq(rsvps.eventId, eventId), eq(rsvps.userId, session.user.id)));
 
   return Response.json({ message: "RSVP cancelled" });
 }

@@ -1,8 +1,8 @@
-import Link from "next/link";
 import { ArrowRight, Shield, Sparkles } from "lucide-react";
+import Link from "next/link";
 import { GitHubIcon } from "@/components/icons";
-import { Button } from "@/components/ui/button";
 import { FeatureCards } from "@/components/layout/feature-cards";
+import { Button } from "@/components/ui/button";
 
 const steps = [
   {

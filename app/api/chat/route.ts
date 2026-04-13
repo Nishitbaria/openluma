@@ -1,7 +1,7 @@
 import { createAgentUIStreamResponse, type UIMessage } from "ai";
-import { auth } from "@/lib/auth";
 import { headers } from "next/headers";
 import { createOrchestrator } from "@/lib/ai/agents/orchestrator";
+import { auth } from "@/lib/auth";
 
 export async function POST(req: Request) {
   const session = await auth.api.getSession({ headers: await headers() });

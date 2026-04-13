@@ -1,13 +1,13 @@
 "use client";
 
-import { cn } from "@/lib/utils";
-import { Logo } from "@/components/logo";
-import { useScroll } from "@/hooks/use-scroll";
-import { Button } from "@/components/ui/button";
+import Link from "next/link";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
+import { Logo } from "@/components/logo";
+import { Button } from "@/components/ui/button";
+import { useScroll } from "@/hooks/use-scroll";
 import { authClient } from "@/lib/auth-client";
-import Link from "next/link";
+import { cn } from "@/lib/utils";
 
 export const navLinks = [
   {

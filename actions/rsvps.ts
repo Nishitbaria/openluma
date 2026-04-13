@@ -1,11 +1,11 @@
 "use server";
 
+import { and, eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { events, rsvps, user } from "@/lib/db/schema";
-import { eq, and } from "drizzle-orm";
-import { headers } from "next/headers";
-import { revalidatePath } from "next/cache";
 import { sendRsvpConfirmationEmail } from "@/lib/email";
 
 export async function submitRsvpAction(eventId: string, message?: string) {
@@ -91,9 +91,7 @@ export async function cancelRsvpAction(eventId: string) {
 
   await db
     .delete(rsvps)
-    .where(
-      and(eq(rsvps.eventId, eventId), eq(rsvps.userId, session.user.id)),
-    );
+    .where(and(eq(rsvps.eventId, eventId), eq(rsvps.userId, session.user.id)));
 
   revalidatePath(`/events/${eventId}`);
 }

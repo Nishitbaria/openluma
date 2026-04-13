@@ -1,11 +1,11 @@
 "use server";
 
+import { eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { user } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
-import { headers } from "next/headers";
-import { revalidatePath } from "next/cache";
 
 export async function updateProfileAction(data: {
   name?: string;

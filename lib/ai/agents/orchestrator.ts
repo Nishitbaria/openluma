@@ -1,6 +1,6 @@
-import { ToolLoopAgent, tool, stepCountIs } from "ai";
-import { z } from "zod/v4";
 import { openai } from "@ai-sdk/openai";
+import { stepCountIs, ToolLoopAgent, tool } from "ai";
+import { z } from "zod/v4";
 import { createEventAgent } from "./event-agent";
 
 export function createOrchestrator(userId: string) {
@@ -49,20 +49,25 @@ Use the \`delegateToEventAgent\` tool to forward event-related requests.
               "A clear, specific prompt describing what the Event Agent should do. Include all relevant details from the user's message.",
             ),
         }),
-        execute: async ({ prompt }) => {
+        execute: async ({ prompt }, { abortSignal }) => {
           try {
             const result = await eventAgent.generate({
               messages: [{ role: "user", content: prompt }],
+              abortSignal,
             });
             // Extract structured artifacts from tool results
             const artifacts: Array<{ type: string; data: unknown }> = [];
             for (const step of result.steps) {
               for (const tr of step.toolResults) {
-                const res = (tr as unknown as { output?: Record<string, unknown> }).output;
+                const res = tr.output as Record<string, unknown> | undefined;
                 if (res?.success && res.event) {
                   artifacts.push({ type: "event-created", data: res.event });
                 }
-                if (res?.events && Array.isArray(res.events) && res.events.length > 0) {
+                if (
+                  res?.events &&
+                  Array.isArray(res.events) &&
+                  res.events.length > 0
+                ) {
                   artifacts.push({ type: "event-list", data: res.events });
                 }
               }

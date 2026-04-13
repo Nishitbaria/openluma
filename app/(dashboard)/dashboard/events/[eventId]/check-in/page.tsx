@@ -1,21 +1,20 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
-import { useParams } from "next/navigation";
-import Link from "next/link";
 import {
   ArrowLeft,
   Camera,
   CameraOff,
   CheckCircle2,
-  XCircle,
   Users,
+  XCircle,
 } from "lucide-react";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 
 interface CheckinRecord {
   id: string;
@@ -126,7 +125,7 @@ export default function CheckInPage() {
           // Ignore scan failures (no QR detected)
         },
       );
-    } catch (err) {
+    } catch {
       toast.error("Could not access camera. Please allow camera permissions.");
       setScanning(false);
     }
@@ -168,9 +167,7 @@ export default function CheckInPage() {
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">
-            Ticket Scanner
-          </h1>
+          <h1 className="text-3xl font-bold tracking-tight">Ticket Scanner</h1>
           <p className="text-muted-foreground">
             Scan attendee QR codes to check them in
           </p>
@@ -236,7 +233,9 @@ export default function CheckInPage() {
                 )}
                 <p
                   className={`text-sm font-medium ${
-                    lastResult.success ? "text-green-700 dark:text-green-300" : "text-red-700 dark:text-red-300"
+                    lastResult.success
+                      ? "text-green-700 dark:text-green-300"
+                      : "text-red-700 dark:text-red-300"
                   }`}
                 >
                   {lastResult.message}

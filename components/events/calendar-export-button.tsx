@@ -4,7 +4,10 @@ import { Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 function formatICSDate(date: Date): string {
-  return date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  return date
+    .toISOString()
+    .replace(/[-:]/g, "")
+    .replace(/\.\d{3}/, "");
 }
 
 export function CalendarExportButton({
@@ -50,11 +53,7 @@ export function CalendarExportButton({
   }
 
   return (
-    <Button
-      variant="outline"
-      className="w-full"
-      onClick={handleExport}
-    >
+    <Button variant="outline" className="w-full" onClick={handleExport}>
       <Calendar className="mr-2 h-4 w-4" />
       Add to Calendar
     </Button>

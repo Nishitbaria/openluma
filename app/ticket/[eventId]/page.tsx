@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
 import { format } from "date-fns";
-import { Calendar, Download, MapPin, Ticket, ArrowLeft } from "lucide-react";
+import { ArrowLeft, Calendar, Download, MapPin, Ticket } from "lucide-react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -142,11 +142,7 @@ export default function TicketPage() {
           </CardContent>
         </Card>
 
-        <Button
-          variant="outline"
-          className="w-full"
-          onClick={handleDownload}
-        >
+        <Button variant="outline" className="w-full" onClick={handleDownload}>
           <Download className="mr-2 h-4 w-4" />
           Download QR Code
         </Button>

@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -14,8 +14,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
 
 interface EventFormProps {
   event?: {
@@ -53,8 +53,7 @@ export function EventForm({ event }: EventFormProps) {
       endTime: (formData.get("endTime") as string) || undefined,
       timezone: formData.get("timezone") as string,
       location: (formData.get("location") as string) || undefined,
-      locationDetails:
-        (formData.get("locationDetails") as string) || undefined,
+      locationDetails: (formData.get("locationDetails") as string) || undefined,
       type: formData.get("type") as "in_person" | "virtual" | "hybrid",
       visibility: formData.get("visibility") as "public" | "private",
       capacity: formData.get("capacity")
@@ -147,7 +146,11 @@ export function EventForm({ event }: EventFormProps) {
             </div>
           </div>
 
-          <input type="hidden" name="timezone" value={Intl.DateTimeFormat().resolvedOptions().timeZone} />
+          <input
+            type="hidden"
+            name="timezone"
+            value={Intl.DateTimeFormat().resolvedOptions().timeZone}
+          />
 
           <div className="space-y-2">
             <Label htmlFor="location">Location</Label>
@@ -219,9 +222,7 @@ export function EventForm({ event }: EventFormProps) {
               name="requiresApproval"
               defaultChecked={event?.requiresApproval ?? false}
             />
-            <Label htmlFor="requiresApproval">
-              Require approval for RSVPs
-            </Label>
+            <Label htmlFor="requiresApproval">Require approval for RSVPs</Label>
           </div>
 
           <div className="flex gap-3">

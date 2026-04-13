@@ -1,10 +1,10 @@
+import { and, eq } from "drizzle-orm";
+import { headers } from "next/headers";
+import type { NextRequest } from "next/server";
+import QRCode from "qrcode";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { events, rsvps } from "@/lib/db/schema";
-import { headers } from "next/headers";
-import { eq, and } from "drizzle-orm";
-import QRCode from "qrcode";
-import type { NextRequest } from "next/server";
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -31,7 +31,13 @@ export async function GET(
 
   const event = await db.query.events.findFirst({
     where: eq(events.id, eventId),
-    columns: { id: true, title: true, startTime: true, endTime: true, location: true },
+    columns: {
+      id: true,
+      title: true,
+      startTime: true,
+      endTime: true,
+      location: true,
+    },
   });
 
   if (!event) {

@@ -1,3 +1,4 @@
+import { relations } from "drizzle-orm";
 import {
   boolean,
   index,
@@ -6,8 +7,8 @@ import {
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
 
 // ─── Better Auth Required Tables ─────────────────────────────────────────────
 
@@ -89,6 +90,11 @@ export const invitationStatusEnum = pgEnum("invitation_status", [
   "expired",
 ]);
 
+export const invitationRoleEnum = pgEnum("invitation_role", [
+  "attendee",
+  "cohost",
+]);
+
 // ─── Application Tables ──────────────────────────────────────────────────────
 
 export const categories = pgTable("categories", {
@@ -166,6 +172,7 @@ export const rsvps = pgTable(
   (table) => [
     index("rsvps_event_id_idx").on(table.eventId),
     index("rsvps_user_id_idx").on(table.userId),
+    uniqueIndex("rsvps_event_user_unique").on(table.eventId, table.userId),
   ],
 );
 
@@ -181,6 +188,7 @@ export const invitations = pgTable(
     email: text("email").notNull(),
     token: text("token").notNull().unique(),
     status: invitationStatusEnum("status").notNull().default("pending"),
+    role: invitationRoleEnum("role").notNull().default("attendee"),
     invitedBy: text("invited_by")
       .notNull()
       .references(() => user.id),
@@ -193,18 +201,27 @@ export const invitations = pgTable(
   ],
 );
 
-export const eventCohosts = pgTable("event_cohosts", {
-  id: text("id")
-    .primaryKey()
-    .$defaultFn(() => crypto.randomUUID()),
-  eventId: text("event_id")
-    .notNull()
-    .references(() => events.id, { onDelete: "cascade" }),
-  userId: text("user_id")
-    .notNull()
-    .references(() => user.id, { onDelete: "cascade" }),
-  addedAt: timestamp("added_at").notNull().defaultNow(),
-});
+export const eventCohosts = pgTable(
+  "event_cohosts",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    eventId: text("event_id")
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    addedAt: timestamp("added_at").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("event_cohosts_event_user_unique").on(
+      table.eventId,
+      table.userId,
+    ),
+  ],
+);
 
 export const attendeeCheckins = pgTable("attendee_checkins", {
   id: text("id")

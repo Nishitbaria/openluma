@@ -1,12 +1,12 @@
 "use server";
 
+import { eq } from "drizzle-orm";
+import { nanoid } from "nanoid";
+import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { events, invitations } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
-import { headers } from "next/headers";
-import { revalidatePath } from "next/cache";
-import { nanoid } from "nanoid";
 import { sendInvitationEmail } from "@/lib/email";
 
 export async function sendInvitationAction(eventId: string, email: string) {

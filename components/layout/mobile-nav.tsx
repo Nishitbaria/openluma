@@ -1,13 +1,13 @@
 "use client";
 
-import { cn } from "@/lib/utils";
-import React from "react";
-import { Portal, PortalBackdrop } from "@/components/ui/portal";
-import { Button } from "@/components/ui/button";
-import { navLinks } from "@/components/layout/header";
-import { XIcon, MenuIcon } from "lucide-react";
-import { authClient } from "@/lib/auth-client";
+import { MenuIcon, XIcon } from "lucide-react";
 import Link from "next/link";
+import React from "react";
+import { navLinks } from "@/components/layout/header";
+import { Button } from "@/components/ui/button";
+import { Portal, PortalBackdrop } from "@/components/ui/portal";
+import { authClient } from "@/lib/auth-client";
+import { cn } from "@/lib/utils";
 
 export function MobileNav() {
   const [open, setOpen] = React.useState(false);

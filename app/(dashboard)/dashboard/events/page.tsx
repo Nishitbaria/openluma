@@ -1,14 +1,14 @@
-import Link from "next/link";
-import { Plus, Calendar } from "lucide-react";
-import { auth } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { events, rsvps } from "@/lib/db/schema";
-import { eq, and, gte, lt, desc } from "drizzle-orm";
+import { and, desc, eq, gte, lt } from "drizzle-orm";
+import { Calendar, Plus } from "lucide-react";
 import { headers } from "next/headers";
+import Link from "next/link";
 import { redirect } from "next/navigation";
+import { EventCard } from "@/components/events/event-card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { EventCard } from "@/components/events/event-card";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { eventCohosts, events, rsvps } from "@/lib/db/schema";
 
 export default async function EventsPage() {
   const session = await auth.api.getSession({ headers: await headers() });
@@ -16,39 +16,63 @@ export default async function EventsPage() {
 
   const now = new Date();
 
-  const [upcomingEvents, pastEvents, attendingRsvps] = await Promise.all([
-    db.query.events.findMany({
-      where: and(eq(events.hostId, session.user.id), gte(events.startTime, now)),
-      with: {
-        host: { columns: { id: true, name: true, image: true } },
-        rsvps: { columns: { id: true } },
-      },
-      orderBy: [desc(events.startTime)],
-    }),
-    db.query.events.findMany({
-      where: and(eq(events.hostId, session.user.id), lt(events.startTime, now)),
-      with: {
-        host: { columns: { id: true, name: true, image: true } },
-        rsvps: { columns: { id: true } },
-      },
-      orderBy: [desc(events.startTime)],
-    }),
-    db.query.rsvps.findMany({
-      where: eq(rsvps.userId, session.user.id),
-      with: {
-        event: {
-          with: {
-            host: { columns: { id: true, name: true, image: true } },
-            rsvps: { columns: { id: true } },
+  const [upcomingEvents, pastEvents, attendingRsvps, cohostingRows] =
+    await Promise.all([
+      db.query.events.findMany({
+        where: and(
+          eq(events.hostId, session.user.id),
+          gte(events.startTime, now),
+        ),
+        with: {
+          host: { columns: { id: true, name: true, image: true } },
+          rsvps: { columns: { id: true } },
+        },
+        orderBy: [desc(events.startTime)],
+      }),
+      db.query.events.findMany({
+        where: and(
+          eq(events.hostId, session.user.id),
+          lt(events.startTime, now),
+        ),
+        with: {
+          host: { columns: { id: true, name: true, image: true } },
+          rsvps: { columns: { id: true } },
+        },
+        orderBy: [desc(events.startTime)],
+      }),
+      db.query.rsvps.findMany({
+        where: eq(rsvps.userId, session.user.id),
+        with: {
+          event: {
+            with: {
+              host: { columns: { id: true, name: true, image: true } },
+              rsvps: { columns: { id: true } },
+            },
           },
         },
-      },
-      orderBy: [desc(rsvps.createdAt)],
-    }),
-  ]);
+        orderBy: [desc(rsvps.createdAt)],
+      }),
+      db.query.eventCohosts.findMany({
+        where: eq(eventCohosts.userId, session.user.id),
+        with: {
+          event: {
+            with: {
+              host: { columns: { id: true, name: true, image: true } },
+              rsvps: { columns: { id: true } },
+            },
+          },
+        },
+      }),
+    ]);
+
+  const cohostingEvents = cohostingRows.map((r) => r.event);
+  const cohostEventIds = new Set(cohostingEvents.map((e) => e.id));
 
   const attendingEvents = attendingRsvps
-    .filter((r) => r.event.hostId !== session.user.id)
+    .filter(
+      (r) =>
+        r.event.hostId !== session.user.id && !cohostEventIds.has(r.event.id),
+    )
     .map((r) => r.event);
 
   return (
@@ -74,6 +98,9 @@ export default async function EventsPage() {
             Upcoming ({upcomingEvents.length})
           </TabsTrigger>
           <TabsTrigger value="past">Past ({pastEvents.length})</TabsTrigger>
+          <TabsTrigger value="cohosting">
+            Co-hosting ({cohostingEvents.length})
+          </TabsTrigger>
           <TabsTrigger value="attending">
             Attending ({attendingEvents.length})
           </TabsTrigger>
@@ -103,6 +130,26 @@ export default async function EventsPage() {
           ) : (
             <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {pastEvents.map((event) => (
+                <EventCard
+                  key={event.id}
+                  event={{ ...event, _count: { rsvps: event.rsvps.length } }}
+                  href={`/dashboard/events/${event.id}`}
+                />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="cohosting" className="mt-6">
+          {cohostingEvents.length === 0 ? (
+            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12">
+              <p className="text-sm text-muted-foreground">
+                You&apos;re not co-hosting any events.
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {cohostingEvents.map((event) => (
                 <EventCard
                   key={event.id}
                   event={{ ...event, _count: { rsvps: event.rsvps.length } }}

@@ -1,11 +1,13 @@
-import { notFound } from "next/navigation";
-import Link from "next/link";
-import { ArrowLeft, Users, CheckCircle, Clock, XCircle } from "lucide-react";
-import { db } from "@/lib/db";
-import { events, rsvps, attendeeCheckins } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
+import { ArrowLeft, CheckCircle, Clock, Users, XCircle } from "lucide-react";
+import { headers } from "next/headers";
+import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { attendeeCheckins, events, rsvps } from "@/lib/db/schema";
 
 export default async function AnalyticsPage({
   params,
@@ -13,13 +15,21 @@ export default async function AnalyticsPage({
   params: Promise<{ eventId: string }>;
 }) {
   const { eventId } = await params;
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session?.user) redirect("/sign-in");
 
   const event = await db.query.events.findFirst({
     where: eq(events.id, eventId),
-    columns: { id: true, title: true },
+    with: { cohosts: { columns: { userId: true } } },
+    columns: { id: true, title: true, hostId: true },
   });
 
   if (!event) notFound();
+
+  const isHost = event.hostId === session.user.id;
+  const isCohost = event.cohosts.some((c) => c.userId === session.user.id);
+
+  if (!isHost && !isCohost) notFound();
 
   const eventRsvps = await db.query.rsvps.findMany({
     where: eq(rsvps.eventId, eventId),
@@ -33,7 +43,8 @@ export default async function AnalyticsPage({
   const pending = eventRsvps.filter((r) => r.status === "pending").length;
   const rejected = eventRsvps.filter((r) => r.status === "rejected").length;
   const checkedIn = checkins.length;
-  const checkInRate = approved > 0 ? Math.round((checkedIn / approved) * 100) : 0;
+  const checkInRate =
+    approved > 0 ? Math.round((checkedIn / approved) * 100) : 0;
 
   const stats = [
     { title: "Total RSVPs", value: eventRsvps.length, icon: Users },

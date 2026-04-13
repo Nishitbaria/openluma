@@ -1,30 +1,40 @@
 "use client";
 
 import { useChat } from "@ai-sdk/react";
-import { useState, Fragment } from "react";
+import { code } from "@streamdown/code";
+import type { UIMessage } from "ai";
+import { DefaultChatTransport, isToolUIPart } from "ai";
 import { format } from "date-fns";
 import {
-  User,
-  Loader2,
-  Sparkles,
   Bot,
-  RefreshCcw,
-  Copy,
-  ExternalLink,
   Calendar,
-  MapPin,
-  Users,
-  Globe,
-  Lock,
-  Link2,
+  Copy,
   Edit,
+  ExternalLink,
+  Globe,
+  Link2,
+  Loader2,
+  Lock,
+  MapPin,
   Plus,
+  RefreshCcw,
+  Sparkles,
   SquarePen,
+  User,
+  Users,
 } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
+import { Fragment, useState } from "react";
+import { toast } from "sonner";
 import { Streamdown } from "streamdown";
-import { code } from "@streamdown/code";
+import {
+  Artifact,
+  ArtifactAction,
+  ArtifactActions,
+  ArtifactContent,
+  ArtifactDescription,
+  ArtifactHeader,
+  ArtifactTitle,
+} from "@/components/ai-elements/artifact";
 import {
   Conversation,
   ConversationContent,
@@ -32,30 +42,21 @@ import {
 } from "@/components/ai-elements/conversation";
 import {
   Message,
-  MessageContent,
-  MessageActions,
   MessageAction,
+  MessageActions,
+  MessageContent,
 } from "@/components/ai-elements/message";
 import {
-  Artifact,
-  ArtifactHeader,
-  ArtifactTitle,
-  ArtifactDescription,
-  ArtifactActions,
-  ArtifactAction,
-  ArtifactContent,
-} from "@/components/ai-elements/artifact";
-import {
   PromptInput,
-  PromptInputTextarea,
   PromptInputBody,
   PromptInputFooter,
-  PromptInputSubmit,
-  PromptInputTools,
   type PromptInputMessage,
+  PromptInputSubmit,
+  PromptInputTextarea,
+  PromptInputTools,
 } from "@/components/ai-elements/prompt-input";
-import type { UIMessage } from "ai";
-import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 const suggestions = [
   { icon: Plus, label: "Create a tech meetup for next Friday at 6pm" },
@@ -65,7 +66,9 @@ const suggestions = [
 ];
 
 export function ChatPanel() {
-  const { messages, setMessages, sendMessage, status, regenerate } = useChat();
+  const { messages, setMessages, sendMessage, status, regenerate } = useChat({
+    transport: new DefaultChatTransport({ api: "/api/chat" }),
+  });
   const [input, setInput] = useState("");
 
   function handleSubmit(message: PromptInputMessage) {
@@ -158,9 +161,9 @@ export function ChatPanel() {
                 const artifacts = extractArtifacts(message.parts);
                 const hasRunningTool = message.parts.some(
                   (p) =>
-                    p.type.startsWith("tool-") &&
-                    (p as { state?: string }).state !== "output-available" &&
-                    (p as { state?: string }).state !== "result",
+                    isToolUIPart(p) &&
+                    p.state !== "output-available" &&
+                    p.state !== "output-error",
                 );
                 const lastTextIdx =
                   textParts.length > 0
@@ -284,7 +287,10 @@ export function ChatPanel() {
           <PromptInputFooter className="border-t-0">
             <PromptInputTools>
               <span className="text-xs text-muted-foreground">
-                <kbd className="rounded border px-1 font-mono text-[10px]">Enter</kbd> to send
+                <kbd className="rounded border px-1 font-mono text-[10px]">
+                  Enter
+                </kbd>{" "}
+                to send
               </span>
             </PromptInputTools>
             <PromptInputSubmit
@@ -328,13 +334,9 @@ type ChatArtifact = EventCreatedArtifactType | EventListArtifactType;
 function extractArtifacts(parts: UIMessage["parts"]): ChatArtifact[] {
   const artifacts: ChatArtifact[] = [];
   for (const part of parts) {
-    if (!part.type.startsWith("tool-")) continue;
-    const toolPart = part as Record<string, unknown>;
-    const state = toolPart.state as string | undefined;
-    if (state !== "output-available" && state !== "result") continue;
-    const output = (toolPart.output ?? toolPart.result) as
-      | Record<string, unknown>
-      | undefined;
+    if (!isToolUIPart(part)) continue;
+    if (part.state !== "output-available") continue;
+    const output = part.output as Record<string, unknown> | undefined;
     if (!output) continue;
     const partArtifacts = output.artifacts as
       | Array<{ type: string; data: unknown }>
@@ -365,7 +367,9 @@ function extractArtifacts(parts: UIMessage["parts"]): ChatArtifact[] {
     )
       artifacts.push({
         kind: "event-list",
-        events: (output.events as Record<string, unknown>[]).map(parseEventData),
+        events: (output.events as Record<string, unknown>[]).map(
+          parseEventData,
+        ),
       });
   }
   return artifacts;

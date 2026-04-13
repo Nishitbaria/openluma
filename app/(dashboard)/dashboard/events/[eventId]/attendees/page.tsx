@@ -1,14 +1,14 @@
-import { notFound } from "next/navigation";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { db } from "@/lib/db";
-import { events, rsvps, invitations } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
-import { auth } from "@/lib/auth";
+import { ArrowLeft } from "lucide-react";
 import { headers } from "next/headers";
-import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
 import { AttendeeList } from "@/components/events/attendee-list";
 import { InviteForm } from "@/components/events/invite-form";
+import { Button } from "@/components/ui/button";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { eventCohosts, events, invitations, rsvps } from "@/lib/db/schema";
 
 export default async function AttendeesPage({
   params,
@@ -17,17 +17,22 @@ export default async function AttendeesPage({
 }) {
   const { eventId } = await params;
   const session = await auth.api.getSession({ headers: await headers() });
+  if (!session?.user) redirect("/sign-in");
 
   const event = await db.query.events.findFirst({
     where: eq(events.id, eventId),
+    with: { cohosts: { columns: { userId: true } } },
     columns: { id: true, title: true, hostId: true },
   });
 
   if (!event) notFound();
 
-  const isHost = event.hostId === session?.user?.id;
+  const isHost = event.hostId === session.user.id;
+  const isCohost = event.cohosts.some((c) => c.userId === session.user.id);
 
-  const [attendees, eventInvitations] = await Promise.all([
+  if (!isHost && !isCohost) notFound();
+
+  const [attendees, eventInvitations, cohosts] = await Promise.all([
     db.query.rsvps.findMany({
       where: eq(rsvps.eventId, eventId),
       with: {
@@ -38,6 +43,12 @@ export default async function AttendeesPage({
     db.query.invitations.findMany({
       where: eq(invitations.eventId, eventId),
       orderBy: (invitations, { desc }) => [desc(invitations.createdAt)],
+    }),
+    db.query.eventCohosts.findMany({
+      where: eq(eventCohosts.eventId, eventId),
+      with: {
+        user: { columns: { id: true, name: true, email: true, image: true } },
+      },
     }),
   ]);
 
@@ -57,12 +68,17 @@ export default async function AttendeesPage({
         </div>
       </div>
 
-      {isHost && <InviteForm eventId={eventId} />}
+      {(isHost || isCohost) && <InviteForm eventId={eventId} />}
 
       <AttendeeList
         attendees={attendees.map((a) => ({
           ...a,
           createdAt: a.createdAt.toISOString(),
+        }))}
+        cohosts={cohosts.map((c) => ({
+          id: c.id,
+          userId: c.userId,
+          user: c.user,
         }))}
         invitations={eventInvitations.map((inv) => ({
           ...inv,

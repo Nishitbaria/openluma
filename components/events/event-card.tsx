@@ -1,13 +1,13 @@
-import Link from "next/link";
 import { format } from "date-fns";
-import { Calendar, MapPin, Users, Globe, Lock } from "lucide-react";
+import { Calendar, Globe, Lock, MapPin, Users } from "lucide-react";
+import Link from "next/link";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
   CardFooter,
   CardHeader,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 
 interface EventCardProps {
   event: {
@@ -45,7 +45,9 @@ export function EventCard({ event, href }: EventCardProps) {
         )}
         <CardHeader className="pb-2">
           <div className="flex items-center gap-2">
-            <Badge variant={event.visibility === "public" ? "default" : "secondary"}>
+            <Badge
+              variant={event.visibility === "public" ? "default" : "secondary"}
+            >
               {event.visibility === "public" ? (
                 <Globe className="mr-1 h-3 w-3" />
               ) : (
@@ -76,9 +78,7 @@ export function EventCard({ event, href }: EventCardProps) {
             <Users className="h-4 w-4" />
             <span>{event._count?.rsvps ?? 0} attendees</span>
           </div>
-          {event.host && (
-            <span className="ml-auto">by {event.host.name}</span>
-          )}
+          {event.host && <span className="ml-auto">by {event.host.name}</span>}
         </CardFooter>
       </Card>
     </Link>

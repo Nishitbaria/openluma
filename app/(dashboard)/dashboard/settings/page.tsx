@@ -1,14 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { Monitor, Moon, Sun } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
+import { useState } from "react";
 import { toast } from "sonner";
-import { Monitor, Moon, Sun } from "lucide-react";
-import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -25,6 +22,9 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 
 export default function SettingsPage() {

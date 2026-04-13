@@ -1,16 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { toast } from "sonner";
-import { Camera } from "lucide-react";
-import { authClient } from "@/lib/auth-client";
 import { UploadButton } from "@uploadthing/react";
-import type { OurFileRouter } from "@/lib/uploadthing";
+import { Camera } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { toast } from "sonner";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Label } from "@/components/ui/label";
 import {
   Card,
   CardContent,
@@ -18,7 +14,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { authClient } from "@/lib/auth-client";
+import type { OurFileRouter } from "@/lib/uploadthing";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -81,9 +81,7 @@ export default function ProfilePage() {
       <Card>
         <CardHeader>
           <CardTitle>Avatar</CardTitle>
-          <CardDescription>
-            Upload a profile picture. Max 2MB.
-          </CardDescription>
+          <CardDescription>Upload a profile picture. Max 2MB.</CardDescription>
         </CardHeader>
         <CardContent className="flex items-center gap-6">
           <Avatar className="h-20 w-20">

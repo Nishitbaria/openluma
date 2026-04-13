@@ -1,10 +1,10 @@
-import { ToolLoopAgent, tool, stepCountIs } from "ai";
-import { z } from "zod/v4";
 import { openai } from "@ai-sdk/openai";
-import { db } from "@/lib/db";
-import { events, rsvps, invitations } from "@/lib/db/schema";
-import { eq, and, ilike, gte, desc } from "drizzle-orm";
+import { stepCountIs, ToolLoopAgent, tool } from "ai";
+import { and, desc, eq, gte, ilike } from "drizzle-orm";
 import { nanoid } from "nanoid";
+import { z } from "zod/v4";
+import { db } from "@/lib/db";
+import { events, invitations, rsvps } from "@/lib/db/schema";
 import { sendInvitationEmail } from "@/lib/email";
 
 export function createEventAgent(userId: string) {
@@ -148,9 +148,7 @@ RULES:
             conditions.push(ilike(events.title, `%${params.query}%`));
           }
           if (params.startAfter) {
-            conditions.push(
-              gte(events.startTime, new Date(params.startAfter)),
-            );
+            conditions.push(gte(events.startTime, new Date(params.startAfter)));
           }
 
           const results = await db.query.events.findMany({
@@ -191,9 +189,20 @@ RULES:
             },
           });
           if (!event) return { error: "Event not found" };
+          if (event.visibility === "private" && event.hostId !== userId) {
+            return { error: "Not authorized to view this private event" };
+          }
+          // Only include attendee emails for the host
+          const isHost = event.hostId === userId;
           return {
             event: {
               ...event,
+              rsvps: isHost
+                ? event.rsvps
+                : event.rsvps.map((r) => ({
+                    ...r,
+                    user: { id: r.user.id, name: r.user.name },
+                  })),
               rsvpSummary: {
                 total: event.rsvps.length,
                 approved: event.rsvps.filter((r) => r.status === "approved")
@@ -243,7 +252,10 @@ RULES:
             .where(eq(events.id, eventId))
             .returning();
 
-          return { success: true, event: { id: updated.id, title: updated.title } };
+          return {
+            success: true,
+            event: { id: updated.id, title: updated.title },
+          };
         },
       }),
 
@@ -289,10 +301,7 @@ RULES:
           if (!event) return { error: "Event not found" };
 
           const existing = await db.query.rsvps.findFirst({
-            where: and(
-              eq(rsvps.eventId, eventId),
-              eq(rsvps.userId, userId),
-            ),
+            where: and(eq(rsvps.eventId, eventId), eq(rsvps.userId, userId)),
           });
           if (existing) return { error: "Already RSVP'd", rsvp: existing };
 
@@ -308,11 +317,23 @@ RULES:
       }),
 
       getAttendees: tool({
-        description: "Get the attendee list for an event.",
+        description:
+          "Get the attendee list for an event. Only the host can see attendee emails.",
         inputSchema: z.object({
           eventId: z.string().describe("The event ID"),
         }),
         execute: async ({ eventId }) => {
+          const event = await db.query.events.findFirst({
+            where: eq(events.id, eventId),
+            columns: { id: true, hostId: true, visibility: true },
+          });
+          if (!event) return { error: "Event not found" };
+          if (event.visibility === "private" && event.hostId !== userId) {
+            return {
+              error: "Not authorized to view attendees of this private event",
+            };
+          }
+          const isHost = event.hostId === userId;
           const eventRsvps = await db.query.rsvps.findMany({
             where: eq(rsvps.eventId, eventId),
             with: {
@@ -322,7 +343,7 @@ RULES:
           return {
             attendees: eventRsvps.map((r) => ({
               name: r.user.name,
-              email: r.user.email,
+              email: isHost ? r.user.email : undefined,
               status: r.status,
             })),
             total: eventRsvps.length,

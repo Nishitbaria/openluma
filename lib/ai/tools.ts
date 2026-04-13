@@ -1,21 +1,23 @@
 import { tool } from "ai";
+import { and, desc, eq, gte, ilike } from "drizzle-orm";
+import { nanoid } from "nanoid";
 import { z } from "zod/v4";
 import { db } from "@/lib/db";
-import { events, rsvps, invitations } from "@/lib/db/schema";
-import { eq, and, ilike, gte, desc } from "drizzle-orm";
-import { nanoid } from "nanoid";
+import { events, invitations, rsvps } from "@/lib/db/schema";
 import { sendInvitationEmail } from "@/lib/email";
 
 export function createTools(userId: string) {
   return {
     createEvent: tool({
-      description:
-        "Create a new event. Requires at least title and startTime.",
+      description: "Create a new event. Requires at least title and startTime.",
       inputSchema: z.object({
         title: z.string().describe("Event title"),
         description: z.string().optional().describe("Event description"),
         startTime: z.string().describe("ISO 8601 datetime for event start"),
-        endTime: z.string().optional().describe("ISO 8601 datetime for event end"),
+        endTime: z
+          .string()
+          .optional()
+          .describe("ISO 8601 datetime for event end"),
         location: z
           .string()
           .optional()
@@ -48,10 +50,7 @@ export function createTools(userId: string) {
     listMyEvents: tool({
       description: "List events hosted by the current user.",
       inputSchema: z.object({
-        upcoming: z
-          .boolean()
-          .optional()
-          .describe("Only show upcoming events"),
+        upcoming: z.boolean().optional().describe("Only show upcoming events"),
       }),
       execute: async ({ upcoming }) => {
         const conditions = [eq(events.hostId, userId)];

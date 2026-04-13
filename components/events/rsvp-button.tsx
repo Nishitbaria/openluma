@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { Check, Clock, LogIn, X } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { toast } from "sonner";
-import { LogIn, Check, Clock, X } from "lucide-react";
-import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
+import { authClient } from "@/lib/auth-client";
 
 export function RsvpButton({
   eventId,
@@ -59,6 +59,26 @@ export function RsvpButton({
           disabled={loading}
         >
           Cancel RSVP
+        </Button>
+      </div>
+    );
+  }
+
+  if (status === "waitlisted") {
+    return (
+      <div className="space-y-2">
+        <Button disabled className="w-full" size="lg" variant="outline">
+          <Clock className="mr-2 h-4 w-4 text-orange-600" />
+          On Waitlist
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full text-muted-foreground"
+          onClick={() => handleCancel()}
+          disabled={loading}
+        >
+          Leave Waitlist
         </Button>
       </div>
     );
@@ -123,8 +143,10 @@ export function RsvpButton({
       const newStatus = data.rsvp?.status ?? data.status;
       setStatus(newStatus);
 
-      if (newStatus === "pending" || requiresApproval) {
+      if (newStatus === "pending") {
         toast.success("RSVP submitted! Awaiting host approval.");
+      } else if (newStatus === "waitlisted") {
+        toast.success("You've been added to the waitlist.");
       } else {
         toast.success("You're attending this event!");
       }
@@ -160,7 +182,12 @@ export function RsvpButton({
   }
 
   return (
-    <Button onClick={handleRsvp} disabled={loading} className="w-full" size="lg">
+    <Button
+      onClick={handleRsvp}
+      disabled={loading}
+      className="w-full"
+      size="lg"
+    >
       {loading
         ? "Submitting..."
         : requiresApproval

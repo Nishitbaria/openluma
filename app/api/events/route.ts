@@ -1,10 +1,10 @@
+import { and, desc, eq, gte, ilike, lte } from "drizzle-orm";
+import { headers } from "next/headers";
+import type { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { events, eventTags } from "@/lib/db/schema";
 import { createEventSchema } from "@/lib/validators/event";
-import { headers } from "next/headers";
-import { eq, and, ilike, gte, lte, desc } from "drizzle-orm";
-import type { NextRequest } from "next/server";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -18,8 +18,16 @@ export async function GET(request: NextRequest) {
 
   const conditions = [];
 
-  if (visibility) {
-    conditions.push(eq(events.visibility, visibility as "public" | "private"));
+  // Default to public events only; private events require authentication + ownership
+  if (visibility === "private") {
+    const session = await auth.api.getSession({ headers: await headers() });
+    if (!session?.user) {
+      return Response.json({ message: "Unauthorized" }, { status: 401 });
+    }
+    conditions.push(eq(events.visibility, "private"));
+    conditions.push(eq(events.hostId, session.user.id));
+  } else {
+    conditions.push(eq(events.visibility, "public"));
   }
 
   if (hostId) {

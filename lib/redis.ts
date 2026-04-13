@@ -1,5 +1,5 @@
-import { Redis } from "@upstash/redis";
 import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
 
 function createRedis() {
   const url = process.env.UPSTASH_REDIS_REST_URL;

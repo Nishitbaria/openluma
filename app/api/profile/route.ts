@@ -1,9 +1,9 @@
-import { auth } from "@/lib/auth";
-import { db } from "@/lib/db";
-import { user } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import type { NextRequest } from "next/server";
+import { auth } from "@/lib/auth";
+import { db } from "@/lib/db";
+import { user } from "@/lib/db/schema";
 
 export async function PATCH(request: NextRequest) {
   const session = await auth.api.getSession({ headers: await headers() });

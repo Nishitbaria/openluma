@@ -1,8 +1,10 @@
-import { notFound } from "next/navigation";
+import { eq } from "drizzle-orm";
+import { headers } from "next/headers";
+import { notFound, redirect } from "next/navigation";
+import { EventForm } from "@/components/events/event-form";
+import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { events } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
-import { EventForm } from "@/components/events/event-form";
 
 export default async function EditEventPage({
   params,
@@ -10,14 +12,22 @@ export default async function EditEventPage({
   params: Promise<{ eventId: string }>;
 }) {
   const { eventId } = await params;
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session?.user) redirect("/sign-in");
 
   const event = await db.query.events.findFirst({
     where: eq(events.id, eventId),
+    with: { cohosts: { columns: { userId: true } } },
   });
 
   if (!event) {
     notFound();
   }
+
+  const isHost = event.hostId === session.user.id;
+  const isCohost = event.cohosts.some((c) => c.userId === session.user.id);
+
+  if (!isHost && !isCohost) notFound();
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">

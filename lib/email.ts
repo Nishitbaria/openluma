@@ -15,9 +15,13 @@ function generateICS(event: {
   id: string;
 }): string {
   const formatDate = (d: Date) =>
-    d.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+    d
+      .toISOString()
+      .replace(/[-:]/g, "")
+      .replace(/\.\d{3}/, "");
 
-  const end = event.endTime ?? new Date(event.startTime.getTime() + 60 * 60 * 1000);
+  const end =
+    event.endTime ?? new Date(event.startTime.getTime() + 60 * 60 * 1000);
 
   return [
     "BEGIN:VCALENDAR",
@@ -40,6 +44,7 @@ export async function sendInvitationEmail(
   to: string,
   eventTitle: string,
   inviteToken: string,
+  role: "attendee" | "cohost" = "attendee",
 ) {
   if (!resend) {
     console.warn("Resend not configured, skipping invitation email");
@@ -47,15 +52,25 @@ export async function sendInvitationEmail(
   }
 
   const inviteUrl = `${appUrl}/api/invitations/${inviteToken}`;
+  const isCohost = role === "cohost";
+  const subject = isCohost
+    ? `You're invited to co-host ${eventTitle}`
+    : `You're invited to ${eventTitle}`;
+  const heading = isCohost
+    ? "You've been invited as a Co-host!"
+    : "You've been invited!";
+  const description = isCohost
+    ? `You've been invited to co-host <strong>${eventTitle}</strong> on OpenLuma. As a co-host, you'll be able to manage attendees and event details.`
+    : `You've been invited to <strong>${eventTitle}</strong> on OpenLuma.`;
 
   const { data, error } = await resend.emails.send({
     from: fromEmail,
     to,
-    subject: `You're invited to ${eventTitle}`,
+    subject,
     html: `
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2>You've been invited!</h2>
-        <p>You've been invited to <strong>${eventTitle}</strong> on OpenLuma.</p>
+        <h2>${heading}</h2>
+        <p>${description}</p>
         <div style="margin: 24px 0;">
           <a href="${inviteUrl}?action=accept" style="background: #000; color: #fff; padding: 12px 24px; text-decoration: none; border-radius: 8px; display: inline-block;">Accept Invitation</a>
           <a href="${inviteUrl}?action=decline" style="color: #666; padding: 12px 24px; text-decoration: none; display: inline-block;">Decline</a>

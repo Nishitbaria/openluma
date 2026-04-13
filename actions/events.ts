@@ -1,12 +1,12 @@
 "use server";
 
+import { eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { events } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
-import { headers } from "next/headers";
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 
 export async function deleteEventAction(eventId: string) {
   const session = await auth.api.getSession({ headers: await headers() });

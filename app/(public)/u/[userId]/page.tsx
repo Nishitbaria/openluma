@@ -1,9 +1,9 @@
+import { and, desc, eq } from "drizzle-orm";
 import { notFound } from "next/navigation";
-import { db } from "@/lib/db";
-import { user, events } from "@/lib/db/schema";
-import { eq, and, desc } from "drizzle-orm";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { EventCard } from "@/components/events/event-card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { db } from "@/lib/db";
+import { events, user } from "@/lib/db/schema";
 
 export async function generateMetadata({
   params,

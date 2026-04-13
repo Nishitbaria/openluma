@@ -1,9 +1,9 @@
+import { and, eq } from "drizzle-orm";
+import { headers } from "next/headers";
+import type { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { events, eventCohosts, user } from "@/lib/db/schema";
-import { headers } from "next/headers";
-import { eq, and } from "drizzle-orm";
-import type { NextRequest } from "next/server";
+import { eventCohosts, events, user } from "@/lib/db/schema";
 
 export async function POST(
   request: NextRequest,

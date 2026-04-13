@@ -1,9 +1,9 @@
+import { and, eq } from "drizzle-orm";
+import { headers } from "next/headers";
+import type { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { events, rsvps, attendeeCheckins } from "@/lib/db/schema";
-import { headers } from "next/headers";
-import { eq, and } from "drizzle-orm";
-import type { NextRequest } from "next/server";
+import { attendeeCheckins, events, rsvps } from "@/lib/db/schema";
 
 export async function POST(
   request: NextRequest,
@@ -61,6 +61,27 @@ export async function GET(
   { params }: { params: Promise<{ eventId: string }> },
 ) {
   const { eventId } = await params;
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session?.user) {
+    return Response.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  const event = await db.query.events.findFirst({
+    where: eq(events.id, eventId),
+    with: { cohosts: { columns: { userId: true } } },
+    columns: { id: true, hostId: true },
+  });
+
+  if (!event) {
+    return Response.json({ message: "Event not found" }, { status: 404 });
+  }
+
+  const isHost = event.hostId === session.user.id;
+  const isCohost = event.cohosts.some((c) => c.userId === session.user.id);
+
+  if (!isHost && !isCohost) {
+    return Response.json({ message: "Not authorized" }, { status: 403 });
+  }
 
   const checkins = await db.query.attendeeCheckins.findMany({
     where: eq(attendeeCheckins.eventId, eventId),

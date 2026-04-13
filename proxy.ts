@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 
 const protectedPaths = [
@@ -41,9 +41,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: [
-    "/dashboard/:path*",
-    "/sign-in",
-    "/sign-up",
-  ],
+  matcher: ["/dashboard/:path*", "/sign-in", "/sign-up"],
 };

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { AtSignIcon, Loader2Icon, LockIcon } from "lucide-react";
 import Link from "next/link";
-import { authClient } from "@/lib/auth-client";
-import { cn } from "@/lib/utils";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState } from "react";
+import { toast } from "sonner";
+import { AuthDivider } from "@/components/auth-divider";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,9 +13,8 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from "@/components/ui/input-group";
-import { AuthDivider } from "@/components/auth-divider";
-import { AtSignIcon, LockIcon, Loader2Icon } from "lucide-react";
-import { toast } from "sonner";
+import { authClient } from "@/lib/auth-client";
+import { cn } from "@/lib/utils";
 
 export default function SignInPage() {
   const router = useRouter();

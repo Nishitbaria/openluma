@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { Logo } from "@/components/logo";
 import { GitHubIcon } from "@/components/icons";
+import { Logo } from "@/components/logo";
 import { Separator } from "@/components/ui/separator";
 
 const footerLinks = {

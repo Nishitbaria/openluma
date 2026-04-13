@@ -7,7 +7,8 @@ export default function AuthLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { isAuthenticated, isPending } = useRedirectIfAuthenticated("/dashboard");
+  const { isAuthenticated, isPending } =
+    useRedirectIfAuthenticated("/dashboard");
 
   if (isPending || isAuthenticated) return null;
 
