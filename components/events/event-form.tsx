@@ -50,6 +50,20 @@ export function EventForm({ event }: EventFormProps) {
   const [plainDescription, setPlainDescription] = useState(event?.description ?? "");
   const isEditing = !!event;
 
+  // Default to tomorrow 6 PM – 8 PM for new events
+  const defaultStart = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    d.setHours(18, 0, 0, 0);
+    return d.toISOString().slice(0, 16);
+  })();
+  const defaultEnd = (() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    d.setHours(20, 0, 0, 0);
+    return d.toISOString().slice(0, 16);
+  })();
+
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
@@ -180,7 +194,7 @@ export function EventForm({ event }: EventFormProps) {
                 defaultValue={
                   event?.startTime
                     ? new Date(event.startTime).toISOString().slice(0, 16)
-                    : ""
+                    : defaultStart
                 }
               />
             </div>
@@ -193,7 +207,7 @@ export function EventForm({ event }: EventFormProps) {
                 defaultValue={
                   event?.endTime
                     ? new Date(event.endTime).toISOString().slice(0, 16)
-                    : ""
+                    : defaultEnd
                 }
               />
             </div>
