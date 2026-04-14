@@ -10,6 +10,7 @@ interface EventTabsNavProps {
 const tabs = [
   { key: "overview", label: "Overview", requiresManage: false },
   { key: "guests", label: "Guests", requiresManage: true },
+  { key: "questions", label: "Questions", requiresManage: true },
   { key: "insights", label: "Insights", requiresManage: true },
   { key: "more", label: "More", requiresManage: true },
 ];

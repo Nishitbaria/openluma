@@ -1,17 +1,18 @@
 import { format } from "date-fns";
-import { and, eq } from "drizzle-orm";
+import { and, eq, lte } from "drizzle-orm";
 import { Calendar, Globe, Lock, MapPin, Users } from "lucide-react";
 import { headers } from "next/headers";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { CalendarExportButton } from "@/components/events/calendar-export-button";
+import { CopyLinkButton } from "@/components/events/copy-link-button";
 import { RichTextRenderer } from "@/components/events/rich-text-renderer";
 import { RsvpButton } from "@/components/events/rsvp-button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { events, rsvps } from "@/lib/db/schema";
+import { eventQuestions, events, rsvps } from "@/lib/db/schema";
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -87,15 +88,37 @@ export default async function PublicEventBySlugPage({
     | "waitlisted"
     | null = null;
 
-  if (session?.user) {
-    const userRsvp = await db.query.rsvps.findFirst({
+  const [userRsvpResult, questions] = await Promise.all([
+    session?.user
+      ? db.query.rsvps.findFirst({
+          where: and(
+            eq(rsvps.eventId, event.id),
+            eq(rsvps.userId, session.user.id),
+          ),
+          columns: { status: true, createdAt: true },
+        })
+      : Promise.resolve(undefined),
+    db.query.eventQuestions.findMany({
+      where: eq(eventQuestions.eventId, event.id),
+      orderBy: (q, { asc }) => [asc(q.order)],
+      columns: { id: true, label: true, type: true, required: true, options: true },
+    }),
+  ]);
+
+  currentRsvpStatus = userRsvpResult?.status ?? null;
+
+  // Waitlist position: count waitlisted RSVPs created at or before the user's
+  let waitlistPosition: number | null = null;
+  if (currentRsvpStatus === "waitlisted" && userRsvpResult?.createdAt) {
+    const earlier = await db.query.rsvps.findMany({
       where: and(
         eq(rsvps.eventId, event.id),
-        eq(rsvps.userId, session.user.id),
+        eq(rsvps.status, "waitlisted"),
+        lte(rsvps.createdAt, userRsvpResult.createdAt),
       ),
-      columns: { status: true },
+      columns: { id: true },
     });
-    currentRsvpStatus = userRsvp?.status ?? null;
+    waitlistPosition = earlier.length;
   }
 
   if (event.visibility === "private") {
@@ -151,7 +174,10 @@ export default async function PublicEventBySlugPage({
         )}
       </div>
 
-      <h1 className="text-4xl font-bold tracking-tight">{event.title}</h1>
+      <div className="flex items-start justify-between gap-3">
+        <h1 className="text-4xl font-bold tracking-tight">{event.title}</h1>
+        <CopyLinkButton url={`${appUrl}/e/${slug}`} />
+      </div>
       <p className="text-muted-foreground mt-2">Hosted by {event.host.name}</p>
 
       <div className="grid gap-8 md:grid-cols-3 mt-8">
@@ -236,6 +262,8 @@ export default async function PublicEventBySlugPage({
                   eventSlug={slug}
                   requiresApproval={event.requiresApproval}
                   currentRsvpStatus={currentRsvpStatus}
+                  questions={questions}
+                  waitlistPosition={waitlistPosition}
                 />
               )}
               <CalendarExportButton

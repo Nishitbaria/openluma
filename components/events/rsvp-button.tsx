@@ -5,25 +5,94 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { authClient } from "@/lib/auth-client";
+import {
+  type EventQuestion,
+  RsvpQuestionsDialog,
+} from "./rsvp-questions-dialog";
 
 export function RsvpButton({
   eventId,
   eventSlug,
   requiresApproval,
   currentRsvpStatus,
+  questions = [],
+  waitlistPosition,
 }: {
   eventId: string;
   eventSlug?: string;
   requiresApproval: boolean;
   currentRsvpStatus?: "pending" | "approved" | "rejected" | "waitlisted" | null;
+  questions?: EventQuestion[];
+  waitlistPosition?: number | null;
 }) {
   const router = useRouter();
   const { data: session } = authClient.useSession();
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(currentRsvpStatus);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [cancelLabel, setCancelLabel] = useState("");
 
   const isLoggedIn = !!session?.user;
+
+  const openCancelModal = (label: string) => {
+    setCancelLabel(label);
+    setCancelModalOpen(true);
+  };
+
+  const cancelConfirm = (label: string) => (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="w-full text-muted-foreground"
+      onClick={() => openCancelModal(label)}
+      disabled={loading}
+    >
+      {label}
+    </Button>
+  );
+
+  const cancelModal = (
+    <Dialog open={cancelModalOpen} onOpenChange={setCancelModalOpen}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>
+            {cancelLabel === "Leave Waitlist" ? "Leave Waitlist?" : "Cancel RSVP?"}
+          </DialogTitle>
+          <DialogDescription>
+            {cancelLabel === "Leave Waitlist"
+              ? "You'll lose your spot in the waitlist. You can re-join later, but you'll be placed at the end of the line."
+              : "Are you sure you want to cancel your RSVP? You can re-register later if spots are still available."}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button
+            variant="outline"
+            onClick={() => setCancelModalOpen(false)}
+            disabled={loading}
+          >
+            Keep my spot
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => { setCancelModalOpen(false); handleCancel(); }}
+            disabled={loading}
+          >
+            {loading ? "Cancelling..." : cancelLabel === "Leave Waitlist" ? "Leave Waitlist" : "Cancel RSVP"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 
   // Already RSVP'd - show status
   if (status === "approved") {
@@ -33,15 +102,8 @@ export function RsvpButton({
           <Check className="mr-2 h-4 w-4 text-green-600" />
           You&apos;re Attending
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full text-muted-foreground"
-          onClick={() => handleCancel()}
-          disabled={loading}
-        >
-          Cancel RSVP
-        </Button>
+        {cancelConfirm("Cancel RSVP")}
+        {cancelModal}
       </div>
     );
   }
@@ -53,15 +115,8 @@ export function RsvpButton({
           <Clock className="mr-2 h-4 w-4 text-yellow-600" />
           Pending Approval
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full text-muted-foreground"
-          onClick={() => handleCancel()}
-          disabled={loading}
-        >
-          Cancel RSVP
-        </Button>
+        {cancelConfirm("Cancel RSVP")}
+        {cancelModal}
       </div>
     );
   }
@@ -72,16 +127,19 @@ export function RsvpButton({
         <Button disabled className="w-full" size="lg" variant="outline">
           <Clock className="mr-2 h-4 w-4 text-orange-600" />
           On Waitlist
+          {waitlistPosition != null && (
+            <span className="ml-2 text-xs font-normal text-muted-foreground">
+              #{waitlistPosition}
+            </span>
+          )}
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full text-muted-foreground"
-          onClick={() => handleCancel()}
-          disabled={loading}
-        >
-          Leave Waitlist
-        </Button>
+        {waitlistPosition != null && (
+          <p className="text-xs text-center text-muted-foreground">
+            You&apos;re #{waitlistPosition} in line — we&apos;ll notify you if a spot opens.
+          </p>
+        )}
+        {cancelConfirm("Leave Waitlist")}
+        {cancelModal}
       </div>
     );
   }
@@ -125,13 +183,18 @@ export function RsvpButton({
   }
 
   // Logged in, not RSVP'd yet
-  async function handleRsvp() {
+  async function handleRsvp(customAnswers?: Record<string, string | boolean>) {
+    // If there are questions and no answers yet, open the dialog
+    if (questions.length > 0 && !customAnswers) {
+      setDialogOpen(true);
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch(`/api/events/${eventId}/rsvp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ customAnswers }),
       });
 
       if (res.status === 401) {
@@ -150,6 +213,7 @@ export function RsvpButton({
 
       const newStatus = data.rsvp?.status ?? data.status;
       setStatus(newStatus);
+      setDialogOpen(false);
 
       if (newStatus === "pending") {
         toast.success("RSVP submitted! Awaiting host approval.");
@@ -190,17 +254,29 @@ export function RsvpButton({
   }
 
   return (
-    <Button
-      onClick={handleRsvp}
-      disabled={loading}
-      className="w-full"
-      size="lg"
-    >
-      {loading
-        ? "Submitting..."
-        : requiresApproval
-          ? "Request to Attend"
-          : "RSVP - I'm Going!"}
-    </Button>
+    <>
+      <Button
+        onClick={() => handleRsvp()}
+        disabled={loading}
+        className="w-full"
+        size="lg"
+      >
+        {loading
+          ? "Submitting..."
+          : requiresApproval
+            ? "Request to Attend"
+            : "RSVP - I'm Going!"}
+      </Button>
+      {questions.length > 0 && (
+        <RsvpQuestionsDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          questions={questions}
+          onSubmit={(answers) => handleRsvp(answers)}
+          loading={loading}
+          submitLabel={requiresApproval ? "Request to Attend" : "RSVP - I'm Going!"}
+        />
+      )}
+    </>
   );
 }

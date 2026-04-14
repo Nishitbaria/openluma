@@ -1,7 +1,7 @@
 # OpenLuma Feature Roadmap
 
 > Gap analysis vs Lu.ma — prioritized by impact-to-effort ratio.
-> Last updated: 2026-04-14
+> Last updated: 2026-04-15
 
 ---
 
@@ -22,6 +22,9 @@
 - Rich text event descriptions — Tiptap WYSIWYG editor, stored as JSON with plain-text fallback (PR #3)
 - Event cloning — "Duplicate" button + AI `cloneEvent` tool (PR #4)
 - Waitlist auto-promotion — auto-waitlists when full, promotes oldest on cancellation (PR #5)
+- Automated pre-event reminders — Vercel Cron sends 24h + 1h emails to approved attendees (PR #6)
+- Custom registration questions — hosts define text/paragraph/checkbox/dropdown questions per event, answers stored per RSVP (PR #7)
+- UI polish — RSVP cancel confirmation modal, waitlist position display, copy link button on public event page, improved empty states
 
 ## What We Don't Have (vs Lu.ma)
 
@@ -111,7 +114,7 @@
 
 ---
 
-### 6. Automated Pre-Event Reminders
+### 6. Automated Pre-Event Reminders ✅ Done
 
 **Problem:** `sendEventReminderEmail` is fully implemented in `lib/email.ts` but never called from anywhere. No scheduler exists.
 
@@ -126,7 +129,7 @@
 
 ---
 
-### 7. Custom Registration Questions
+### 7. Custom Registration Questions ✅ Done
 
 **Problem:** Every real event needs at least one custom question (dietary restrictions, company name, t-shirt size). Currently no way to collect structured data from attendees.
 
@@ -234,29 +237,6 @@ webhooks: id, userId, url, events text[], secret, active, createdAt
 
 ---
 
-### 12. AI-Powered Event Blast Emails
-
-**Problem:** No way for hosts to email their guest list. Lu.ma has event blasts with segment targeting.
-
-**Solution:** Host writes or AI-drafts a message. Send to filtered segments (all approved, waitlisted, by custom question answer). Uses Resend batch API (`resend.batch.send`).
-
-**OpenLuma AI advantage:** "AI drafts your event announcement, then sends it to your filtered guest list in one step." No other open-source event tool has this.
-
-**Schema changes:**
-```
-eventBlasts: id, eventId, subject, body, sentTo (jsonb), sentAt, createdBy
-```
-
-**Files to modify:**
-- `lib/db/schema.ts` — new `eventBlasts` table
-- `lib/email.ts` — add `sendEventBlastEmail` using `resend.batch.send`
-- `lib/ai/agents/event-agent.ts` — add blast draft tool
-- `app/(dashboard)/dashboard/events/[eventId]/page.tsx` — blast UI in More tab or new sub-page
-
-**Dependencies:** None (Resend batch is part of existing `resend` package)
-
----
-
 ## Tier 3 — Nice to Have
 
 ### 13. Event Page Themes
@@ -265,13 +245,10 @@ eventBlasts: id, eventId, subject, body, sentTo (jsonb), sentAt, createdBy
 ### 14. Community Calendar Pages
 Public `/u/[userId]/calendar` page + ICS feed at `/u/[userId]/calendar.ics`. Subscribable calendar showing all public events by a host. ICS generation already exists in `lib/email.ts`.
 
-### 15. Token Gating (Web3)
-Require wallet connection + NFT/ERC-20 balance to RSVP. `eventGates` table. Niche but makes OpenLuma the default for token-gated events. **Deps:** `viem`, `wagmi`.
-
-### 16. SMS Reminders (Twilio)
+### 15. SMS Reminders (Twilio)
 Add `phoneNumber text` to user. Send SMS alongside email reminders. 95% open rate vs 25% for email. **Deps:** `twilio`.
 
-### 17. Group Registration
+### 16. Group Registration
 `quantity int default 1` on rsvps. Capacity checks use `SUM(quantity)`. One QR per attendee in group.
 
 ---
@@ -282,10 +259,11 @@ Add `phoneNumber text` to user. Send SMS alongside email reminders. 95% open rat
 |--------|----------|--------|
 | 1 | Slugs (#1), OG Images (#2) | ✅ Done |
 | 2 | Rich Text (#3), Event Cloning (#4) | ✅ Done |
-| 3 | Waitlist (#5), Reminders (#6) | Waitlist ✅ Done — Reminders pending |
-| 4 | Custom Questions (#7), Analytics (#9) | Pending |
-| 5 | Paid Ticketing (#8), API/Webhooks (#10) | Pending |
-| 6+ | Tier 3 features by community demand | Pending |
+| 3 | Waitlist (#5), Reminders (#6) | ✅ Done |
+| 4 | Custom Questions (#7), UI Polish | ✅ Done |
+| 5 | Analytics (#9), Paid Ticketing (#8) | Pending |
+| 6 | API/Webhooks (#10), Zoom/Meet (#11) | Pending |
+| 7+ | Tier 3 features by community demand | Pending |
 
 ---
 
@@ -297,10 +275,9 @@ Already built (Lu.ma doesn't have):
 - **No vendor lock-in** — own your data, own your audience
 
 Differentiation to lean into:
-- AI-drafted event descriptions and blast emails
+- AI-drafted event descriptions
 - AI-powered event discovery recommendations
 - Open API from day one (Lu.ma paywalls their API behind $59/mo Plus plan)
-- Community-driven themes and plugins
 
 ---
 

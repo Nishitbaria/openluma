@@ -7,6 +7,7 @@ import {
   Mail,
   ShieldCheck,
   UserMinus,
+  Users,
   X,
   XCircle,
 } from "lucide-react";
@@ -17,10 +18,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
+interface Question {
+  id: string;
+  label: string;
+}
+
 interface Attendee {
   id: string;
   status: "pending" | "approved" | "rejected" | "waitlisted";
   message: string | null;
+  customAnswers: Record<string, string | boolean> | null;
   createdAt: string;
   user: {
     id: string;
@@ -54,12 +61,14 @@ export function AttendeeList({
   attendees,
   cohosts = [],
   invitations = [],
+  questions = [],
   eventId,
   isHost,
 }: {
   attendees: Attendee[];
   cohosts?: Cohost[];
   invitations?: Invitation[];
+  questions?: Question[];
   eventId: string;
   isHost: boolean;
 }) {
@@ -157,19 +166,29 @@ export function AttendeeList({
   }
 
   function exportCsv() {
+    const questionHeaders = questions.map((q) => `"${q.label.replace(/"/g, '""')}"`).join(",");
+    const header = `Name,Email,Status,Role,Date${questions.length > 0 ? `,${questionHeaders}` : ""}`;
+
+    const attendeeAnswers = (a: Attendee) =>
+      questions.map((q) => {
+        const ans = a.customAnswers?.[q.id];
+        if (ans === undefined || ans === null) return `""`;
+        return `"${String(ans).replace(/"/g, '""')}"`;
+      }).join(",");
+
     const rows = [
-      "Name,Email,Status,Role,Date",
+      header,
       ...cohosts.map(
         (c) =>
-          `"${c.user.name}","${c.user.email ?? ""}","active","Co-host","—"`,
+          `"${c.user.name}","${c.user.email ?? ""}","active","Co-host","—"${questions.length > 0 ? `,${questions.map(() => `""`).join(",")}` : ""}`,
       ),
       ...attendees.map(
         (a) =>
-          `"${a.user.name}","${a.user.email}","${a.status}","Attendee","${new Date(a.createdAt).toLocaleDateString()}"`,
+          `"${a.user.name}","${a.user.email}","${a.status}","Attendee","${new Date(a.createdAt).toLocaleDateString()}"${questions.length > 0 ? `,${attendeeAnswers(a)}` : ""}`,
       ),
       ...invitations.map(
         (inv) =>
-          `"—","${inv.email}","${inv.status}","${inv.role === "cohost" ? "Co-host" : "Attendee"} (invited)","${new Date(inv.createdAt).toLocaleDateString()}"`,
+          `"—","${inv.email}","${inv.status}","${inv.role === "cohost" ? "Co-host" : "Attendee"} (invited)","${new Date(inv.createdAt).toLocaleDateString()}"${questions.length > 0 ? `,${questions.map(() => `""`).join(",")}` : ""}`,
       ),
     ].join("\n");
 
@@ -288,9 +307,11 @@ export function AttendeeList({
           RSVPs ({attendees.length})
         </h3>
         {attendees.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-6">
-            No RSVPs yet.
-          </p>
+          <div className="flex flex-col items-center gap-2 py-10 text-center border rounded-lg">
+            <Users className="h-8 w-8 text-muted-foreground/50" />
+            <p className="text-sm font-medium">No RSVPs yet</p>
+            <p className="text-xs text-muted-foreground">Share your event link to start collecting RSVPs.</p>
+          </div>
         ) : (
           <div className="divide-y rounded-lg border">
             {attendees.map((attendee) => (
@@ -311,6 +332,20 @@ export function AttendeeList({
                       <p className="text-xs text-muted-foreground mt-1 italic">
                         &quot;{attendee.message}&quot;
                       </p>
+                    )}
+                    {attendee.customAnswers && questions.length > 0 && (
+                      <div className="mt-1 space-y-0.5">
+                        {questions.map((q) => {
+                          const ans = attendee.customAnswers?.[q.id];
+                          if (ans === undefined || ans === null) return null;
+                          return (
+                            <p key={q.id} className="text-xs text-muted-foreground">
+                              <span className="font-medium">{q.label}:</span>{" "}
+                              {typeof ans === "boolean" ? (ans ? "Yes" : "No") : ans}
+                            </p>
+                          );
+                        })}
+                      </div>
                     )}
                   </div>
                 </div>

@@ -3,6 +3,7 @@ import {
   boolean,
   index,
   integer,
+  json,
   pgEnum,
   pgTable,
   text,
@@ -95,6 +96,13 @@ export const invitationRoleEnum = pgEnum("invitation_role", [
   "cohost",
 ]);
 
+export const questionTypeEnum = pgEnum("question_type", [
+  "text",
+  "paragraph",
+  "checkbox",
+  "dropdown",
+]);
+
 // ─── Application Tables ──────────────────────────────────────────────────────
 
 export const categories = pgTable("categories", {
@@ -157,6 +165,24 @@ export const eventTags = pgTable(
   (table) => [index("event_tags_event_id_idx").on(table.eventId)],
 );
 
+export const eventQuestions = pgTable(
+  "event_questions",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    eventId: text("event_id")
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
+    label: text("label").notNull(),
+    type: questionTypeEnum("type").notNull().default("text"),
+    required: boolean("required").notNull().default(false),
+    order: integer("order").notNull().default(0),
+    options: json("options").$type<string[]>(),
+  },
+  (table) => [index("event_questions_event_id_idx").on(table.eventId)],
+);
+
 export const rsvps = pgTable(
   "rsvps",
   {
@@ -171,6 +197,7 @@ export const rsvps = pgTable(
       .references(() => user.id, { onDelete: "cascade" }),
     status: rsvpStatusEnum("status").notNull().default("pending"),
     message: text("message"),
+    customAnswers: json("custom_answers").$type<Record<string, string | boolean>>(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -278,6 +305,7 @@ export const eventsRelations = relations(events, ({ one, many }) => ({
   invitations: many(invitations),
   cohosts: many(eventCohosts),
   tags: many(eventTags),
+  questions: many(eventQuestions),
   checkins: many(attendeeCheckins),
 }));
 
@@ -287,6 +315,10 @@ export const categoriesRelations = relations(categories, ({ many }) => ({
 
 export const eventTagsRelations = relations(eventTags, ({ one }) => ({
   event: one(events, { fields: [eventTags.eventId], references: [events.id] }),
+}));
+
+export const eventQuestionsRelations = relations(eventQuestions, ({ one }) => ({
+  event: one(events, { fields: [eventQuestions.eventId], references: [events.id] }),
 }));
 
 export const rsvpsRelations = relations(rsvps, ({ one }) => ({
