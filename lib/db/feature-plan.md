@@ -17,6 +17,11 @@
 - User profiles with avatar upload (UploadThing)
 - Dashboard with basic analytics (counts only)
 - CSV attendee export, light/dark theme, sidebar navigation
+- Custom event URL slugs — shareable `/e/[slug]` links, auto-generated + customizable (PR #1)
+- OG image generation — 1200×630 social cards via `next/og`, Redis-cached (PR #2)
+- Rich text event descriptions — Tiptap WYSIWYG editor, stored as JSON with plain-text fallback (PR #3)
+- Event cloning — "Duplicate" button + AI `cloneEvent` tool (PR #4)
+- Waitlist auto-promotion — auto-waitlists when full, promotes oldest on cancellation (PR #5)
 
 ## What We Don't Have (vs Lu.ma)
 
@@ -24,7 +29,7 @@
 
 ## Tier 1 — High Impact, Moderate Effort
 
-### 1. Custom Event URL Slugs
+### 1. Custom Event URL Slugs ✅ Done
 
 **Problem:** All event URLs use UUIDs (`/events/9935db37-cde9-...`) which look unprofessional in social posts and messages.
 
@@ -41,7 +46,7 @@
 
 ---
 
-### 2. OG Image Generation for Social Sharing
+### 2. OG Image Generation for Social Sharing ✅ Done
 
 **Problem:** Shared event links on Twitter/LinkedIn show no rich preview — just a plain text link. Lu.ma generates beautiful social cards automatically.
 
@@ -56,7 +61,7 @@
 
 ---
 
-### 3. Rich Text Event Descriptions
+### 3. Rich Text Event Descriptions ✅ Done
 
 **Problem:** Event descriptions are plain text only. Lu.ma supports bold, italic, bullets, links, and embeds. Plain text is the #1 quality gap.
 
@@ -74,7 +79,7 @@
 
 ---
 
-### 4. Event Cloning / Duplication
+### 4. Event Cloning / Duplication ✅ Done
 
 **Problem:** Recurring meetup organizers re-create events from scratch every time. Lu.ma has "Clone Event" (up to 30 at once).
 
@@ -89,7 +94,7 @@
 
 ---
 
-### 5. Waitlist Auto-Promotion
+### 5. Waitlist Auto-Promotion ✅ Done
 
 **Problem:** The `waitlisted` status exists in `rsvpStatusEnum` but is never used. When capacity fills, new RSVPs fail instead of waitlisting. When someone cancels, hosts must manually promote.
 
@@ -273,14 +278,14 @@ Add `phoneNumber text` to user. Send SMS alongside email reminders. 95% open rat
 
 ## Implementation Sequencing
 
-| Sprint | Features | Rationale |
-|--------|----------|-----------|
-| 1 | Slugs (#1), OG Images (#2) | Quick wins visible on every shared link |
-| 2 | Rich Text (#3), Event Cloning (#4) | Core UX quality + organizer productivity |
-| 3 | Waitlist (#5), Reminders (#6) | Engagement + show-up rate |
-| 4 | Custom Questions (#7), Analytics (#9) | Data collection + host insights |
-| 5 | Paid Ticketing (#8), API/Webhooks (#10) | Monetization + integration foundation |
-| 6+ | Tier 3 features by community demand | Themes, calendar pages, token gating, SMS |
+| Sprint | Features | Status |
+|--------|----------|--------|
+| 1 | Slugs (#1), OG Images (#2) | ✅ Done |
+| 2 | Rich Text (#3), Event Cloning (#4) | ✅ Done |
+| 3 | Waitlist (#5), Reminders (#6) | Waitlist ✅ Done — Reminders pending |
+| 4 | Custom Questions (#7), Analytics (#9) | Pending |
+| 5 | Paid Ticketing (#8), API/Webhooks (#10) | Pending |
+| 6+ | Tier 3 features by community demand | Pending |
 
 ---
 
