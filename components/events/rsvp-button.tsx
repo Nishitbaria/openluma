@@ -17,20 +17,57 @@ export function RsvpButton({
   requiresApproval,
   currentRsvpStatus,
   questions = [],
+  waitlistPosition,
 }: {
   eventId: string;
   eventSlug?: string;
   requiresApproval: boolean;
   currentRsvpStatus?: "pending" | "approved" | "rejected" | "waitlisted" | null;
   questions?: EventQuestion[];
+  waitlistPosition?: number | null;
 }) {
   const router = useRouter();
   const { data: session } = authClient.useSession();
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(currentRsvpStatus);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
 
   const isLoggedIn = !!session?.user;
+
+  const cancelConfirm = (label: string) =>
+    confirmingCancel ? (
+      <div className="flex gap-2">
+        <Button
+          variant="destructive"
+          size="sm"
+          className="flex-1"
+          onClick={() => { setConfirmingCancel(false); handleCancel(); }}
+          disabled={loading}
+        >
+          {loading ? "Cancelling..." : "Yes, cancel"}
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="flex-1"
+          onClick={() => setConfirmingCancel(false)}
+          disabled={loading}
+        >
+          Never mind
+        </Button>
+      </div>
+    ) : (
+      <Button
+        variant="ghost"
+        size="sm"
+        className="w-full text-muted-foreground"
+        onClick={() => setConfirmingCancel(true)}
+        disabled={loading}
+      >
+        {label}
+      </Button>
+    );
 
   // Already RSVP'd - show status
   if (status === "approved") {
@@ -40,15 +77,7 @@ export function RsvpButton({
           <Check className="mr-2 h-4 w-4 text-green-600" />
           You&apos;re Attending
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full text-muted-foreground"
-          onClick={() => handleCancel()}
-          disabled={loading}
-        >
-          Cancel RSVP
-        </Button>
+        {cancelConfirm("Cancel RSVP")}
       </div>
     );
   }
@@ -60,15 +89,7 @@ export function RsvpButton({
           <Clock className="mr-2 h-4 w-4 text-yellow-600" />
           Pending Approval
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full text-muted-foreground"
-          onClick={() => handleCancel()}
-          disabled={loading}
-        >
-          Cancel RSVP
-        </Button>
+        {cancelConfirm("Cancel RSVP")}
       </div>
     );
   }
@@ -79,16 +100,18 @@ export function RsvpButton({
         <Button disabled className="w-full" size="lg" variant="outline">
           <Clock className="mr-2 h-4 w-4 text-orange-600" />
           On Waitlist
+          {waitlistPosition != null && (
+            <span className="ml-2 text-xs font-normal text-muted-foreground">
+              #{waitlistPosition}
+            </span>
+          )}
         </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full text-muted-foreground"
-          onClick={() => handleCancel()}
-          disabled={loading}
-        >
-          Leave Waitlist
-        </Button>
+        {waitlistPosition != null && (
+          <p className="text-xs text-center text-muted-foreground">
+            You&apos;re #{waitlistPosition} in line — we&apos;ll notify you if a spot opens.
+          </p>
+        )}
+        {cancelConfirm("Leave Waitlist")}
       </div>
     );
   }

@@ -15,6 +15,20 @@
       "when": 1776140482007,
       "tag": "0001_cute_arclight",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1776185471391,
+      "tag": "0002_colossal_cyclops",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1776186173874,
+      "tag": "0003_short_angel",
+      "breakpoints": true
     }
   ]
 }

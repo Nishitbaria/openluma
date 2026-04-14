@@ -1,10 +1,11 @@
 import { format } from "date-fns";
-import { and, eq } from "drizzle-orm";
+import { and, eq, lte } from "drizzle-orm";
 import { Calendar, Globe, Lock, MapPin, Users } from "lucide-react";
 import { headers } from "next/headers";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { CalendarExportButton } from "@/components/events/calendar-export-button";
+import { CopyLinkButton } from "@/components/events/copy-link-button";
 import { RichTextRenderer } from "@/components/events/rich-text-renderer";
 import { RsvpButton } from "@/components/events/rsvp-button";
 import { Badge } from "@/components/ui/badge";
@@ -94,7 +95,7 @@ export default async function PublicEventBySlugPage({
             eq(rsvps.eventId, event.id),
             eq(rsvps.userId, session.user.id),
           ),
-          columns: { status: true },
+          columns: { status: true, createdAt: true },
         })
       : Promise.resolve(undefined),
     db.query.eventQuestions.findMany({
@@ -105,6 +106,20 @@ export default async function PublicEventBySlugPage({
   ]);
 
   currentRsvpStatus = userRsvpResult?.status ?? null;
+
+  // Waitlist position: count waitlisted RSVPs created at or before the user's
+  let waitlistPosition: number | null = null;
+  if (currentRsvpStatus === "waitlisted" && userRsvpResult?.createdAt) {
+    const earlier = await db.query.rsvps.findMany({
+      where: and(
+        eq(rsvps.eventId, event.id),
+        eq(rsvps.status, "waitlisted"),
+        lte(rsvps.createdAt, userRsvpResult.createdAt),
+      ),
+      columns: { id: true },
+    });
+    waitlistPosition = earlier.length;
+  }
 
   if (event.visibility === "private") {
     const isHost = session?.user?.id === event.host.id;
@@ -159,7 +174,10 @@ export default async function PublicEventBySlugPage({
         )}
       </div>
 
-      <h1 className="text-4xl font-bold tracking-tight">{event.title}</h1>
+      <div className="flex items-start justify-between gap-3">
+        <h1 className="text-4xl font-bold tracking-tight">{event.title}</h1>
+        <CopyLinkButton url={`${appUrl}/e/${slug}`} />
+      </div>
       <p className="text-muted-foreground mt-2">Hosted by {event.host.name}</p>
 
       <div className="grid gap-8 md:grid-cols-3 mt-8">
@@ -245,6 +263,7 @@ export default async function PublicEventBySlugPage({
                   requiresApproval={event.requiresApproval}
                   currentRsvpStatus={currentRsvpStatus}
                   questions={questions}
+                  waitlistPosition={waitlistPosition}
                 />
               )}
               <CalendarExportButton

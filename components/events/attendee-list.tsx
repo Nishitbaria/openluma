@@ -7,6 +7,7 @@ import {
   Mail,
   ShieldCheck,
   UserMinus,
+  Users,
   X,
   XCircle,
 } from "lucide-react";
@@ -306,9 +307,11 @@ export function AttendeeList({
           RSVPs ({attendees.length})
         </h3>
         {attendees.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-6">
-            No RSVPs yet.
-          </p>
+          <div className="flex flex-col items-center gap-2 py-10 text-center border rounded-lg">
+            <Users className="h-8 w-8 text-muted-foreground/50" />
+            <p className="text-sm font-medium">No RSVPs yet</p>
+            <p className="text-xs text-muted-foreground">Share your event link to start collecting RSVPs.</p>
+          </div>
         ) : (
           <div className="divide-y rounded-lg border">
             {attendees.map((attendee) => (
