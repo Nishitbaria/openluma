@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus, Trash2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -195,25 +195,63 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
           </div>
 
           {q.type === "dropdown" && (
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Label className="text-xs text-muted-foreground">
-                Options (one per line)
+                Dropdown options
               </Label>
-              <textarea
-                className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm resize-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                value={(q.options ?? []).join("\n")}
-                onChange={(e) =>
+              <div className="space-y-2">
+                {(q.options ?? []).map((opt, optIdx) => (
+                  <div key={optIdx} className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground w-4 shrink-0">{optIdx + 1}.</span>
+                    <Input
+                      className="h-8 text-sm"
+                      value={opt}
+                      placeholder={`Option ${optIdx + 1}`}
+                      onChange={(e) => {
+                        const newOptions = [...(q.options ?? [])];
+                        newOptions[optIdx] = e.target.value;
+                        setQuestions((prev) =>
+                          prev.map((x) => (x.id === q.id ? { ...x, options: newOptions } : x)),
+                        );
+                      }}
+                      onBlur={() => updateQuestion(q.id, { options: q.options })}
+                    />
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                      onClick={() => {
+                        const newOptions = (q.options ?? []).filter((_, i) => i !== optIdx);
+                        setQuestions((prev) =>
+                          prev.map((x) => (x.id === q.id ? { ...x, options: newOptions } : x)),
+                        );
+                        updateQuestion(q.id, { options: newOptions });
+                      }}
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                ))}
+              </div>
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 w-full text-xs"
+                onClick={() => {
+                  const newOptions = [...(q.options ?? []), ""];
                   setQuestions((prev) =>
-                    prev.map((x) =>
-                      x.id === q.id
-                        ? { ...x, options: e.target.value.split("\n").filter(Boolean) }
-                        : x,
-                    ),
-                  )
-                }
-                onBlur={() => updateQuestion(q.id, { options: q.options })}
-                placeholder="Option 1&#10;Option 2&#10;Option 3"
-              />
+                    prev.map((x) => (x.id === q.id ? { ...x, options: newOptions } : x)),
+                  );
+                }}
+              >
+                <Plus className="mr-1 h-3 w-3" />
+                Add Option
+              </Button>
+              {(q.options ?? []).length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  Click "Add Option" to create choices for attendees.
+                </p>
+              )}
             </div>
           )}
 
