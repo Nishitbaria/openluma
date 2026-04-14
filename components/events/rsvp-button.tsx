@@ -5,6 +5,14 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { authClient } from "@/lib/auth-client";
 import {
   type EventQuestion,
@@ -31,43 +39,60 @@ export function RsvpButton({
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(currentRsvpStatus);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [confirmingCancel, setConfirmingCancel] = useState(false);
+  const [cancelModalOpen, setCancelModalOpen] = useState(false);
+  const [cancelLabel, setCancelLabel] = useState("");
 
   const isLoggedIn = !!session?.user;
 
-  const cancelConfirm = (label: string) =>
-    confirmingCancel ? (
-      <div className="flex gap-2">
-        <Button
-          variant="destructive"
-          size="sm"
-          className="flex-1"
-          onClick={() => { setConfirmingCancel(false); handleCancel(); }}
-          disabled={loading}
-        >
-          {loading ? "Cancelling..." : "Yes, cancel"}
-        </Button>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="flex-1"
-          onClick={() => setConfirmingCancel(false)}
-          disabled={loading}
-        >
-          Never mind
-        </Button>
-      </div>
-    ) : (
-      <Button
-        variant="ghost"
-        size="sm"
-        className="w-full text-muted-foreground"
-        onClick={() => setConfirmingCancel(true)}
-        disabled={loading}
-      >
-        {label}
-      </Button>
-    );
+  const openCancelModal = (label: string) => {
+    setCancelLabel(label);
+    setCancelModalOpen(true);
+  };
+
+  const cancelConfirm = (label: string) => (
+    <Button
+      variant="ghost"
+      size="sm"
+      className="w-full text-muted-foreground"
+      onClick={() => openCancelModal(label)}
+      disabled={loading}
+    >
+      {label}
+    </Button>
+  );
+
+  const cancelModal = (
+    <Dialog open={cancelModalOpen} onOpenChange={setCancelModalOpen}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>
+            {cancelLabel === "Leave Waitlist" ? "Leave Waitlist?" : "Cancel RSVP?"}
+          </DialogTitle>
+          <DialogDescription>
+            {cancelLabel === "Leave Waitlist"
+              ? "You'll lose your spot in the waitlist. You can re-join later, but you'll be placed at the end of the line."
+              : "Are you sure you want to cancel your RSVP? You can re-register later if spots are still available."}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="gap-2 sm:gap-0">
+          <Button
+            variant="outline"
+            onClick={() => setCancelModalOpen(false)}
+            disabled={loading}
+          >
+            Keep my spot
+          </Button>
+          <Button
+            variant="destructive"
+            onClick={() => { setCancelModalOpen(false); handleCancel(); }}
+            disabled={loading}
+          >
+            {loading ? "Cancelling..." : cancelLabel === "Leave Waitlist" ? "Leave Waitlist" : "Cancel RSVP"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
 
   // Already RSVP'd - show status
   if (status === "approved") {
@@ -78,6 +103,7 @@ export function RsvpButton({
           You&apos;re Attending
         </Button>
         {cancelConfirm("Cancel RSVP")}
+        {cancelModal}
       </div>
     );
   }
@@ -90,6 +116,7 @@ export function RsvpButton({
           Pending Approval
         </Button>
         {cancelConfirm("Cancel RSVP")}
+        {cancelModal}
       </div>
     );
   }
@@ -112,6 +139,7 @@ export function RsvpButton({
           </p>
         )}
         {cancelConfirm("Leave Waitlist")}
+        {cancelModal}
       </div>
     );
   }
