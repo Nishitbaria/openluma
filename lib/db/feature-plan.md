@@ -23,6 +23,7 @@
 - Event cloning — "Duplicate" button + AI `cloneEvent` tool (PR #4)
 - Waitlist auto-promotion — auto-waitlists when full, promotes oldest on cancellation (PR #5)
 - Automated pre-event reminders — Vercel Cron sends 24h + 1h emails to approved attendees (PR #6)
+- Custom registration questions — hosts define text/paragraph/checkbox/dropdown questions per event, answers stored per RSVP (PR #7)
 
 ## What We Don't Have (vs Lu.ma)
 
@@ -127,7 +128,7 @@
 
 ---
 
-### 7. Custom Registration Questions
+### 7. Custom Registration Questions ✅ Done
 
 **Problem:** Every real event needs at least one custom question (dietary restrictions, company name, t-shirt size). Currently no way to collect structured data from attendees.
 
@@ -284,7 +285,7 @@ Add `phoneNumber text` to user. Send SMS alongside email reminders. 95% open rat
 | 1 | Slugs (#1), OG Images (#2) | ✅ Done |
 | 2 | Rich Text (#3), Event Cloning (#4) | ✅ Done |
 | 3 | Waitlist (#5), Reminders (#6) | ✅ Done |
-| 4 | Custom Questions (#7), Analytics (#9) | Pending |
+| 4 | Custom Questions (#7), Analytics (#9) | Questions ✅ Done — Analytics pending |
 | 5 | Paid Ticketing (#8), API/Webhooks (#10) | Pending |
 | 6+ | Tier 3 features by community demand | Pending |
 
