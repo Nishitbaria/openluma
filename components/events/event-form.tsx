@@ -34,6 +34,7 @@ interface EventFormProps {
     capacity: number | null;
     requiresApproval: boolean;
     categoryId: string | null;
+    slug?: string;
   };
 }
 
@@ -43,6 +44,7 @@ export function EventForm({ event }: EventFormProps) {
   const [coverImage, setCoverImage] = useState<string | null>(
     event?.coverImage ?? null,
   );
+  const [slug, setSlug] = useState(event?.slug ?? "");
   const isEditing = !!event;
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -65,6 +67,7 @@ export function EventForm({ event }: EventFormProps) {
         ? Number(formData.get("capacity"))
         : undefined,
       requiresApproval: formData.get("requiresApproval") === "on",
+      ...(isEditing && slug ? { slug } : {}),
     };
 
     try {
@@ -126,6 +129,30 @@ export function EventForm({ event }: EventFormProps) {
               defaultValue={event?.title}
             />
           </div>
+
+          {isEditing && (
+            <div className="space-y-2">
+              <Label htmlFor="slug">Event URL</Label>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground shrink-0">
+                  /e/
+                </span>
+                <Input
+                  id="slug"
+                  placeholder="custom-url"
+                  value={slug}
+                  onChange={(e) =>
+                    setSlug(
+                      e.target.value
+                        .toLowerCase()
+                        .replace(/[^a-z0-9-]/g, "")
+                        .replace(/-+/g, "-"),
+                    )
+                  }
+                />
+              </div>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="description">Description</Label>

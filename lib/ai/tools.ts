@@ -5,6 +5,7 @@ import { z } from "zod/v4";
 import { db } from "@/lib/db";
 import { events, invitations, rsvps } from "@/lib/db/schema";
 import { sendInvitationEmail } from "@/lib/email";
+import { generateEventSlug } from "@/lib/utils/slugify";
 
 export function createTools(userId: string) {
   return {
@@ -32,6 +33,7 @@ export function createTools(userId: string) {
           .insert(events)
           .values({
             title: params.title,
+            slug: generateEventSlug(params.title),
             description: params.description,
             startTime: new Date(params.startTime),
             endTime: params.endTime ? new Date(params.endTime) : null,

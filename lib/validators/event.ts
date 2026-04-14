@@ -17,7 +17,18 @@ export const createEventSchema = z.object({
   tags: z.array(z.string()).optional(),
 });
 
-export const updateEventSchema = createEventSchema.partial();
+export const updateEventSchema = createEventSchema
+  .extend({
+    slug: z
+      .string()
+      .min(3, "Slug must be at least 3 characters")
+      .max(100, "Slug must be at most 100 characters")
+      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, {
+        message: "Slug must be lowercase letters, numbers, and hyphens only",
+      })
+      .optional(),
+  })
+  .partial();
 
 export type CreateEventInput = z.infer<typeof createEventSchema>;
 export type UpdateEventInput = z.infer<typeof updateEventSchema>;

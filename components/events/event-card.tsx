@@ -12,6 +12,7 @@ import {
 interface EventCardProps {
   event: {
     id: string;
+    slug?: string;
     title: string;
     description: string | null;
     coverImage: string | null;
@@ -32,7 +33,9 @@ export function EventCard({ event, href }: EventCardProps) {
       : event.startTime;
 
   return (
-    <Link href={href ?? `/events/${event.id}`}>
+    <Link
+      href={href ?? (event.slug ? `/e/${event.slug}` : `/events/${event.id}`)}
+    >
       <Card className="overflow-hidden transition-shadow hover:shadow-lg">
         {event.coverImage && (
           <div className="aspect-video overflow-hidden">

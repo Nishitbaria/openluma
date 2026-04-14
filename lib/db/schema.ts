@@ -113,6 +113,7 @@ export const events = pgTable(
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
     title: text("title").notNull(),
+    slug: text("slug").notNull().unique(),
     description: text("description"),
     coverImage: text("cover_image"),
     startTime: timestamp("start_time").notNull(),
@@ -132,6 +133,7 @@ export const events = pgTable(
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => [
+    uniqueIndex("events_slug_unique_idx").on(table.slug),
     index("events_host_id_idx").on(table.hostId),
     index("events_start_time_idx").on(table.startTime),
     index("events_visibility_idx").on(table.visibility),

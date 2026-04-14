@@ -43,6 +43,7 @@ interface EventEditDrawerProps {
     capacity: number | null;
     requiresApproval: boolean;
     categoryId: string | null;
+    slug?: string;
   };
   trigger?: React.ReactNode;
 }
@@ -52,6 +53,7 @@ export function EventEditDrawer({ event, trigger }: EventEditDrawerProps) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [coverImage, setCoverImage] = useState<string | null>(event.coverImage);
+  const [slug, setSlug] = useState(event.slug ?? "");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -73,6 +75,7 @@ export function EventEditDrawer({ event, trigger }: EventEditDrawerProps) {
         ? Number(formData.get("capacity"))
         : undefined,
       requiresApproval: formData.get("requiresApproval") === "on",
+      ...(slug ? { slug } : {}),
     };
 
     try {
@@ -128,6 +131,26 @@ export function EventEditDrawer({ event, trigger }: EventEditDrawerProps) {
               required
               defaultValue={event.title}
             />
+            <div className="mt-2 space-y-1.5">
+              <Label className="text-sm text-muted-foreground">Event URL</Label>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground shrink-0">
+                  /e/
+                </span>
+                <Input
+                  placeholder="custom-url"
+                  value={slug}
+                  onChange={(e) =>
+                    setSlug(
+                      e.target.value
+                        .toLowerCase()
+                        .replace(/[^a-z0-9-]/g, "")
+                        .replace(/-+/g, "-"),
+                    )
+                  }
+                />
+              </div>
+            </div>
           </div>
 
           {/* Description */}

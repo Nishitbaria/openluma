@@ -121,6 +121,7 @@ export default async function EventDetailPage({
     capacity: event.capacity,
     requiresApproval: event.requiresApproval,
     categoryId: event.categoryId,
+    slug: event.slug,
   };
 
   // --- Tab-specific data fetching ---
@@ -231,7 +232,7 @@ export default async function EventDetailPage({
     };
   }
 
-  const publicEventUrl = `/events/${eventId}`;
+  const publicEventUrl = `/e/${event.slug}`;
 
   return (
     <div className="space-y-6">
@@ -334,6 +335,7 @@ export default async function EventDetailPage({
               <CalendarExportButton
                 event={{
                   id: event.id,
+                  slug: event.slug,
                   title: event.title,
                   description: event.description,
                   startTime: event.startTime.toISOString(),

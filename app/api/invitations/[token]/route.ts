@@ -41,7 +41,11 @@ export async function GET(
       .update(invitations)
       .set({ status: "declined" })
       .where(eq(invitations.id, invitation.id));
-    return redirect(`/events/${invitation.eventId}?declined=true`);
+    return redirect(
+      invitation.event.slug
+        ? `/e/${invitation.event.slug}?declined=true`
+        : `/events/${invitation.eventId}?declined=true`,
+    );
   }
 
   // Accept: requires auth
@@ -109,5 +113,9 @@ export async function GET(
   if (invitation.role === "cohost") {
     return redirect(`/dashboard/events/${invitation.eventId}?accepted=true`);
   }
-  return redirect(`/events/${invitation.eventId}?accepted=true`);
+  return redirect(
+    invitation.event.slug
+      ? `/e/${invitation.event.slug}?accepted=true`
+      : `/events/${invitation.eventId}?accepted=true`,
+  );
 }

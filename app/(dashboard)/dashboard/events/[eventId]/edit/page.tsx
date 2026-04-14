@@ -51,6 +51,7 @@ export default async function EditEventPage({
           capacity: event.capacity,
           requiresApproval: event.requiresApproval,
           categoryId: event.categoryId,
+          slug: event.slug,
         }}
       />
     </div>

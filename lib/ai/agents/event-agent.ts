@@ -6,6 +6,7 @@ import { z } from "zod/v4";
 import { db } from "@/lib/db";
 import { events, invitations, rsvps } from "@/lib/db/schema";
 import { sendInvitationEmail } from "@/lib/email";
+import { generateEventSlug } from "@/lib/utils/slugify";
 
 export function createEventAgent(userId: string) {
   return new ToolLoopAgent({
@@ -25,7 +26,7 @@ RULES:
 - When creating events, ask for missing required fields (title, start time) before calling the tool.
 - Format dates in a human-friendly way (e.g., "Friday, April 18 at 6:00 PM").
 - Be concise but helpful.
-- When you successfully create an event, share the event link: /events/{eventId}
+- When you successfully create an event, share the event link: /e/{eventSlug}
 - When listing events, format them as a clean numbered list.`,
     tools: {
       getCurrentDate: tool({
@@ -76,6 +77,7 @@ RULES:
             .insert(events)
             .values({
               title: params.title,
+              slug: generateEventSlug(params.title),
               description: params.description,
               startTime: new Date(params.startTime),
               endTime: params.endTime ? new Date(params.endTime) : null,
@@ -91,6 +93,7 @@ RULES:
             success: true,
             event: {
               id: event.id,
+              slug: event.slug,
               title: event.title,
               description: event.description,
               startTime: event.startTime,
@@ -122,6 +125,7 @@ RULES:
             limit: 20,
             columns: {
               id: true,
+              slug: true,
               title: true,
               startTime: true,
               location: true,
@@ -160,6 +164,7 @@ RULES:
             limit: 10,
             columns: {
               id: true,
+              slug: true,
               title: true,
               startTime: true,
               location: true,

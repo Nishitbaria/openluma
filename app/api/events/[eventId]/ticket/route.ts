@@ -26,6 +26,7 @@ export async function GET(
       where: eq(events.id, eventId),
       columns: {
         id: true,
+        slug: true,
         title: true,
         startTime: true,
         endTime: true,
@@ -61,6 +62,7 @@ export async function GET(
   return Response.json({
     ticket: {
       eventId,
+      eventSlug: event.slug,
       eventTitle: event.title,
       startTime: event.startTime,
       endTime: event.endTime,

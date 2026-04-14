@@ -32,6 +32,7 @@ export async function submitRsvpAction(eventId: string, message?: string) {
   });
 
   revalidatePath(`/events/${eventId}`);
+  if (event.slug) revalidatePath(`/e/${event.slug}`);
   revalidatePath(`/dashboard/events/${eventId}`);
 }
 
@@ -93,5 +94,11 @@ export async function cancelRsvpAction(eventId: string) {
     .delete(rsvps)
     .where(and(eq(rsvps.eventId, eventId), eq(rsvps.userId, session.user.id)));
 
+  const event = await db.query.events.findFirst({
+    where: eq(events.id, eventId),
+    columns: { slug: true },
+  });
+
   revalidatePath(`/events/${eventId}`);
+  if (event?.slug) revalidatePath(`/e/${event.slug}`);
 }

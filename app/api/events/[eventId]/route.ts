@@ -1,9 +1,9 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { headers } from "next/headers";
 import type { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { eventCohosts, events, rsvps } from "@/lib/db/schema";
+import { events, rsvps } from "@/lib/db/schema";
 import { updateEventSchema } from "@/lib/validators/event";
 
 export async function GET(
@@ -99,10 +99,24 @@ export async function PUT(
     );
   }
 
-  const { tags, ...updateData } = parsed.data;
+  const { tags, slug, ...updateData } = parsed.data;
+
+  if (slug) {
+    const existing = await db.query.events.findFirst({
+      where: and(eq(events.slug, slug), ne(events.id, eventId)),
+      columns: { id: true },
+    });
+    if (existing) {
+      return Response.json(
+        { message: "This slug is already taken" },
+        { status: 409 },
+      );
+    }
+  }
 
   const updates: Record<string, unknown> = {
     ...updateData,
+    ...(slug ? { slug } : {}),
     updatedAt: new Date(),
   };
   if (updateData.startTime) updates.startTime = new Date(updateData.startTime);
