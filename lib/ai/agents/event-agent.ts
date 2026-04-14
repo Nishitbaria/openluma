@@ -4,7 +4,7 @@ import { and, desc, eq, gte, ilike } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { z } from "zod/v4";
 import { db } from "@/lib/db";
-import { events, invitations, rsvps } from "@/lib/db/schema";
+import { eventTags, events, invitations, rsvps } from "@/lib/db/schema";
 import { sendInvitationEmail } from "@/lib/email";
 import { generateEventSlug } from "@/lib/utils/slugify";
 
@@ -354,6 +354,59 @@ RULES:
             total: eventRsvps.length,
             approved: eventRsvps.filter((r) => r.status === "approved").length,
             pending: eventRsvps.filter((r) => r.status === "pending").length,
+          };
+        },
+      }),
+
+      cloneEvent: tool({
+        description:
+          "Duplicate an existing event. Copies all fields except dates and guests. The host must set new dates before publishing.",
+        inputSchema: z.object({
+          eventId: z.string().describe("The ID of the event to clone"),
+        }),
+        execute: async ({ eventId }) => {
+          const source = await db.query.events.findFirst({
+            where: eq(events.id, eventId),
+            with: { tags: true },
+          });
+          if (!source) return { error: "Event not found" };
+          if (source.hostId !== userId) return { error: "Not authorized" };
+
+          const newSlug = generateEventSlug(`${source.title} copy`);
+
+          const [cloned] = await db
+            .insert(events)
+            .values({
+              title: `${source.title} (Copy)`,
+              slug: newSlug,
+              description: source.description,
+              richDescription: source.richDescription,
+              coverImage: source.coverImage,
+              timezone: source.timezone,
+              location: source.location,
+              locationDetails: source.locationDetails,
+              type: source.type,
+              visibility: source.visibility,
+              capacity: source.capacity,
+              requiresApproval: source.requiresApproval,
+              categoryId: source.categoryId,
+              hostId: userId,
+              startTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+            })
+            .returning();
+
+          if (source.tags.length > 0) {
+            await db.insert(eventTags).values(
+              source.tags.map((t) => ({ eventId: cloned.id, tag: t.tag })),
+            );
+          }
+
+          return {
+            success: true,
+            clonedEventId: cloned.id,
+            clonedEventSlug: cloned.slug,
+            editUrl: `/dashboard/events/${cloned.id}/edit`,
+            message: `Duplicated as "${cloned.title}". Please set new dates at /dashboard/events/${cloned.id}/edit`,
           };
         },
       }),

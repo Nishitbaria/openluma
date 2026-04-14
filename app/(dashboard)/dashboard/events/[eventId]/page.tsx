@@ -21,6 +21,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AttendeeList } from "@/components/events/attendee-list";
 import { CalendarExportButton } from "@/components/events/calendar-export-button";
+import { CloneEventButton } from "@/components/events/clone-event-button";
 import { CopyLinkButton } from "@/components/events/copy-link-button";
 import { DeleteEventButton } from "@/components/events/delete-event-button";
 import { EventEditDrawer } from "@/components/events/event-edit-drawer";
@@ -485,6 +486,7 @@ function OverviewTab({
             </Link>
           </Button>
           <EventEditDrawer event={serializedEvent} />
+          {isHost && <CloneEventButton eventId={eventId} />}
           {isHost && (
             <DeleteEventButton eventId={eventId} eventTitle={event.title} />
           )}
