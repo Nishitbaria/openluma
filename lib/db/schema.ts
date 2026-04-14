@@ -115,6 +115,7 @@ export const events = pgTable(
     title: text("title").notNull(),
     slug: text("slug").notNull().unique(),
     description: text("description"),
+    richDescription: text("rich_description"),
     coverImage: text("cover_image"),
     startTime: timestamp("start_time").notNull(),
     endTime: timestamp("end_time"),

@@ -52,6 +52,7 @@ export default async function EditEventPage({
           requiresApproval: event.requiresApproval,
           categoryId: event.categoryId,
           slug: event.slug,
+          richDescription: event.richDescription,
         }}
       />
     </div>

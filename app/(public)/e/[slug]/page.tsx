@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import Image from "next/image";
 import { notFound } from "next/navigation";
 import { CalendarExportButton } from "@/components/events/calendar-export-button";
+import { RichTextRenderer } from "@/components/events/rich-text-renderer";
 import { RsvpButton } from "@/components/events/rsvp-button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -194,15 +195,19 @@ export default async function PublicEventBySlugPage({
             </CardContent>
           </Card>
 
-          {event.description && (
+          {(event.richDescription || event.description) && (
             <Card>
               <CardHeader>
                 <CardTitle>About this event</CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                  {event.description}
-                </p>
+                {event.richDescription ? (
+                  <RichTextRenderer content={event.richDescription} />
+                ) : (
+                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                    {event.description}
+                  </p>
+                )}
               </CardContent>
             </Card>
           )}
