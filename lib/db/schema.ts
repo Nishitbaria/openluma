@@ -126,6 +126,8 @@ export const events = pgTable(
     visibility: eventVisibilityEnum("visibility").notNull().default("public"),
     capacity: integer("capacity"),
     requiresApproval: boolean("requires_approval").notNull().default(false),
+    reminderSent24h: boolean("reminder_sent_24h").notNull().default(false),
+    reminderSent1h: boolean("reminder_sent_1h").notNull().default(false),
     hostId: text("host_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
