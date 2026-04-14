@@ -11,7 +11,7 @@ const questionSchema = z.object({
   type: z.enum(["text", "paragraph", "checkbox", "dropdown"]),
   required: z.boolean().default(false),
   order: z.number().int().default(0),
-  options: z.array(z.string()).optional(),
+  options: z.array(z.string()).nullish(),
 });
 
 async function getHostOrCohost(eventId: string, userId: string) {
