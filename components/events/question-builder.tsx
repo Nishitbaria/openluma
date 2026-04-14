@@ -1,6 +1,23 @@
 "use client";
 
 import {
+  DndContext,
+  type DragEndEvent,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
+import {
   AlignLeft,
   CheckSquare,
   ChevronLeft,
@@ -93,6 +110,11 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [modal, setModal] = useState<ModalState>(EMPTY_MODAL);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
 
   useEffect(() => {
     fetch(`/api/events/${eventId}/questions`)
@@ -213,13 +235,16 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
     router.refresh();
   }
 
-  // ── Move ──────────────────────────────────────────────────────────────────
-  async function moveQuestion(index: number, direction: "up" | "down") {
-    const newList = [...questions];
-    const swapIndex = direction === "up" ? index - 1 : index + 1;
-    if (swapIndex < 0 || swapIndex >= newList.length) return;
-    [newList[index], newList[swapIndex]] = [newList[swapIndex], newList[index]];
-    const reordered = newList.map((q, i) => ({ ...q, order: i }));
+  // ── Drag reorder ──────────────────────────────────────────────────────────
+  async function handleDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = questions.findIndex((q) => q.id === active.id);
+    const newIndex = questions.findIndex((q) => q.id === over.id);
+    const reordered = arrayMove(questions, oldIndex, newIndex).map((q, i) => ({
+      ...q,
+      order: i,
+    }));
     setQuestions(reordered);
     await Promise.all(
       reordered.map((q) =>
@@ -249,49 +274,25 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
             </p>
           </div>
         ) : (
-          questions.map((q, index) => {
-            const Meta = TYPE_META[q.type];
-            return (
-              <div
-                key={q.id}
-                className="group flex items-center gap-3 rounded-lg border bg-card px-4 py-3 hover:bg-muted/40 transition-colors"
+          <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext
+                items={questions.map((q) => q.id)}
+                strategy={verticalListSortingStrategy}
               >
-                {/* Drag handle (visual only) */}
-                <GripVertical className="h-4 w-4 text-muted-foreground/40 shrink-0 cursor-grab" />
-
-                {/* Type icon */}
-                <Meta.icon className="h-4 w-4 text-muted-foreground shrink-0" />
-
-                {/* Label + type */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{q.label}</p>
-                  <p className="text-xs text-muted-foreground">{Meta.label}{q.required ? " · Required" : ""}</p>
-                </div>
-
-                {/* Actions — visible on hover */}
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-7 w-7"
-                    onClick={() => openEdit(q)}
-                    title="Edit"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    size="icon"
-                    variant="ghost"
-                    className="h-7 w-7 text-destructive hover:text-destructive"
-                    onClick={() => deleteQuestion(q.id)}
-                    title="Delete"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </div>
-            );
-          })
+                {questions.map((q) => (
+                  <SortableQuestionRow
+                    key={q.id}
+                    question={q}
+                    onEdit={openEdit}
+                    onDelete={deleteQuestion}
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
         )}
       </div>
 
@@ -435,5 +436,87 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+// ── Sortable row ──────────────────────────────────────────────────────────────
+
+function SortableQuestionRow({
+  question,
+  onEdit,
+  onDelete,
+}: {
+  question: Question;
+  onEdit: (q: Question) => void;
+  onDelete: (id: string) => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: question.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    zIndex: isDragging ? 10 : undefined,
+  };
+
+  const Meta = TYPE_META[question.type];
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="group flex items-center gap-3 rounded-lg border bg-card px-4 py-3 hover:bg-muted/40 transition-colors"
+    >
+      {/* Drag handle */}
+      <button
+        type="button"
+        className="cursor-grab active:cursor-grabbing touch-none text-muted-foreground/40 hover:text-muted-foreground transition-colors"
+        {...attributes}
+        {...listeners}
+      >
+        <GripVertical className="h-4 w-4" />
+      </button>
+
+      {/* Type icon */}
+      <Meta.icon className="h-4 w-4 text-muted-foreground shrink-0" />
+
+      {/* Label + type */}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium truncate">{question.label}</p>
+        <p className="text-xs text-muted-foreground">
+          {Meta.label}
+          {question.required ? " · Required" : ""}
+        </p>
+      </div>
+
+      {/* Actions — visible on hover */}
+      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-7 w-7"
+          onClick={() => onEdit(question)}
+          title="Edit"
+        >
+          <Pencil className="h-3.5 w-3.5" />
+        </Button>
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-7 w-7 text-destructive hover:text-destructive"
+          onClick={() => onDelete(question.id)}
+          title="Delete"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    </div>
   );
 }
