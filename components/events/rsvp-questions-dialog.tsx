@@ -23,7 +23,7 @@ import { Switch } from "@/components/ui/switch";
 export interface EventQuestion {
   id: string;
   label: string;
-  type: "text" | "paragraph" | "checkbox" | "dropdown";
+  type: "text" | "paragraph" | "checkbox" | "dropdown" | "social_profile" | "company" | "phone" | "website" | "terms";
   required: boolean;
   options: string[] | null;
 }
@@ -56,7 +56,12 @@ export function RsvpQuestionsDialog({
       if (q.required) {
         const answer = answers[q.id];
         if (q.type === "checkbox") {
-          // checkbox just needs to exist — no validation
+          // checkbox is a yes/no — any answer is valid
+        } else if (q.type === "terms") {
+          if (!answer) {
+            alert(`You must agree to "${q.label}".`);
+            return;
+          }
         } else if (!answer || (typeof answer === "string" && !answer.trim())) {
           alert(`"${q.label}" is required.`);
           return;
@@ -127,6 +132,69 @@ export function RsvpQuestionsDialog({
                     ))}
                   </SelectContent>
                 </Select>
+              )}
+
+              {q.type === "social_profile" && (
+                <div className="space-y-2">
+                  {q.options?.[0] && (
+                    <p className="text-xs text-muted-foreground">Platform: {q.options[0]}</p>
+                  )}
+                  <Input
+                    value={(answers[q.id] as string) ?? ""}
+                    onChange={(e) => setAnswer(q.id, e.target.value)}
+                    placeholder={q.options?.[0] ? `Your ${q.options[0]} username` : "Your username"}
+                  />
+                </div>
+              )}
+
+              {q.type === "company" && (
+                <div className="space-y-2">
+                  <Input
+                    value={(answers[q.id] as string) ?? ""}
+                    onChange={(e) => setAnswer(q.id, e.target.value)}
+                    placeholder="Your company name"
+                  />
+                  {q.options?.[0] && (
+                    <Input
+                      value={(answers[`${q.id}_jobtitle`] as string) ?? ""}
+                      onChange={(e) => setAnswer(`${q.id}_jobtitle`, e.target.value)}
+                      placeholder={q.options[0]}
+                    />
+                  )}
+                </div>
+              )}
+
+              {q.type === "phone" && (
+                <Input
+                  type="tel"
+                  value={(answers[q.id] as string) ?? ""}
+                  onChange={(e) => setAnswer(q.id, e.target.value)}
+                  placeholder="+1 (555) 000-0000"
+                />
+              )}
+
+              {q.type === "website" && (
+                <Input
+                  type="url"
+                  value={(answers[q.id] as string) ?? ""}
+                  onChange={(e) => setAnswer(q.id, e.target.value)}
+                  placeholder="https://yourwebsite.com"
+                />
+              )}
+
+              {q.type === "terms" && (
+                <div className="flex items-start gap-3 rounded-lg border bg-muted/30 p-3">
+                  <Switch
+                    id={`answer-${q.id}`}
+                    checked={(answers[q.id] as boolean) ?? false}
+                    onCheckedChange={(checked) => setAnswer(q.id, checked)}
+                    className="mt-0.5"
+                  />
+                  <Label htmlFor={`answer-${q.id}`} className="text-sm leading-snug cursor-pointer">
+                    I agree to the terms and conditions
+                    {q.required && <span className="text-destructive ml-1">*</span>}
+                  </Label>
+                </div>
               )}
             </div>
           ))}
