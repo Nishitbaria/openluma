@@ -6,6 +6,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { EventCoverImagePicker } from "@/components/events/event-cover-image-picker";
 import { EventLocationToggle } from "@/components/events/event-location-toggle";
+import { RichTextEditor } from "@/components/events/rich-text-editor";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,7 +26,6 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 
 interface EventEditDrawerProps {
   event: {
@@ -44,6 +44,7 @@ interface EventEditDrawerProps {
     requiresApproval: boolean;
     categoryId: string | null;
     slug?: string;
+    richDescription?: string | null;
   };
   trigger?: React.ReactNode;
 }
@@ -54,6 +55,8 @@ export function EventEditDrawer({ event, trigger }: EventEditDrawerProps) {
   const [loading, setLoading] = useState(false);
   const [coverImage, setCoverImage] = useState<string | null>(event.coverImage);
   const [slug, setSlug] = useState(event.slug ?? "");
+  const [richDescription, setRichDescription] = useState(event.richDescription ?? "");
+  const [plainDescription, setPlainDescription] = useState(event.description ?? "");
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -62,7 +65,8 @@ export function EventEditDrawer({ event, trigger }: EventEditDrawerProps) {
     const formData = new FormData(e.currentTarget);
     const data = {
       title: formData.get("title") as string,
-      description: formData.get("description") as string,
+      description: plainDescription || undefined,
+      richDescription: richDescription || undefined,
       coverImage: coverImage || undefined,
       startTime: formData.get("startTime") as string,
       endTime: (formData.get("endTime") as string) || undefined,
@@ -156,11 +160,13 @@ export function EventEditDrawer({ event, trigger }: EventEditDrawerProps) {
           {/* Description */}
           <div className="space-y-3">
             <h3 className="text-sm font-semibold">Description</h3>
-            <Textarea
-              name="description"
+            <RichTextEditor
+              content={richDescription}
+              onChange={(json, plain) => {
+                setRichDescription(json);
+                setPlainDescription(plain);
+              }}
               placeholder="Who should come? What's the event about?"
-              rows={3}
-              defaultValue={event.description ?? ""}
             />
           </div>
 

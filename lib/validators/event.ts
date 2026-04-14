@@ -3,6 +3,7 @@ import { z } from "zod/v4";
 export const createEventSchema = z.object({
   title: z.string().min(1, "Title is required").max(200),
   description: z.string().optional(),
+  richDescription: z.string().optional(),
   coverImage: z.string().optional(),
   startTime: z.string().min(1, "Start time is required"),
   endTime: z.string().optional(),

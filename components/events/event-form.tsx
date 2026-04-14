@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
 import { EventCoverImagePicker } from "@/components/events/event-cover-image-picker";
+import { RichTextEditor } from "@/components/events/rich-text-editor";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -16,7 +17,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 
 interface EventFormProps {
   event?: {
@@ -35,6 +35,7 @@ interface EventFormProps {
     requiresApproval: boolean;
     categoryId: string | null;
     slug?: string;
+    richDescription?: string | null;
   };
 }
 
@@ -45,6 +46,8 @@ export function EventForm({ event }: EventFormProps) {
     event?.coverImage ?? null,
   );
   const [slug, setSlug] = useState(event?.slug ?? "");
+  const [richDescription, setRichDescription] = useState(event?.richDescription ?? "");
+  const [plainDescription, setPlainDescription] = useState(event?.description ?? "");
   const isEditing = !!event;
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -54,7 +57,8 @@ export function EventForm({ event }: EventFormProps) {
     const formData = new FormData(e.currentTarget);
     const data = {
       title: formData.get("title") as string,
-      description: formData.get("description") as string,
+      description: plainDescription || undefined,
+      richDescription: richDescription || undefined,
       coverImage: coverImage || undefined,
       startTime: formData.get("startTime") as string,
       endTime: (formData.get("endTime") as string) || undefined,
@@ -155,13 +159,13 @@ export function EventForm({ event }: EventFormProps) {
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              id="description"
-              name="description"
-              placeholder="Tell people about your event..."
-              rows={4}
-              defaultValue={event?.description ?? ""}
+            <Label>Description</Label>
+            <RichTextEditor
+              content={richDescription}
+              onChange={(json, plain) => {
+                setRichDescription(json);
+                setPlainDescription(plain);
+              }}
             />
           </div>
 

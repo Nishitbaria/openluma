@@ -25,6 +25,7 @@ import { CopyLinkButton } from "@/components/events/copy-link-button";
 import { DeleteEventButton } from "@/components/events/delete-event-button";
 import { EventEditDrawer } from "@/components/events/event-edit-drawer";
 import { EventTabsNav } from "@/components/events/event-tabs-nav";
+import { RichTextRenderer } from "@/components/events/rich-text-renderer";
 import { InviteForm } from "@/components/events/invite-form";
 import {
   Avatar,
@@ -122,6 +123,7 @@ export default async function EventDetailPage({
     requiresApproval: event.requiresApproval,
     categoryId: event.categoryId,
     slug: event.slug,
+    richDescription: event.richDescription,
   };
 
   // --- Tab-specific data fetching ---
@@ -429,6 +431,7 @@ function OverviewTab({
     cohosts: Array<{
       user: { id: string; name: string | null; image: string | null };
     }>;
+    richDescription: string | null;
     rsvps: Array<{
       id: string;
       status: string;
@@ -546,12 +549,16 @@ function OverviewTab({
               </div>
 
               {/* Description */}
-              {event.description && (
+              {(event.richDescription || event.description) && (
                 <>
                   <Separator />
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">
-                    {event.description}
-                  </p>
+                  {event.richDescription ? (
+                    <RichTextRenderer content={event.richDescription} />
+                  ) : (
+                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                      {event.description}
+                    </p>
+                  )}
                 </>
               )}
 
