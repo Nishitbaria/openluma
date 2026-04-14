@@ -288,6 +288,8 @@ export default async function EventDetailPage({
   }
 
   const publicEventUrl = `/e/${event.slug}`;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const shareUrl = `${appUrl}/e/${event.slug}`;
 
   return (
     <div className="space-y-6">
@@ -336,6 +338,7 @@ export default async function EventDetailPage({
           hasTicket={hasTicket}
           eventId={eventId}
           publicEventUrl={publicEventUrl}
+          shareUrl={shareUrl}
         />
       )}
 
@@ -465,6 +468,7 @@ function OverviewTab({
   hasTicket,
   eventId,
   publicEventUrl,
+  shareUrl,
 }: {
   event: {
     id: string;
@@ -524,6 +528,7 @@ function OverviewTab({
   hasTicket: boolean;
   eventId: string;
   publicEventUrl: string;
+  shareUrl: string;
 }) {
   return (
     <div className="space-y-6">
@@ -788,10 +793,14 @@ function OverviewTab({
 
           {/* Share */}
           <Card>
-            <CardContent className="flex items-center gap-3 p-4">
-              <Share2 className="h-4 w-4 text-muted-foreground" />
-              <span className="flex-1 text-sm font-medium">Share Event</span>
-              <CopyLinkButton url={publicEventUrl} />
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                <Share2 className="h-4 w-4 text-muted-foreground" />
+                Share Event
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <CopyLinkButton url={shareUrl} variant="pill" />
             </CardContent>
           </Card>
 

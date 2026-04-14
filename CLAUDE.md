@@ -113,6 +113,44 @@ lib/
 - **Profile avatar**: Custom upload button using `useUploadThing("profileAvatar")` on profile page
 - No `@uploadthing/react/styles.css` import — all upload UI is custom-built
 
+## Design System Guidelines
+
+> **IMPORTANT: Always follow these rules for every UI change — no exceptions.**
+
+### Colors — Theme Only
+- **Never** use hardcoded colors like `text-green-600`, `bg-blue-500`, `text-red-500`, etc.
+- **Always** use semantic theme tokens: `text-primary`, `bg-primary`, `text-muted-foreground`, `bg-muted`, `text-destructive`, `bg-destructive`, `border`, `ring`, etc.
+- For opacity variants use Tailwind's slash syntax: `bg-primary/80`, `bg-primary/60`, `text-primary/70`
+- Status indicators: use `text-primary` for success/active, `text-muted-foreground` for neutral, `text-destructive` for errors
+
+### Typography
+- Headings: `font-bold` or `font-semibold` with `tracking-tight`
+- Body/labels: `text-sm text-muted-foreground`
+- Stat values: `text-2xl font-bold`
+- Captions: `text-xs text-muted-foreground`
+
+### Spacing & Layout
+- Card padding: use `CardHeader` / `CardContent` — never add raw `p-*` to `<Card>` directly
+- Consistent gap: `gap-2` (tight), `gap-4` (default), `gap-6` (sections), `gap-8` (page sections)
+- Stack spacing: `space-y-2` (tight), `space-y-4` (default), `space-y-6` (sections)
+
+### Components
+- Use shadcn/ui components from `components/ui/` for all UI primitives — never build custom buttons, inputs, dialogs from scratch
+- Confirmation actions (delete, cancel): always use a `Dialog` with a destructive confirm button — never inline two-button patterns
+- Empty states: always show an icon + heading + helper text — never just plain text
+- Loading states: use `disabled` + text change (e.g. "Saving...") — no spinners unless async duration is unknown
+- Toast notifications: use `sonner` (`toast.success`, `toast.error`) for all user feedback
+
+### Icons
+- Source: Lucide React only (`lucide-react`)
+- Size: `h-4 w-4` (inline), `h-5 w-5` (card headers), `h-8 w-8` (empty states)
+- Color: `text-muted-foreground` by default; `text-primary` for active/highlighted
+
+### Charts & Data Viz
+- Use shadcn chart (`components/ui/chart.tsx`) wrapping Recharts — never raw Recharts without `ChartContainer`
+- Colors: only `hsl(var(--primary))` and its opacity variants — no hardcoded hex/rgb/named colors
+- Always show a zero/empty state when there is no data
+
 ## Conventions
 
 - Use Biome for linting/formatting, not ESLint/Prettier
