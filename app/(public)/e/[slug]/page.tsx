@@ -12,6 +12,8 @@ import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { events, rsvps } from "@/lib/db/schema";
 
+const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
 export async function generateMetadata({
   params,
 }: {
@@ -20,7 +22,12 @@ export async function generateMetadata({
   const { slug } = await params;
   const event = await db.query.events.findFirst({
     where: eq(events.slug, slug),
-    columns: { title: true, description: true, visibility: true },
+    columns: {
+      title: true,
+      description: true,
+      visibility: true,
+      coverImage: true,
+    },
   });
   if (!event) return { title: "Event Not Found" };
   if (event.visibility === "private") {
@@ -29,9 +36,25 @@ export async function generateMetadata({
       description: "This event is invite-only.",
     };
   }
+
+  const ogImageUrl = `${appUrl}/api/og?slug=${slug}`;
+  const description = event.description ?? `Join ${event.title} on OpenLuma`;
+
   return {
     title: `${event.title} - OpenLuma`,
-    description: event.description ?? `Join ${event.title} on OpenLuma`,
+    description,
+    openGraph: {
+      title: `${event.title} - OpenLuma`,
+      description,
+      images: [{ url: ogImageUrl, width: 1200, height: 630, alt: event.title }],
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${event.title} - OpenLuma`,
+      description,
+      images: [ogImageUrl],
+    },
   };
 }
 
