@@ -269,6 +269,23 @@ export const attendeeCheckins = pgTable("attendee_checkins", {
   checkedInBy: text("checked_in_by").references(() => user.id),
 });
 
+export const eventPageviews = pgTable(
+  "event_pageviews",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    eventId: text("event_id")
+      .notNull()
+      .references(() => events.id, { onDelete: "cascade" }),
+    ipHash: text("ip_hash").notNull(),
+    referrer: text("referrer"),
+    city: text("city"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [index("event_pageviews_event_id_idx").on(table.eventId)],
+);
+
 export const chatMessages = pgTable(
   "chat_messages",
   {
@@ -307,6 +324,7 @@ export const eventsRelations = relations(events, ({ one, many }) => ({
   tags: many(eventTags),
   questions: many(eventQuestions),
   checkins: many(attendeeCheckins),
+  pageviews: many(eventPageviews),
 }));
 
 export const categoriesRelations = relations(categories, ({ many }) => ({
@@ -363,6 +381,10 @@ export const attendeeCheckinsRelations = relations(
     }),
   }),
 );
+
+export const eventPageviewsRelations = relations(eventPageviews, ({ one }) => ({
+  event: one(events, { fields: [eventPageviews.eventId], references: [events.id] }),
+}));
 
 export const chatMessagesRelations = relations(chatMessages, ({ one }) => ({
   user: one(user, { fields: [chatMessages.userId], references: [user.id] }),
