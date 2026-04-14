@@ -71,9 +71,9 @@ export function EventAnalytics({
 
   const funnelSteps = [
     { label: "Page Views", value: funnel.totalViews, color: "bg-primary" },
-    { label: "RSVPs", value: funnel.totalRsvps, color: "bg-blue-500" },
-    { label: "Approved", value: funnel.approved, color: "bg-green-500" },
-    { label: "Checked In", value: funnel.checkedIn, color: "bg-emerald-400" },
+    { label: "RSVPs", value: funnel.totalRsvps, color: "bg-primary/80" },
+    { label: "Approved", value: funnel.approved, color: "bg-primary/60" },
+    { label: "Checked In", value: funnel.checkedIn, color: "bg-primary/40" },
   ];
   const funnelMax = Math.max(funnel.totalViews, 1);
 
@@ -207,7 +207,7 @@ export function EventAnalytics({
                   </div>
                   <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
                     <div
-                      className="h-full rounded-full bg-primary/60 transition-all"
+                      className="h-full rounded-full bg-primary/70 transition-all"
                       style={{ width: `${funnel.totalViews > 0 ? Math.round((ref.count / funnel.totalViews) * 100) : 0}%` }}
                     />
                   </div>
