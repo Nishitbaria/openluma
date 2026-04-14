@@ -141,6 +141,7 @@ export async function POST(
       userId: session.user.id,
       status,
       message: body.message,
+      customAnswers: body.customAnswers ?? null,
     })
     .returning();
 

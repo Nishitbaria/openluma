@@ -6,22 +6,29 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth-client";
+import {
+  type EventQuestion,
+  RsvpQuestionsDialog,
+} from "./rsvp-questions-dialog";
 
 export function RsvpButton({
   eventId,
   eventSlug,
   requiresApproval,
   currentRsvpStatus,
+  questions = [],
 }: {
   eventId: string;
   eventSlug?: string;
   requiresApproval: boolean;
   currentRsvpStatus?: "pending" | "approved" | "rejected" | "waitlisted" | null;
+  questions?: EventQuestion[];
 }) {
   const router = useRouter();
   const { data: session } = authClient.useSession();
   const [loading, setLoading] = useState(false);
   const [status, setStatus] = useState(currentRsvpStatus);
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const isLoggedIn = !!session?.user;
 
@@ -125,13 +132,18 @@ export function RsvpButton({
   }
 
   // Logged in, not RSVP'd yet
-  async function handleRsvp() {
+  async function handleRsvp(customAnswers?: Record<string, string | boolean>) {
+    // If there are questions and no answers yet, open the dialog
+    if (questions.length > 0 && !customAnswers) {
+      setDialogOpen(true);
+      return;
+    }
     setLoading(true);
     try {
       const res = await fetch(`/api/events/${eventId}/rsvp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ customAnswers }),
       });
 
       if (res.status === 401) {
@@ -150,6 +162,7 @@ export function RsvpButton({
 
       const newStatus = data.rsvp?.status ?? data.status;
       setStatus(newStatus);
+      setDialogOpen(false);
 
       if (newStatus === "pending") {
         toast.success("RSVP submitted! Awaiting host approval.");
@@ -190,17 +203,29 @@ export function RsvpButton({
   }
 
   return (
-    <Button
-      onClick={handleRsvp}
-      disabled={loading}
-      className="w-full"
-      size="lg"
-    >
-      {loading
-        ? "Submitting..."
-        : requiresApproval
-          ? "Request to Attend"
-          : "RSVP - I'm Going!"}
-    </Button>
+    <>
+      <Button
+        onClick={() => handleRsvp()}
+        disabled={loading}
+        className="w-full"
+        size="lg"
+      >
+        {loading
+          ? "Submitting..."
+          : requiresApproval
+            ? "Request to Attend"
+            : "RSVP - I'm Going!"}
+      </Button>
+      {questions.length > 0 && (
+        <RsvpQuestionsDialog
+          open={dialogOpen}
+          onOpenChange={setDialogOpen}
+          questions={questions}
+          onSubmit={(answers) => handleRsvp(answers)}
+          loading={loading}
+          submitLabel={requiresApproval ? "Request to Attend" : "RSVP - I'm Going!"}
+        />
+      )}
+    </>
   );
 }

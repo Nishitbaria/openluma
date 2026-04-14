@@ -22,6 +22,7 @@
 - Rich text event descriptions — Tiptap WYSIWYG editor, stored as JSON with plain-text fallback (PR #3)
 - Event cloning — "Duplicate" button + AI `cloneEvent` tool (PR #4)
 - Waitlist auto-promotion — auto-waitlists when full, promotes oldest on cancellation (PR #5)
+- Automated pre-event reminders — Vercel Cron sends 24h + 1h emails to approved attendees (PR #6)
 
 ## What We Don't Have (vs Lu.ma)
 
@@ -111,7 +112,7 @@
 
 ---
 
-### 6. Automated Pre-Event Reminders
+### 6. Automated Pre-Event Reminders ✅ Done
 
 **Problem:** `sendEventReminderEmail` is fully implemented in `lib/email.ts` but never called from anywhere. No scheduler exists.
 
@@ -282,7 +283,7 @@ Add `phoneNumber text` to user. Send SMS alongside email reminders. 95% open rat
 |--------|----------|--------|
 | 1 | Slugs (#1), OG Images (#2) | ✅ Done |
 | 2 | Rich Text (#3), Event Cloning (#4) | ✅ Done |
-| 3 | Waitlist (#5), Reminders (#6) | Waitlist ✅ Done — Reminders pending |
+| 3 | Waitlist (#5), Reminders (#6) | ✅ Done |
 | 4 | Custom Questions (#7), Analytics (#9) | Pending |
 | 5 | Paid Ticketing (#8), API/Webhooks (#10) | Pending |
 | 6+ | Tier 3 features by community demand | Pending |

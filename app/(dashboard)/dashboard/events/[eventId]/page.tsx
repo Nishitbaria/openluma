@@ -22,6 +22,7 @@ import { notFound } from "next/navigation";
 import { AttendeeList } from "@/components/events/attendee-list";
 import { CalendarExportButton } from "@/components/events/calendar-export-button";
 import { CloneEventButton } from "@/components/events/clone-event-button";
+import { QuestionBuilder } from "@/components/events/question-builder";
 import { CopyLinkButton } from "@/components/events/copy-link-button";
 import { DeleteEventButton } from "@/components/events/delete-event-button";
 import { EventEditDrawer } from "@/components/events/event-edit-drawer";
@@ -44,6 +45,7 @@ import { db } from "@/lib/db";
 import {
   attendeeCheckins,
   eventCohosts,
+  eventQuestions,
   events,
   invitations,
   rsvps,
@@ -135,6 +137,7 @@ export default async function EventDetailPage({
       userId: string;
       status: "pending" | "approved" | "rejected" | "waitlisted";
       message: string | null;
+      customAnswers: Record<string, string | boolean> | null;
       createdAt: string;
       user: { id: string; name: string; email: string; image: string | null };
     }>;
@@ -151,6 +154,7 @@ export default async function EventDetailPage({
       userId: string;
       user: { id: string; name: string; email: string; image: string | null };
     }>;
+    questions: Array<{ id: string; label: string }>;
   } | null = null;
 
   let analyticsData: {
@@ -158,7 +162,7 @@ export default async function EventDetailPage({
   } | null = null;
 
   if (tab === "guests" && canManage) {
-    const [attendees, eventInvitations, cohostsList] = await Promise.all([
+    const [attendees, eventInvitations, cohostsList, questionsList] = await Promise.all([
       db.query.rsvps.findMany({
         where: eq(rsvps.eventId, eventId),
         with: {
@@ -180,11 +184,17 @@ export default async function EventDetailPage({
           },
         },
       }),
+      db.query.eventQuestions.findMany({
+        where: eq(eventQuestions.eventId, eventId),
+        orderBy: (q, { asc }) => [asc(q.order)],
+        columns: { id: true, label: true },
+      }),
     ]);
 
     attendeesData = {
       attendees: attendees.map((a) => ({
         ...a,
+        customAnswers: (a.customAnswers as Record<string, string | boolean> | null) ?? null,
         createdAt: a.createdAt.toISOString(),
         user: { ...a.user, name: a.user.name ?? "Unknown" },
       })),
@@ -201,6 +211,7 @@ export default async function EventDetailPage({
         userId: c.userId,
         user: { ...c.user, name: c.user.name ?? "Unknown" },
       })),
+      questions: questionsList,
     };
   }
 
@@ -294,9 +305,22 @@ export default async function EventDetailPage({
             attendees={attendeesData.attendees}
             cohosts={attendeesData.cohostsList}
             invitations={attendeesData.eventInvitations}
+            questions={attendeesData.questions}
             eventId={eventId}
             isHost={isHost}
           />
+        </div>
+      )}
+
+      {tab === "questions" && canManage && (
+        <div className="max-w-xl space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold">Registration Questions</h2>
+            <p className="text-sm text-muted-foreground">
+              Attendees will answer these when they RSVP. Answers appear in the Guests tab and CSV export.
+            </p>
+          </div>
+          <QuestionBuilder eventId={eventId} />
         </div>
       )}
 
