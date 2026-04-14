@@ -20,6 +20,7 @@ export function CalendarExportButton({
     endTime: string | null;
     location: string | null;
     id: string;
+    slug?: string;
   };
 }) {
   function handleExport() {
@@ -38,7 +39,7 @@ export function CalendarExportButton({
       `SUMMARY:${event.title}`,
       `DESCRIPTION:${event.description ?? ""}`,
       `LOCATION:${event.location ?? ""}`,
-      `URL:${window.location.origin}/events/${event.id}`,
+      `URL:${window.location.origin}${event.slug ? `/e/${event.slug}` : `/events/${event.id}`}`,
       "END:VEVENT",
       "END:VCALENDAR",
     ].join("\r\n");

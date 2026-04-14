@@ -4,6 +4,7 @@ import type { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { events, eventTags } from "@/lib/db/schema";
+import { generateEventSlug } from "@/lib/utils/slugify";
 import { createEventSchema } from "@/lib/validators/event";
 
 export async function GET(request: NextRequest) {
@@ -88,6 +89,7 @@ export async function POST(request: NextRequest) {
     .insert(events)
     .values({
       ...eventData,
+      slug: generateEventSlug(eventData.title),
       startTime: new Date(eventData.startTime),
       endTime: eventData.endTime ? new Date(eventData.endTime) : null,
       hostId: session.user.id,

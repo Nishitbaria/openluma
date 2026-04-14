@@ -9,10 +9,12 @@ import { authClient } from "@/lib/auth-client";
 
 export function RsvpButton({
   eventId,
+  eventSlug,
   requiresApproval,
   currentRsvpStatus,
 }: {
   eventId: string;
+  eventSlug?: string;
   requiresApproval: boolean;
   currentRsvpStatus?: "pending" | "approved" | "rejected" | "waitlisted" | null;
 }) {
@@ -108,7 +110,11 @@ export function RsvpButton({
   if (!isLoggedIn) {
     return (
       <Button
-        onClick={() => router.push(`/sign-in?callbackUrl=/events/${eventId}`)}
+        onClick={() =>
+          router.push(
+            `/sign-in?callbackUrl=${eventSlug ? `/e/${eventSlug}` : `/events/${eventId}`}`,
+          )
+        }
         className="w-full"
         size="lg"
       >
@@ -129,7 +135,9 @@ export function RsvpButton({
       });
 
       if (res.status === 401) {
-        router.push(`/sign-in?callbackUrl=/events/${eventId}`);
+        router.push(
+          `/sign-in?callbackUrl=${eventSlug ? `/e/${eventSlug}` : `/events/${eventId}`}`,
+        );
         return;
       }
 

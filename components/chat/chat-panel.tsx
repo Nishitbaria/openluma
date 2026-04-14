@@ -56,7 +56,6 @@ import {
   PromptInputTools,
 } from "@/components/ai-elements/prompt-input";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
 
 const suggestions = [
   { icon: Plus, label: "Create a tech meetup for next Friday at 6pm" },
@@ -308,6 +307,7 @@ export function ChatPanel() {
 
 interface EventData {
   id: string;
+  slug?: string;
   title: string;
   description?: string | null;
   startTime: string;
@@ -400,7 +400,7 @@ function ArtifactCard({ artifact }: { artifact: ChatArtifact }) {
 function EventCreatedCard({ event }: { event: EventData }) {
   const startDate = new Date(event.startTime);
   const endDate = event.endTime ? new Date(event.endTime) : null;
-  const eventUrl = `/events/${event.id}`;
+  const eventUrl = event.slug ? `/e/${event.slug}` : `/events/${event.id}`;
   const dashboardUrl = `/dashboard/events/${event.id}`;
 
   return (
@@ -498,7 +498,9 @@ function EventListCard({ events }: { events: EventData[] }) {
         <div className="divide-y">
           {events.map((event) => {
             const startDate = new Date(event.startTime);
-            const eventUrl = `/events/${event.id}`;
+            const eventUrl = event.slug
+              ? `/e/${event.slug}`
+              : `/events/${event.id}`;
             return (
               <a
                 key={event.id}

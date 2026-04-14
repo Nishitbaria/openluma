@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator";
 
 interface TicketData {
   eventId: string;
+  eventSlug: string;
   eventTitle: string;
   startTime: string;
   endTime: string | null;
@@ -57,7 +58,15 @@ export default function TicketPage() {
           {error ?? "Ticket not available"}
         </p>
         <Button asChild variant="outline">
-          <Link href={`/events/${eventId}`}>Back to Event</Link>
+          <Link
+            href={
+              ticket?.eventSlug
+                ? `/e/${ticket.eventSlug}`
+                : `/events/${eventId}`
+            }
+          >
+            Back to Event
+          </Link>
         </Button>
       </div>
     );
@@ -79,7 +88,13 @@ export default function TicketPage() {
       <div className="w-full max-w-md space-y-4">
         <div className="flex items-center gap-2">
           <Button asChild variant="ghost" size="sm">
-            <Link href={`/events/${eventId}`}>
+            <Link
+              href={
+                ticket?.eventSlug
+                  ? `/e/${ticket.eventSlug}`
+                  : `/events/${eventId}`
+              }
+            >
               <ArrowLeft className="mr-1 h-4 w-4" />
               Event
             </Link>

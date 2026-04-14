@@ -13,6 +13,7 @@ function generateICS(event: {
   endTime: Date | null;
   location: string | null;
   id: string;
+  slug?: string;
 }): string {
   const formatDate = (d: Date) =>
     d
@@ -33,7 +34,7 @@ function generateICS(event: {
     `DTEND:${formatDate(end)}`,
     `SUMMARY:${event.title}`,
     `LOCATION:${event.location ?? ""}`,
-    `URL:${appUrl}/events/${event.id}`,
+    `URL:${appUrl}${event.slug ? `/e/${event.slug}` : `/events/${event.id}`}`,
     `DESCRIPTION:View your ticket: ${appUrl}/ticket/${event.id}`,
     "END:VEVENT",
     "END:VCALENDAR",
@@ -92,6 +93,7 @@ export async function sendRsvpConfirmationEmail(
   status: string,
   event?: {
     id: string;
+    slug?: string;
     title: string;
     startTime: Date;
     endTime: Date | null;
@@ -104,7 +106,7 @@ export async function sendRsvpConfirmationEmail(
     // Send rich approval email with ticket + calendar
     const icsContent = generateICS(event);
     const ticketUrl = `${appUrl}/ticket/${event.id}`;
-    const eventUrl = `${appUrl}/events/${event.id}`;
+    const eventUrl = `${appUrl}${event.slug ? `/e/${event.slug}` : `/events/${event.id}`}`;
 
     const { data, error } = await resend.emails.send({
       from: fromEmail,
