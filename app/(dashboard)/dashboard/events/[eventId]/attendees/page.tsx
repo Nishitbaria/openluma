@@ -8,7 +8,7 @@ import { InviteForm } from "@/components/events/invite-form";
 import { Button } from "@/components/ui/button";
 import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { eventCohosts, events, invitations, rsvps } from "@/lib/db/schema";
+import { eventCohosts, eventQuestions, events, invitations, rsvps } from "@/lib/db/schema";
 
 export default async function AttendeesPage({
   params,
@@ -32,11 +32,12 @@ export default async function AttendeesPage({
 
   if (!isHost && !isCohost) notFound();
 
-  const [attendees, eventInvitations, cohosts] = await Promise.all([
+  const [attendees, eventInvitations, cohosts, questions] = await Promise.all([
     db.query.rsvps.findMany({
       where: eq(rsvps.eventId, eventId),
       with: {
         user: { columns: { id: true, name: true, email: true, image: true } },
+        timeline: { orderBy: (t, { desc }) => [desc(t.createdAt)] },
       },
       orderBy: (rsvps, { desc }) => [desc(rsvps.createdAt)],
     }),
@@ -49,6 +50,11 @@ export default async function AttendeesPage({
       with: {
         user: { columns: { id: true, name: true, email: true, image: true } },
       },
+    }),
+    db.query.eventQuestions.findMany({
+      where: eq(eventQuestions.eventId, eventId),
+      orderBy: (q, { asc }) => [asc(q.order)],
+      columns: { id: true, label: true, type: true },
     }),
   ]);
 
@@ -74,6 +80,10 @@ export default async function AttendeesPage({
         attendees={attendees.map((a) => ({
           ...a,
           createdAt: a.createdAt.toISOString(),
+          timeline: a.timeline.map((t) => ({
+            ...t,
+            createdAt: t.createdAt.toISOString(),
+          })),
         }))}
         cohosts={cohosts.map((c) => ({
           id: c.id,
@@ -85,6 +95,7 @@ export default async function AttendeesPage({
           createdAt: inv.createdAt.toISOString(),
           expiresAt: inv.expiresAt?.toISOString() ?? null,
         }))}
+        questions={questions}
         eventId={eventId}
         isHost={isHost}
       />

@@ -213,6 +213,23 @@ export const rsvps = pgTable(
   ],
 );
 
+export const rsvpTimeline = pgTable("rsvp_timeline", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  rsvpId: text("rsvp_id")
+    .notNull()
+    .references(() => rsvps.id, { onDelete: "cascade" }),
+  eventId: text("event_id")
+    .notNull()
+    .references(() => events.id, { onDelete: "cascade" }),
+  type: text("type").notNull(),
+  fromStatus: text("from_status"),
+  toStatus: text("to_status"),
+  changedByName: text("changed_by_name"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const invitations = pgTable(
   "invitations",
   {
@@ -344,9 +361,15 @@ export const eventQuestionsRelations = relations(eventQuestions, ({ one }) => ({
   event: one(events, { fields: [eventQuestions.eventId], references: [events.id] }),
 }));
 
-export const rsvpsRelations = relations(rsvps, ({ one }) => ({
+export const rsvpsRelations = relations(rsvps, ({ one, many }) => ({
   event: one(events, { fields: [rsvps.eventId], references: [events.id] }),
   user: one(user, { fields: [rsvps.userId], references: [user.id] }),
+  timeline: many(rsvpTimeline),
+}));
+
+export const rsvpTimelineRelations = relations(rsvpTimeline, ({ one }) => ({
+  rsvp: one(rsvps, { fields: [rsvpTimeline.rsvpId], references: [rsvps.id] }),
+  event: one(events, { fields: [rsvpTimeline.eventId], references: [events.id] }),
 }));
 
 export const invitationsRelations = relations(invitations, ({ one }) => ({

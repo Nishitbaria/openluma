@@ -234,10 +234,7 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
 
   // ── Save ──────────────────────────────────────────────────────────────────
   async function handleSave() {
-    const label =
-      modal.type === "social_profile"
-        ? getSocialLabel(modal.platform)
-        : modal.label.trim();
+    const label = modal.label.trim();
 
     if (!label) { toast.error("Question label is required"); return; }
     if (modal.type === "dropdown" && modal.options.length === 0) {
@@ -430,12 +427,13 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
                     <div className="space-y-1.5">
                       <Label className="text-sm">Question</Label>
                       <Input
-                        value={getSocialLabel(modal.platform)}
-                        readOnly
-                        className="text-muted-foreground"
+                        value={modal.label}
+                        onChange={(e) => setModal((m) => ({ ...m, label: e.target.value }))}
+                        placeholder={getSocialLabel(modal.platform)}
+                        onKeyDown={(e) => e.key === "Enter" && handleSave()}
                       />
                       <p className="text-xs text-muted-foreground">
-                        Auto-generated from platform.
+                        Auto-filled from platform — you can customize it.
                       </p>
                     </div>
                   </>

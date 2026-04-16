@@ -1,9 +1,9 @@
-import { and, desc, eq, gte, lt } from "drizzle-orm";
-import { Calendar, Plus } from "lucide-react";
+import { and, eq, gte, lt } from "drizzle-orm";
+import { Plus } from "lucide-react";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { EventCard } from "@/components/events/event-card";
+import { EventTimeline } from "@/components/events/event-timeline";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getSession } from "@/lib/auth";
@@ -27,7 +27,7 @@ export default async function EventsPage() {
           host: { columns: { id: true, name: true, image: true } },
           rsvps: { columns: { id: true } },
         },
-        orderBy: [desc(events.startTime)],
+        orderBy: (events, { asc }) => [asc(events.startTime)],
       }),
       db.query.events.findMany({
         where: and(
@@ -38,7 +38,7 @@ export default async function EventsPage() {
           host: { columns: { id: true, name: true, image: true } },
           rsvps: { columns: { id: true } },
         },
-        orderBy: [desc(events.startTime)],
+        orderBy: (events, { desc }) => [desc(events.startTime)],
       }),
       db.query.rsvps.findMany({
         where: eq(rsvps.userId, session.user.id),
@@ -50,7 +50,6 @@ export default async function EventsPage() {
             },
           },
         },
-        orderBy: [desc(rsvps.createdAt)],
       }),
       db.query.eventCohosts.findMany({
         where: eq(eventCohosts.userId, session.user.id),
@@ -65,7 +64,12 @@ export default async function EventsPage() {
       }),
     ]);
 
-  const cohostingEvents = cohostingRows.map((r) => r.event);
+  const cohostingEvents = cohostingRows
+    .map((r) => r.event)
+    .sort(
+      (a, b) =>
+        new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
+    );
   const cohostEventIds = new Set(cohostingEvents.map((e) => e.id));
 
   const attendingEvents = attendingRsvps
@@ -73,17 +77,16 @@ export default async function EventsPage() {
       (r) =>
         r.event.hostId !== session.user.id && !cohostEventIds.has(r.event.id),
     )
-    .map((r) => r.event);
+    .map((r) => ({ ...r.event, rsvpStatus: r.status }))
+    .sort(
+      (a, b) =>
+        new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
+    );
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">My Events</h1>
-          <p className="text-muted-foreground">
-            Manage your created and attended events.
-          </p>
-        </div>
+        <h1 className="text-3xl font-bold tracking-tight">Events</h1>
         <Button asChild>
           <Link href="/dashboard/events/new">
             <Plus className="mr-2 h-4 w-4" />
@@ -107,97 +110,49 @@ export default async function EventsPage() {
         </TabsList>
 
         <TabsContent value="upcoming" className="mt-6">
-          {upcomingEvents.length === 0 ? (
-            <EmptyState />
-          ) : (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {upcomingEvents.map((event) => (
-                <EventCard
-                  key={event.id}
-                  event={{ ...event, _count: { rsvps: event.rsvps.length } }}
-                  href={`/dashboard/events/${event.id}`}
-                />
-              ))}
-            </div>
-          )}
+          <EventTimeline
+            events={upcomingEvents}
+            href={(e) => `/dashboard/events/${e.id}`}
+            emptyTitle="No upcoming events"
+            emptyDescription="Create your first event to get started."
+            emptyAction={
+              <Button asChild className="mt-4">
+                <Link href="/dashboard/events/new">
+                  <Plus className="mr-2 h-4 w-4" />
+                  Create Event
+                </Link>
+              </Button>
+            }
+          />
         </TabsContent>
 
         <TabsContent value="past" className="mt-6">
-          {pastEvents.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12">
-              <p className="text-sm text-muted-foreground">No past events.</p>
-            </div>
-          ) : (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {pastEvents.map((event) => (
-                <EventCard
-                  key={event.id}
-                  event={{ ...event, _count: { rsvps: event.rsvps.length } }}
-                  href={`/dashboard/events/${event.id}`}
-                />
-              ))}
-            </div>
-          )}
+          <EventTimeline
+            events={pastEvents}
+            href={(e) => `/dashboard/events/${e.id}`}
+            emptyTitle="No past events"
+            emptyDescription="Events you've hosted will appear here."
+          />
         </TabsContent>
 
         <TabsContent value="cohosting" className="mt-6">
-          {cohostingEvents.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12">
-              <p className="text-sm text-muted-foreground">
-                You&apos;re not co-hosting any events.
-              </p>
-            </div>
-          ) : (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {cohostingEvents.map((event) => (
-                <EventCard
-                  key={event.id}
-                  event={{ ...event, _count: { rsvps: event.rsvps.length } }}
-                  href={`/dashboard/events/${event.id}`}
-                />
-              ))}
-            </div>
-          )}
+          <EventTimeline
+            events={cohostingEvents}
+            href={(e) => `/dashboard/events/${e.id}`}
+            emptyTitle="No co-hosted events"
+            emptyDescription="Events where you're a co-host will appear here."
+          />
         </TabsContent>
 
         <TabsContent value="attending" className="mt-6">
-          {attendingEvents.length === 0 ? (
-            <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12">
-              <p className="text-sm text-muted-foreground">
-                You haven&apos;t RSVP&apos;d to any events yet.
-              </p>
-            </div>
-          ) : (
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {attendingEvents.map((event) => (
-                <EventCard
-                  key={event.id}
-                  event={{ ...event, _count: { rsvps: event.rsvps.length } }}
-                  href={`/dashboard/events/${event.id}`}
-                />
-              ))}
-            </div>
-          )}
+          <EventTimeline
+            events={attendingEvents}
+            href={(e) => (e.slug ? `/e/${e.slug}` : `/events/${e.id}`)}
+            emptyTitle="No events attended"
+            emptyDescription="Events you've RSVP'd to will appear here."
+          />
         </TabsContent>
       </Tabs>
-    </div>
-  );
-}
-
-function EmptyState() {
-  return (
-    <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12">
-      <Calendar className="h-12 w-12 text-muted-foreground" />
-      <h3 className="mt-4 text-lg font-semibold">No upcoming events</h3>
-      <p className="mt-2 text-sm text-muted-foreground">
-        Create your first event to get started.
-      </p>
-      <Button asChild className="mt-4">
-        <Link href="/dashboard/events/new">
-          <Plus className="mr-2 h-4 w-4" />
-          Create Event
-        </Link>
-      </Button>
     </div>
   );
 }

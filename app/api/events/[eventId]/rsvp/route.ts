@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import type { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { events, invitations, rsvps, user } from "@/lib/db/schema";
+import { events, invitations, rsvps, rsvpTimeline, user } from "@/lib/db/schema";
 import { sendRsvpConfirmationEmail } from "@/lib/email";
 
 export async function GET(
@@ -145,6 +145,11 @@ export async function POST(
     })
     .returning();
 
+  // Log timeline entry
+  db.insert(rsvpTimeline)
+    .values({ rsvpId: rsvp.id, eventId, type: "registered", toStatus: status })
+    .catch(() => {});
+
   // Send ticket email if auto-approved
   if (status === "approved" && session.user.email) {
     sendRsvpConfirmationEmail(session.user.email, event.title, "approved", {
@@ -194,11 +199,17 @@ export async function PATCH(
   }
 
   const body = await request.json();
-  const { rsvpId, status } = body;
+  const { rsvpId, status, notifyGuest = true, customMessage } = body;
 
-  if (!rsvpId || !["approved", "rejected", "waitlisted"].includes(status)) {
+  if (!rsvpId || !["approved", "rejected", "waitlisted", "pending"].includes(status)) {
     return Response.json({ message: "Invalid data" }, { status: 400 });
   }
+
+  // Fetch existing status for timeline logging
+  const existingRsvp = await db.query.rsvps.findFirst({
+    where: and(eq(rsvps.id, rsvpId), eq(rsvps.eventId, eventId)),
+    columns: { status: true },
+  });
 
   const [updated] = await db
     .update(rsvps)
@@ -207,30 +218,43 @@ export async function PATCH(
     .returning();
 
   if (updated) {
-    // Fire-and-forget: don't block response on email send
-    db.query.user
-      .findFirst({ where: eq(user.id, updated.userId) })
-      .then((rsvpUser) => {
-        if (rsvpUser?.email) {
-          sendRsvpConfirmationEmail(
-            rsvpUser.email,
-            event.title,
-            status,
-            status === "approved"
-              ? {
-                  id: event.id,
-                  title: event.title,
-                  startTime: event.startTime,
-                  endTime: event.endTime,
-                  location: event.location,
-                }
-              : undefined,
-          ).catch((err) =>
-            console.error("Failed to send RSVP email:", err),
-          );
-        }
+    // Log timeline entry
+    db.insert(rsvpTimeline)
+      .values({
+        rsvpId,
+        eventId,
+        type: "status_changed",
+        fromStatus: existingRsvp?.status ?? null,
+        toStatus: status,
+        changedByName: session.user.name,
       })
-      .catch((err) => console.error("Failed to fetch user for email:", err));
+      .catch(() => {});
+
+    // Fire-and-forget: send email if notifyGuest is true
+    if (notifyGuest) {
+      db.query.user
+        .findFirst({ where: eq(user.id, updated.userId) })
+        .then((rsvpUser) => {
+          if (rsvpUser?.email) {
+            sendRsvpConfirmationEmail(
+              rsvpUser.email,
+              event.title,
+              status,
+              {
+                id: event.id,
+                title: event.title,
+                startTime: event.startTime,
+                endTime: event.endTime,
+                location: event.location,
+              },
+              customMessage?.trim() || undefined,
+            ).catch((err) =>
+              console.error("Failed to send RSVP email:", err),
+            );
+          }
+        })
+        .catch((err) => console.error("Failed to fetch user for email:", err));
+    }
   }
 
   return Response.json(updated);
