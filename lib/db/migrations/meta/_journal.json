@@ -43,6 +43,13 @@
       "when": 1776191458364,
       "tag": "0005_worried_pride",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1776361467443,
+      "tag": "0006_cute_blindfold",
+      "breakpoints": true
     }
   ]
 }

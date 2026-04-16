@@ -138,6 +138,14 @@ export default async function EventDetailPage({
       message: string | null;
       customAnswers: Record<string, string | boolean> | null;
       createdAt: string;
+      timeline: Array<{
+        id: string;
+        type: string;
+        fromStatus: string | null;
+        toStatus: string | null;
+        changedByName: string | null;
+        createdAt: string;
+      }>;
       user: { id: string; name: string; email: string; image: string | null };
     }>;
     eventInvitations: Array<{
@@ -153,7 +161,7 @@ export default async function EventDetailPage({
       userId: string;
       user: { id: string; name: string; email: string; image: string | null };
     }>;
-    questions: Array<{ id: string; label: string }>;
+    questions: Array<{ id: string; label: string; type: string }>;
   } | null = null;
 
   let analyticsData: {
@@ -172,6 +180,7 @@ export default async function EventDetailPage({
           user: {
             columns: { id: true, name: true, email: true, image: true },
           },
+          timeline: { orderBy: (t, { desc }) => [desc(t.createdAt)] },
         },
         orderBy: (rsvps, { desc }) => [desc(rsvps.createdAt)],
       }),
@@ -190,7 +199,7 @@ export default async function EventDetailPage({
       db.query.eventQuestions.findMany({
         where: eq(eventQuestions.eventId, eventId),
         orderBy: (q, { asc }) => [asc(q.order)],
-        columns: { id: true, label: true },
+        columns: { id: true, label: true, type: true },
       }),
     ]);
 
@@ -199,6 +208,10 @@ export default async function EventDetailPage({
         ...a,
         customAnswers: (a.customAnswers as Record<string, string | boolean> | null) ?? null,
         createdAt: a.createdAt.toISOString(),
+        timeline: a.timeline.map((t) => ({
+          ...t,
+          createdAt: t.createdAt.toISOString(),
+        })),
         user: { ...a.user, name: a.user.name ?? "Unknown" },
       })),
       eventInvitations: eventInvitations.map((inv) => ({
