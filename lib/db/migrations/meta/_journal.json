@@ -36,6 +36,13 @@
       "when": 1776188991938,
       "tag": "0004_kind_rocket_racer",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1776191458364,
+      "tag": "0005_worried_pride",
+      "breakpoints": true
     }
   ]
 }

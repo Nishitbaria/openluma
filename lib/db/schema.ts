@@ -101,6 +101,11 @@ export const questionTypeEnum = pgEnum("question_type", [
   "paragraph",
   "checkbox",
   "dropdown",
+  "social_profile",
+  "company",
+  "phone",
+  "website",
+  "terms",
 ]);
 
 // ─── Application Tables ──────────────────────────────────────────────────────
