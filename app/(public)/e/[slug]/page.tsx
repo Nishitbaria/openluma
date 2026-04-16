@@ -12,7 +12,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { eventQuestions, events, rsvps } from "@/lib/db/schema";
+import { eventPageviews, eventQuestions, events, rsvps } from "@/lib/db/schema";
+import { redis } from "@/lib/redis";
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
@@ -106,6 +107,31 @@ export default async function PublicEventBySlugPage({
   ]);
 
   currentRsvpStatus = userRsvpResult?.status ?? null;
+
+  // ── Non-blocking pageview tracking ──────────────────────────────────────────
+  void (async () => {
+    try {
+      const reqHeaders = await headers();
+      const ip = reqHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+      const ipHash = Buffer.from(
+        await crypto.subtle.digest("SHA-256", new TextEncoder().encode(ip)),
+      ).toString("hex");
+      const city = reqHeaders.get("x-vercel-ip-city") ?? null;
+      const rawRef = reqHeaders.get("referer") ?? null;
+      const referrer = rawRef
+        ? (() => { try { return new URL(rawRef).hostname || "direct"; } catch { return "direct"; } })()
+        : "direct";
+
+      const dedupKey = `pv:${event.id}:${ipHash}`;
+      const already = redis ? await redis.get(dedupKey) : null;
+      if (!already) {
+        if (redis) redis.set(dedupKey, "1", { ex: 3600 }).catch(() => {});
+        db.insert(eventPageviews).values({ eventId: event.id, ipHash, referrer, city }).catch(() => {});
+      }
+    } catch {
+      // silently ignore — never break page load
+    }
+  })();
 
   // Waitlist position: count waitlisted RSVPs created at or before the user's
   let waitlistPosition: number | null = null;

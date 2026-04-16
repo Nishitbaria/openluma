@@ -1,8 +1,6 @@
 import { format } from "date-fns";
-import { eq } from "drizzle-orm";
+import { and, eq, gte, lte } from "drizzle-orm";
 import {
-  CheckCircle,
-  Clock,
   Crown,
   ExternalLink,
   Globe,
@@ -13,7 +11,6 @@ import {
   ShieldCheck,
   Ticket,
   Users,
-  XCircle,
 } from "lucide-react";
 import { headers } from "next/headers";
 import Image from "next/image";
@@ -21,6 +18,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AttendeeList } from "@/components/events/attendee-list";
 import { CalendarExportButton } from "@/components/events/calendar-export-button";
+import { EventAnalytics } from "@/components/events/event-analytics";
 import { CloneEventButton } from "@/components/events/clone-event-button";
 import { QuestionBuilder } from "@/components/events/question-builder";
 import { CopyLinkButton } from "@/components/events/copy-link-button";
@@ -45,6 +43,7 @@ import { db } from "@/lib/db";
 import {
   attendeeCheckins,
   eventCohosts,
+  eventPageviews,
   eventQuestions,
   events,
   invitations,
@@ -56,9 +55,9 @@ export default async function EventDetailPage({
   searchParams,
 }: {
   params: Promise<{ eventId: string }>;
-  searchParams: Promise<{ tab?: string }>;
+  searchParams: Promise<{ tab?: string; dateFrom?: string; dateTo?: string }>;
 }) {
-  const [{ eventId }, { tab = "overview" }, session] = await Promise.all([
+  const [{ eventId }, { tab = "overview", dateFrom, dateTo }, session] = await Promise.all([
     params,
     searchParams,
     getSession(await headers()),
@@ -158,7 +157,11 @@ export default async function EventDetailPage({
   } | null = null;
 
   let analyticsData: {
-    stats: Array<{ title: string; value: string | number; icon: typeof Users }>;
+    funnel: { totalViews: number; uniqueViews: number; totalRsvps: number; approved: number; checkedIn: number };
+    viewsByDay: { date: string; views: number }[];
+    referrers: { name: string; count: number }[];
+    dateFrom: string;
+    dateTo: string;
   } | null = null;
 
   if (tab === "guests" && canManage) {
@@ -216,37 +219,77 @@ export default async function EventDetailPage({
   }
 
   if (tab === "insights" && canManage) {
-    const [eventRsvps, checkins] = await Promise.all([
+    const resolvedFrom = dateFrom ? new Date(dateFrom) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const resolvedTo = dateTo ? new Date(dateTo) : new Date();
+
+    const [eventRsvps, checkins, views] = await Promise.all([
       db.query.rsvps.findMany({
         where: eq(rsvps.eventId, eventId),
+        columns: { status: true, createdAt: true },
       }),
       db.query.attendeeCheckins.findMany({
         where: eq(attendeeCheckins.eventId, eventId),
+        columns: { checkedInAt: true },
+      }),
+      db.query.eventPageviews.findMany({
+        where: and(
+          eq(eventPageviews.eventId, eventId),
+          gte(eventPageviews.createdAt, resolvedFrom),
+          lte(eventPageviews.createdAt, resolvedTo),
+        ),
+        columns: { createdAt: true, referrer: true, ipHash: true },
       }),
     ]);
 
-    const counts = { approved: 0, pending: 0, rejected: 0 };
-    for (const r of eventRsvps) {
-      if (r.status in counts) counts[r.status as keyof typeof counts]++;
-    }
-    const { approved, pending, rejected } = counts;
+    // Funnel counts
+    const approved = eventRsvps.filter((r) => r.status === "approved").length;
+    const totalRsvps = eventRsvps.length;
     const checkedIn = checkins.length;
-    const checkInRate =
-      approved > 0 ? Math.round((checkedIn / approved) * 100) : 0;
+    const totalViews = views.length;
+    const uniqueViews = new Set(views.map((v) => v.ipHash)).size;
+
+    // Views by day — fill every day in range with 0 if no data
+    const dayMap = new Map<string, number>();
+    const cursor = new Date(resolvedFrom);
+    cursor.setHours(0, 0, 0, 0);
+    const end = new Date(resolvedTo);
+    end.setHours(23, 59, 59, 999);
+    while (cursor <= end) {
+      dayMap.set(cursor.toISOString().slice(0, 10), 0);
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    for (const v of views) {
+      const day = new Date(v.createdAt).toISOString().slice(0, 10);
+      dayMap.set(day, (dayMap.get(day) ?? 0) + 1);
+    }
+    const viewsByDay = Array.from(dayMap.entries()).map(([date, count]) => ({
+      date: new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      views: count,
+    }));
+
+    // Top 5 referrers
+    const refMap = new Map<string, number>();
+    for (const v of views) {
+      const ref = v.referrer ?? "direct";
+      refMap.set(ref, (refMap.get(ref) ?? 0) + 1);
+    }
+    const referrers = Array.from(refMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5)
+      .map(([name, count]) => ({ name, count }));
 
     analyticsData = {
-      stats: [
-        { title: "Total RSVPs", value: eventRsvps.length, icon: Users },
-        { title: "Approved", value: approved, icon: CheckCircle },
-        { title: "Pending", value: pending, icon: Clock },
-        { title: "Rejected", value: rejected, icon: XCircle },
-        { title: "Checked In", value: checkedIn, icon: CheckCircle },
-        { title: "Check-in Rate", value: `${checkInRate}%`, icon: Users },
-      ],
+      funnel: { totalViews, uniqueViews, totalRsvps, approved, checkedIn },
+      viewsByDay,
+      referrers,
+      dateFrom: resolvedFrom.toISOString(),
+      dateTo: resolvedTo.toISOString(),
     };
   }
 
   const publicEventUrl = `/e/${event.slug}`;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const shareUrl = `${appUrl}/e/${event.slug}`;
 
   return (
     <div className="space-y-6">
@@ -295,6 +338,7 @@ export default async function EventDetailPage({
           hasTicket={hasTicket}
           eventId={eventId}
           publicEventUrl={publicEventUrl}
+          shareUrl={shareUrl}
         />
       )}
 
@@ -325,21 +369,7 @@ export default async function EventDetailPage({
       )}
 
       {tab === "insights" && canManage && analyticsData && (
-        <div className="grid gap-4 md:grid-cols-3">
-          {analyticsData.stats.map((stat) => (
-            <Card key={stat.title}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">
-                  {stat.title}
-                </CardTitle>
-                <stat.icon className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+        <EventAnalytics {...analyticsData} eventId={eventId} />
       )}
 
       {tab === "more" && canManage && (
@@ -438,6 +468,7 @@ function OverviewTab({
   hasTicket,
   eventId,
   publicEventUrl,
+  shareUrl,
 }: {
   event: {
     id: string;
@@ -497,6 +528,7 @@ function OverviewTab({
   hasTicket: boolean;
   eventId: string;
   publicEventUrl: string;
+  shareUrl: string;
 }) {
   return (
     <div className="space-y-6">
@@ -761,10 +793,14 @@ function OverviewTab({
 
           {/* Share */}
           <Card>
-            <CardContent className="flex items-center gap-3 p-4">
-              <Share2 className="h-4 w-4 text-muted-foreground" />
-              <span className="flex-1 text-sm font-medium">Share Event</span>
-              <CopyLinkButton url={publicEventUrl} />
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-sm font-medium">
+                <Share2 className="h-4 w-4 text-muted-foreground" />
+                Share Event
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              <CopyLinkButton url={shareUrl} variant="pill" />
             </CardContent>
           </Card>
 
