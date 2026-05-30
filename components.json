@@ -23,6 +23,7 @@
   },
   "registries": {
     "@efferd": "https://efferd.com/r/{style}/{name}.json",
-    "@heroicons-animated": "https://www.heroicons-animated.com/r/{name}.json"
+    "@heroicons-animated": "https://www.heroicons-animated.com/r/{name}.json",
+    "@magicui": "https://magicui.design/r/{name}"
   }
 }

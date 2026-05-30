@@ -1,6 +1,13 @@
 import { NextSSRPlugin } from "@uploadthing/react/next-ssr-plugin";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import {
+  GeistPixelCircle,
+  GeistPixelGrid,
+  GeistPixelLine,
+  GeistPixelSquare,
+  GeistPixelTriangle,
+} from "geist/font/pixel";
 import { ThemeProvider } from "next-themes";
 import { extractRouterConfig } from "uploadthing/server";
 import { Toaster } from "@/components/ui/sonner";
@@ -35,7 +42,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${GeistPixelSquare.variable} ${GeistPixelGrid.variable} ${GeistPixelCircle.variable} ${GeistPixelTriangle.variable} ${GeistPixelLine.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
         <NextSSRPlugin routerConfig={extractRouterConfig(ourFileRouter)} />

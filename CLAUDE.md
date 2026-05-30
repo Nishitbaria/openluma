@@ -129,10 +129,76 @@ lib/
 - Stat values: `text-2xl font-bold`
 - Captions: `text-xs text-muted-foreground`
 
+### Pixel Typography Pattern (Public Pages)
+
+> **IMPORTANT: Every new public-facing page must follow this pattern for descriptions and hero titles.**
+
+**Descriptions** — always use `PixelParagraph` instead of a plain `<p>`:
+```tsx
+import { PixelParagraph } from "@/components/ui/pixel-paragraph-words"
+
+<PixelParagraph
+  text="Your description text here."
+  pixelWords={["key term", "another term"]}  // 1–3 meaningful words max
+  font="circle"
+  pixelWordClassName="text-foreground"
+  className="mt-4 text-muted-foreground leading-relaxed"
+/>
+```
+- Pick 1–3 key concept words per description to highlight — never highlight filler words
+- Use `font="circle"` consistently across all pages for visual cohesion
+- `pixelWordClassName="text-foreground"` makes pixel words pop from `text-muted-foreground` base
+
+**Animated titles** — use `PixelHeading` for hero/landmark headings only:
+```tsx
+import { PixelHeading } from "@/components/ui/pixel-heading-character"
+
+<PixelHeading
+  as="h1"
+  mode="wave"       // "wave" for hero, "random" for accent lines
+  autoPlay
+  cycleInterval={300}
+  staggerDelay={120}
+  showLabel={false}
+  className="text-5xl font-bold tracking-tight"
+>
+  Your Title
+</PixelHeading>
+```
+- Use `PixelHeading` sparingly — hero section + 1 landmark section per page max
+- Section subheadings (`h2`, `h3`) stay as plain text — pixel animation on every heading is overwhelming
+- `mode="wave"` for primary titles, `mode="random"` for secondary accent headings
+
+**Both components are Server Components** — no `"use client"` needed unless the page already requires it.
+
 ### Spacing & Layout
 - Card padding: use `CardHeader` / `CardContent` — never add raw `p-*` to `<Card>` directly
 - Consistent gap: `gap-2` (tight), `gap-4` (default), `gap-6` (sections), `gap-8` (page sections)
 - Stack spacing: `space-y-2` (tight), `space-y-4` (default), `space-y-6` (sections)
+
+### Button Usage — MetalButton vs Button
+
+**`MetalButton`** (chromatic shader ring, `components/ui/metal-button.tsx`) — use for:
+- The **single primary CTA** on a page (e.g. "Get Started Free", "Start for Free", "Create Event")
+- Actions that are the **main conversion goal** of a section
+- Max **1 MetalButton per section** — the effect loses impact if overused
+
+```tsx
+import { MetalButton } from "@/components/ui/metal-button"
+<MetalButton asChild size="lg">
+  <Link href="/sign-up">Get Started Free</Link>
+</MetalButton>
+```
+
+**`Button variant="outline"`** — use for:
+- **Secondary actions** alongside a MetalButton (e.g. "Browse Events", "View on GitHub")
+- Actions that are optional or supplementary — not the main goal
+
+**`Button variant="ghost"`** — use for:
+- **Tertiary/low-priority actions** (e.g. "Cancel", "Skip", nav links)
+- Never use ghost for important CTAs
+
+**Rule of thumb**: One MetalButton per section max. If a section has only one button, it should be MetalButton. If it has two, MetalButton = primary, outline = secondary.
 
 ### Components
 - Use shadcn/ui components from `components/ui/` for all UI primitives — never build custom buttons, inputs, dialogs from scratch
