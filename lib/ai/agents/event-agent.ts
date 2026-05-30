@@ -1,5 +1,5 @@
-import { openai } from "@ai-sdk/openai";
 import { stepCountIs, ToolLoopAgent, tool } from "ai";
+import { model } from "@/lib/ai/model";
 import { and, desc, eq, gte, ilike } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { z } from "zod/v4";
@@ -11,7 +11,7 @@ import { generateEventSlug } from "@/lib/utils/slugify";
 export function createEventAgent(userId: string) {
   return new ToolLoopAgent({
     id: "event-agent",
-    model: openai("gpt-4o-mini"),
+    model,
     instructions: `You are the Event Management Agent for OpenLuma.
 You handle all event-related operations: creating, editing, deleting, searching, and viewing events.
 You also manage RSVPs, attendees, and email invitations.

@@ -2,7 +2,6 @@
 
 import { useChat } from "@ai-sdk/react";
 import { code } from "@streamdown/code";
-import type { UIMessage } from "ai";
 import { DefaultChatTransport, isToolUIPart } from "ai";
 import { format } from "date-fns";
 import {
@@ -26,6 +25,7 @@ import {
 import { Fragment, useState } from "react";
 import { toast } from "sonner";
 import { Streamdown } from "streamdown";
+import type { OrchestratorMessage } from "@/lib/ai/agents/orchestrator";
 import {
   Artifact,
   ArtifactAction,
@@ -65,7 +65,7 @@ const suggestions = [
 ];
 
 export function ChatPanel() {
-  const { messages, setMessages, sendMessage, status, regenerate } = useChat({
+  const { messages, setMessages, sendMessage, status, regenerate } = useChat<OrchestratorMessage>({
     transport: new DefaultChatTransport({ api: "/api/chat" }),
   });
   const [input, setInput] = useState("");
@@ -128,7 +128,7 @@ export function ChatPanel() {
         ) : (
           <Conversation>
             <ConversationContent className="px-4 py-6 max-w-3xl mx-auto w-full">
-              {messages.map((message: UIMessage, messageIndex: number) => {
+              {messages.map((message, messageIndex) => {
                 if (message.role === "user") {
                   const textPart = message.parts.find(
                     (p) => p.type === "text",
@@ -331,7 +331,7 @@ interface EventListArtifactType {
 
 type ChatArtifact = EventCreatedArtifactType | EventListArtifactType;
 
-function extractArtifacts(parts: UIMessage["parts"]): ChatArtifact[] {
+function extractArtifacts(parts: OrchestratorMessage["parts"]): ChatArtifact[] {
   const artifacts: ChatArtifact[] = [];
   for (const part of parts) {
     if (!isToolUIPart(part)) continue;

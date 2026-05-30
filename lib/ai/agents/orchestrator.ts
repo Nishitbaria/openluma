@@ -1,6 +1,6 @@
-import { openai } from "@ai-sdk/openai";
-import { stepCountIs, ToolLoopAgent, tool } from "ai";
+import { stepCountIs, ToolLoopAgent, tool, type InferAgentUIMessage } from "ai";
 import { z } from "zod/v4";
+import { model } from "@/lib/ai/model";
 import { createEventAgent } from "./event-agent";
 
 export function createOrchestrator(userId: string) {
@@ -8,7 +8,7 @@ export function createOrchestrator(userId: string) {
 
   return new ToolLoopAgent({
     id: "orchestrator",
-    model: openai("gpt-4o-mini"),
+    model,
     instructions: `You are the OpenLuma AI Assistant — an intelligent orchestrator that delegates tasks to specialized sub-agents.
 
 ## Your Role
@@ -55,7 +55,6 @@ Use the \`delegateToEventAgent\` tool to forward event-related requests.
               messages: [{ role: "user", content: prompt }],
               abortSignal,
             });
-            // Extract structured artifacts from tool results
             const artifacts: Array<{ type: string; data: unknown }> = [];
             for (const step of result.steps) {
               for (const tr of step.toolResults) {
@@ -63,21 +62,12 @@ Use the \`delegateToEventAgent\` tool to forward event-related requests.
                 if (res?.success && res.event) {
                   artifacts.push({ type: "event-created", data: res.event });
                 }
-                if (
-                  res?.events &&
-                  Array.isArray(res.events) &&
-                  res.events.length > 0
-                ) {
+                if (res?.events && Array.isArray(res.events) && res.events.length > 0) {
                   artifacts.push({ type: "event-list", data: res.events });
                 }
               }
             }
-
-            return {
-              agentId: "event-agent",
-              response: result.text,
-              artifacts,
-            };
+            return { agentId: "event-agent", response: result.text, artifacts };
           } catch (error) {
             return {
               agentId: "event-agent",
@@ -85,8 +75,14 @@ Use the \`delegateToEventAgent\` tool to forward event-related requests.
             };
           }
         },
+        toModelOutput: ({ output }) => ({
+          type: "text" as const,
+          value: output?.response ?? output?.error ?? "Task completed.",
+        }),
       }),
     },
     stopWhen: stepCountIs(5),
   });
 }
+
+export type OrchestratorMessage = InferAgentUIMessage<ReturnType<typeof createOrchestrator>>;
