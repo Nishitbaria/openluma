@@ -2,9 +2,10 @@
 
 import { useChat } from "@ai-sdk/react";
 import { code } from "@streamdown/code";
-import { DefaultChatTransport, isToolUIPart } from "ai";
+import { DefaultChatTransport, getToolName, isToolUIPart, lastAssistantMessageIsCompleteWithApprovalResponses } from "ai";
 import { format } from "date-fns";
 import {
+  AlertTriangle,
   Bot,
   Calendar,
   Copy,
@@ -22,6 +23,7 @@ import {
   User,
   Users,
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Fragment, useState } from "react";
 import { toast } from "sonner";
 import { Streamdown } from "streamdown";
@@ -65,8 +67,9 @@ const suggestions = [
 ];
 
 export function ChatPanel() {
-  const { messages, setMessages, sendMessage, status, regenerate } = useChat<OrchestratorMessage>({
+  const { messages, setMessages, sendMessage, status, regenerate, addToolApprovalResponse } = useChat<OrchestratorMessage>({
     transport: new DefaultChatTransport({ api: "/api/chat" }),
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
   });
   const [input, setInput] = useState("");
 
@@ -158,11 +161,15 @@ export function ChatPanel() {
                   );
 
                 const artifacts = extractArtifacts(message.parts);
+                const approvalParts = message.parts.filter(
+                  (p) => isToolUIPart(p) && p.state === "approval-requested",
+                );
                 const hasRunningTool = message.parts.some(
                   (p) =>
                     isToolUIPart(p) &&
                     p.state !== "output-available" &&
-                    p.state !== "output-error",
+                    p.state !== "output-error" &&
+                    p.state !== "approval-requested",
                 );
                 const lastTextIdx =
                   textParts.length > 0
@@ -181,6 +188,51 @@ export function ChatPanel() {
                           <span>Working on it...</span>
                         </div>
                       )}
+                      {approvalParts.map((part, idx) => {
+                        const toolName = getToolName(part);
+                        const input = (part as { input: Record<string, unknown> }).input;
+                        const toolCallId = (part as { toolCallId: string }).toolCallId;
+
+                        let actionText = "";
+                        if (toolName === "deleteEvent") {
+                          actionText = `Permanently delete "${input.eventTitle || "this event"}"?`;
+                        } else if (toolName === "sendInvitation") {
+                          actionText = `Send invitation to "${input.email}"${input.eventTitle ? ` for "${input.eventTitle}"` : ""}?`;
+                        } else {
+                          return null;
+                        }
+
+                        return (
+                          <div
+                            key={`approval-${toolCallId}-${idx}`}
+                            className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-3"
+                          >
+                            <div className="flex items-start gap-2">
+                              <AlertTriangle className="size-4 text-destructive mt-0.5 shrink-0" />
+                              <div>
+                                <p className="text-sm font-medium">Confirm action</p>
+                                <p className="text-sm text-muted-foreground">{actionText}</p>
+                              </div>
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => addToolApprovalResponse({ id: toolCallId, approved: true })}
+                              >
+                                Confirm
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => addToolApprovalResponse({ id: toolCallId, approved: false })}
+                              >
+                                Cancel
+                              </Button>
+                            </div>
+                          </div>
+                        );
+                      })}
                       {textParts.map(({ part, idx }) => {
                         const text = (part as { text: string }).text;
                         const isLastText = idx === lastTextIdx;

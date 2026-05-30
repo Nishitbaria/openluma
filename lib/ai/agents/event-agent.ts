@@ -1,11 +1,9 @@
 import { stepCountIs, ToolLoopAgent, tool } from "ai";
 import { model } from "@/lib/ai/model";
 import { and, desc, eq, gte, ilike } from "drizzle-orm";
-import { nanoid } from "nanoid";
 import { z } from "zod/v4";
 import { db } from "@/lib/db";
-import { eventTags, events, invitations, rsvps } from "@/lib/db/schema";
-import { sendInvitationEmail } from "@/lib/email";
+import { eventTags, events, rsvps } from "@/lib/db/schema";
 import { generateEventSlug } from "@/lib/utils/slugify";
 
 export function createEventAgent(userId: string) {
@@ -13,15 +11,13 @@ export function createEventAgent(userId: string) {
     id: "event-agent",
     model,
     instructions: `You are the Event Management Agent for OpenLuma.
-You handle all event-related operations: creating, editing, deleting, searching, and viewing events.
-You also manage RSVPs, attendees, and email invitations.
+You handle event operations: creating, editing, searching, viewing events, managing RSVPs, and attendees.
+Deleting events and sending invitations are handled separately by the orchestrator — do NOT attempt those.
 
 IMPORTANT: You do NOT know the current date from your training. ALWAYS call the getCurrentDate tool first before creating events or interpreting relative dates like "tomorrow", "next Friday", "this weekend", etc.
 
 RULES:
 - ALWAYS call getCurrentDate before creating or searching events with relative dates.
-- Before deleting an event, ALWAYS ask the user for confirmation first. Set confirmed=false initially.
-- Before sending invitations to multiple people, confirm the list with the user.
 - Never fabricate data — always use your tools to query real information.
 - When creating events, ask for missing required fields (title, start time) before calling the tool.
 - Format dates in a human-friendly way (e.g., "Friday, April 18 at 6:00 PM").
@@ -264,31 +260,6 @@ RULES:
         },
       }),
 
-      deleteEvent: tool({
-        description:
-          "Delete an event. ALWAYS confirm with the user before calling this.",
-        inputSchema: z.object({
-          eventId: z.string().describe("The event ID to delete"),
-          confirmed: z
-            .boolean()
-            .describe("Must be true - user must confirm deletion first"),
-        }),
-        execute: async ({ eventId, confirmed }) => {
-          if (!confirmed) return { error: "Deletion not confirmed by user" };
-
-          const event = await db.query.events.findFirst({
-            where: eq(events.id, eventId),
-          });
-          if (!event) return { error: "Event not found" };
-          if (event.hostId !== userId) return { error: "Not authorized" };
-
-          await db.delete(events).where(eq(events.id, eventId));
-          return {
-            success: true,
-            message: `Event "${event.title}" deleted`,
-          };
-        },
-      }),
 
       submitRsvp: tool({
         description: "RSVP to an event on behalf of the user.",
@@ -411,35 +382,6 @@ RULES:
         },
       }),
 
-      sendInvitation: tool({
-        description: "Send an email invitation to someone for an event.",
-        inputSchema: z.object({
-          eventId: z.string().describe("The event ID"),
-          email: z.string().describe("Email address to invite"),
-        }),
-        execute: async ({ eventId, email }) => {
-          const event = await db.query.events.findFirst({
-            where: eq(events.id, eventId),
-          });
-          if (!event) return { error: "Event not found" };
-          if (event.hostId !== userId) return { error: "Not authorized" };
-
-          const token = nanoid(32);
-          const [invitation] = await db
-            .insert(invitations)
-            .values({
-              eventId,
-              email,
-              token,
-              invitedBy: userId,
-              expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-            })
-            .returning();
-
-          await sendInvitationEmail(email, event.title, token);
-          return { success: true, email, invitationId: invitation.id };
-        },
-      }),
     },
     stopWhen: stepCountIs(8),
   });

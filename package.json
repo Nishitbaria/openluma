@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "env -u OPENAI_API_KEY next dev",
     "build": "next build",
     "start": "next start",
     "lint": "biome check",
@@ -43,6 +43,7 @@
     "drizzle-orm": "^0.45.2",
     "html5-qrcode": "^2.3.8",
     "lucide-react": "^1.8.0",
+    "metal-fx": "^1.0.4",
     "nanoid": "^5.1.7",
     "next": "16.2.3",
     "next-themes": "^0.4.6",
