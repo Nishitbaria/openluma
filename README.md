@@ -1,10 +1,15 @@
 # OpenLuma
 
+[![CI](https://github.com/Nishitbaria/openluma/actions/workflows/ci.yml/badge.svg)](https://github.com/Nishitbaria/openluma/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-black.svg)](https://github.com/Nishitbaria/openluma/blob/main/LICENSE)
+[![Release](https://img.shields.io/github/v/release/Nishitbaria/openluma?color=black)](https://github.com/Nishitbaria/openluma/releases)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-black.svg)](https://github.com/Nishitbaria/openluma/blob/main/CONTRIBUTING.md)
+
 An open-source event management platform inspired by [Lu.ma](https://lu.ma) — built with Next.js 16, AI-powered event creation, and a modern full-stack architecture.
 
 > **Use natural language to create, manage, and discover events.** OpenLuma features an AI agent that handles event operations through conversation, alongside a full-featured web UI for hosts and attendees.
 
-<!-- Add a screenshot here: ![OpenLuma Screenshot](./public/screenshot.png) -->
+**[Live Demo](https://openluma.vercel.app)** · **[Report Bug](https://github.com/Nishitbaria/openluma/issues/new?template=bug_report.yml)** · **[Request Feature](https://github.com/Nishitbaria/openluma/issues/new?template=feature_request.yml)**
 
 ## Features
 
