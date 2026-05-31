@@ -233,6 +233,65 @@ import { MetalButton } from "@/components/ui/metal-button"
 - Use `useMemo` for derived data in client components that filter/map arrays from props
 - Avoid `{number && <JSX>}` — use ternary or `!= null` guard to prevent rendering `"0"`
 
+## Commit Message Convention (Conventional Commits)
+
+> **IMPORTANT: Every commit MUST follow this format — release-please reads commits to auto-generate changelogs and version bumps.**
+
+### Format
+
+```
+<type>(<optional scope>): <short description>
+```
+
+### Types and what they do
+
+| Type | When to use | Version bump |
+|------|-------------|--------------|
+| `feat` | New feature added | minor `0.1.0 → 0.2.0` |
+| `fix` | Bug fix | patch `0.1.0 → 0.1.1` |
+| `feat!` or `fix!` | Breaking change (the `!` is mandatory) | major `0.1.0 → 1.0.0` |
+| `perf` | Performance improvement | patch |
+| `refactor` | Code change, no new feature or fix | no release |
+| `docs` | Documentation only | no release |
+| `chore` | Maintenance, deps, config | no release |
+| `build` | Build system changes | no release |
+| `ci` | CI/CD workflow changes | no release |
+
+### Examples
+
+```bash
+# Good — triggers a patch release
+git commit -m "fix: google oauth redirect loop on sign-in"
+
+# Good — triggers a minor release
+git commit -m "feat: add calendar export to event detail page"
+
+# Good — triggers a major release (breaking change)
+git commit -m "feat!: redesign event creation API response shape"
+
+# Good — no release triggered
+git commit -m "chore: update shadcn/ui dependencies"
+git commit -m "docs: add self-hosting guide to README"
+git commit -m "refactor: extract email templates to separate files"
+
+# With scope (optional but helpful)
+git commit -m "feat(ai): add attendee suggestion tool to event agent"
+git commit -m "fix(email): ics attachment missing timezone"
+```
+
+### Rules
+- Use **present tense**, lowercase: `add` not `added`, `fix` not `fixed`
+- Keep the description under 72 characters
+- No period at the end
+- Never write `misc`, `updates`, `changes` — always pick a proper type
+
+### How releases work
+
+1. You push commits with proper types to `main`
+2. release-please opens a PR automatically: `chore: release v0.2.0`
+3. That PR contains the bumped `package.json` version + updated `CHANGELOG.md`
+4. You review and **merge the PR** → GitHub release `v0.2.0` is created automatically
+
 ## GitHub
 
 - Repo: https://github.com/Nishitbaria/openluma
