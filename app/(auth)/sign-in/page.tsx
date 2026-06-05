@@ -130,6 +130,7 @@ export default function SignInPage() {
 
             <MetalButton
               className="w-full"
+              metalFxClassName="w-full"
               size="sm"
               type="submit"
               disabled={loading}

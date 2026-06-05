@@ -72,7 +72,7 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel>Overview</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="gap-1">
               {overviewItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
@@ -94,15 +94,19 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel>Events</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="gap-1">
               {eventItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
                     asChild
                     isActive={
-                      item.url === "/"
-                        ? pathname === "/"
-                        : pathname.startsWith(item.url)
+                      pathname.startsWith(item.url) &&
+                      !eventItems.some(
+                        (other) =>
+                          other.url !== item.url &&
+                          other.url.startsWith(item.url) &&
+                          pathname.startsWith(other.url)
+                      )
                     }
                     tooltip={item.title}
                   >
@@ -120,7 +124,7 @@ export function AppSidebar() {
         <SidebarGroup>
           <SidebarGroupLabel>Account</SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
+            <SidebarMenu className="gap-1">
               {settingsItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton

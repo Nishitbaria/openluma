@@ -136,7 +136,7 @@ export default function SignUpPage() {
               </InputGroupAddon>
             </InputGroup>
 
-            <MetalButton className="w-full" size="sm" type="submit" disabled={loading}>
+            <MetalButton className="w-full" metalFxClassName="w-full" size="sm" type="submit" disabled={loading}>
               {loading && <Loader2Icon className="mr-2 size-4 animate-spin" />}
               {loading ? "Creating account..." : "Continue With Email"}
             </MetalButton>

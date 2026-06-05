@@ -39,7 +39,7 @@ export function HeroSection() {
           <AnimatedShinyText>Open source · Self-hostable · AI-powered</AnimatedShinyText>
         </div>
 
-        {/* Pixel headings — unchanged */}
+        {/* Pixel headings */}
         <div className="mb-3 flex flex-col items-center gap-1">
           <PixelHeading
             mode="wave"
