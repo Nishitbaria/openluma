@@ -25,7 +25,8 @@ import { cn } from "@/lib/utils";
 export default function SignInPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") ?? "/dashboard";
+  const raw = searchParams.get("callbackUrl") ?? "/dashboard";
+  const callbackUrl = raw.startsWith("/") && !raw.startsWith("//") ? raw : "/dashboard";
   const [loading, setLoading] = useState(false);
   const { resolvedTheme } = useTheme();
   const gridColor =
