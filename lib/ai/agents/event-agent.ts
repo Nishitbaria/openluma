@@ -3,7 +3,7 @@ import { model } from "@/lib/ai/model";
 import { and, desc, eq, gte, ilike } from "drizzle-orm";
 import { z } from "zod/v4";
 import { db } from "@/lib/db";
-import { eventTags, events, rsvps } from "@/lib/db/schema";
+import { eventTags, events, invitations, rsvps, user } from "@/lib/db/schema";
 import { generateEventSlug } from "@/lib/utils/slugify";
 
 export function createEventAgent(userId: string) {
@@ -275,6 +275,25 @@ RULES:
             where: eq(events.id, eventId),
           });
           if (!event) return { error: "Event not found" };
+
+          if (event.visibility === "private" && event.hostId !== userId) {
+            const currentUser = await db.query.user.findFirst({
+              where: eq(user.id, userId),
+              columns: { email: true },
+            });
+            const invitation = currentUser
+              ? await db.query.invitations.findFirst({
+                  where: and(
+                    eq(invitations.eventId, eventId),
+                    eq(invitations.email, currentUser.email),
+                    eq(invitations.status, "accepted")
+                  ),
+                })
+              : null;
+            if (!invitation) {
+              return { error: "This is a private event. You need an accepted invitation to RSVP." };
+            }
+          }
 
           const existing = await db.query.rsvps.findFirst({
             where: and(eq(rsvps.eventId, eventId), eq(rsvps.userId, userId)),
