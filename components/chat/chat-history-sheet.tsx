@@ -3,7 +3,7 @@
 import { formatDistanceToNow } from "date-fns";
 import { MessageSquare, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -47,6 +47,7 @@ export function ChatHistorySheet({
   activeConversationId?: string;
 }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [loading, setLoading] = useState(false);
   const [pendingDelete, setPendingDelete] =
@@ -69,7 +70,13 @@ export function ChatHistorySheet({
       await deleteConversationAction(pendingDelete.id);
       setConversations((prev) => prev.filter((c) => c.id !== pendingDelete.id));
       toast.success("Conversation deleted");
-      if (pendingDelete.id === activeConversationId) {
+      // Redirect if we're currently viewing the deleted conversation. Check the
+      // live pathname too: a freshly-created chat updates the URL via
+      // history.replaceState without updating the activeConversationId prop.
+      const isViewingDeleted =
+        pendingDelete.id === activeConversationId ||
+        pathname === `/dashboard/chat/${pendingDelete.id}`;
+      if (isViewingDeleted) {
         onOpenChange(false);
         router.push("/dashboard/chat");
       }
