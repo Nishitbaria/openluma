@@ -1,0 +1,170 @@
+"use client";
+
+import { formatDistanceToNow } from "date-fns";
+import { MessageSquare, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import {
+  deleteConversationAction,
+  listConversationsAction,
+} from "@/actions/chat";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
+import { cn } from "@/lib/utils";
+
+interface ConversationSummary {
+  id: string;
+  title: string;
+  updatedAt: Date;
+}
+
+export function ChatHistorySheet({
+  open,
+  onOpenChange,
+  activeConversationId,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  activeConversationId?: string;
+}) {
+  const router = useRouter();
+  const [conversations, setConversations] = useState<ConversationSummary[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [pendingDelete, setPendingDelete] =
+    useState<ConversationSummary | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    setLoading(true);
+    listConversationsAction()
+      .then(setConversations)
+      .catch(() => toast.error("Failed to load conversations"))
+      .finally(() => setLoading(false));
+  }, [open]);
+
+  async function handleDelete() {
+    if (!pendingDelete) return;
+    setDeleting(true);
+    try {
+      await deleteConversationAction(pendingDelete.id);
+      setConversations((prev) => prev.filter((c) => c.id !== pendingDelete.id));
+      toast.success("Conversation deleted");
+      if (pendingDelete.id === activeConversationId) {
+        onOpenChange(false);
+        router.push("/dashboard/chat");
+      }
+    } catch {
+      toast.error("Failed to delete conversation");
+    } finally {
+      setDeleting(false);
+      setPendingDelete(null);
+    }
+  }
+
+  return (
+    <>
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        <SheetContent side="left" className="w-80 p-0">
+          <SheetHeader className="border-b px-4 py-3">
+            <SheetTitle>Chat history</SheetTitle>
+            <SheetDescription>Your past conversations</SheetDescription>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto">
+            {loading ? (
+              <p className="px-4 py-6 text-sm text-muted-foreground">
+                Loading…
+              </p>
+            ) : conversations.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
+                <MessageSquare className="size-6 text-muted-foreground" />
+                <p className="text-sm font-medium">No conversations yet</p>
+                <p className="text-xs text-muted-foreground">
+                  Start chatting and your conversations will appear here.
+                </p>
+              </div>
+            ) : (
+              <ul className="p-2">
+                {conversations.map((conversation) => (
+                  <li
+                    key={conversation.id}
+                    className={cn(
+                      "group flex items-center gap-1 rounded-md transition-colors hover:bg-accent",
+                      conversation.id === activeConversationId && "bg-accent",
+                    )}
+                  >
+                    <Link
+                      href={`/dashboard/chat/${conversation.id}`}
+                      onClick={() => onOpenChange(false)}
+                      className="min-w-0 flex-1 px-2.5 py-2"
+                    >
+                      <p className="truncate text-sm">{conversation.title}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatDistanceToNow(new Date(conversation.updatedAt), {
+                          addSuffix: true,
+                        })}
+                      </p>
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => setPendingDelete(conversation)}
+                      className="mr-1 rounded-md p-1.5 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
+                      aria-label={`Delete "${conversation.title}"`}
+                    >
+                      <Trash2 className="size-3.5" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </SheetContent>
+      </Sheet>
+
+      <Dialog
+        open={pendingDelete !== null}
+        onOpenChange={(dialogOpen) => {
+          if (!dialogOpen) setPendingDelete(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete conversation</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete &quot;{pendingDelete?.title}
+              &quot;? Its messages will be permanently removed.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPendingDelete(null)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={deleting}
+            >
+              {deleting ? "Deleting..." : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}

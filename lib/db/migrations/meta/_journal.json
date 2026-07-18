@@ -50,6 +50,13 @@
       "when": 1776361467443,
       "tag": "0006_cute_blindfold",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1784365835079,
+      "tag": "0007_material_firebird",
+      "breakpoints": true
     }
   ]
 }

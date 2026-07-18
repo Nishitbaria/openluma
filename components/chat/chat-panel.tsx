@@ -2,7 +2,12 @@
 
 import { useChat } from "@ai-sdk/react";
 import { code } from "@streamdown/code";
-import { DefaultChatTransport, getToolName, isToolUIPart, lastAssistantMessageIsCompleteWithApprovalResponses } from "ai";
+import {
+  DefaultChatTransport,
+  getToolName,
+  isToolUIPart,
+  lastAssistantMessageIsCompleteWithApprovalResponses,
+} from "ai";
 import { format } from "date-fns";
 import {
   AlertTriangle,
@@ -12,6 +17,7 @@ import {
   Edit,
   ExternalLink,
   Globe,
+  History,
   Link2,
   Loader2,
   Lock,
@@ -23,11 +29,10 @@ import {
   User,
   Users,
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Fragment, useState } from "react";
+import { useRouter } from "next/navigation";
+import { Fragment, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Streamdown } from "streamdown";
-import type { OrchestratorMessage } from "@/lib/ai/agents/orchestrator";
 import {
   Artifact,
   ArtifactAction,
@@ -57,7 +62,10 @@ import {
   PromptInputTextarea,
   PromptInputTools,
 } from "@/components/ai-elements/prompt-input";
+import { ChatHistorySheet } from "@/components/chat/chat-history-sheet";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import type { OrchestratorMessage } from "@/lib/ai/agents/orchestrator";
 
 const suggestions = [
   { icon: Plus, label: "Create a tech meetup for next Friday at 6pm" },
@@ -66,20 +74,50 @@ const suggestions = [
   { icon: Users, label: "How many people are attending my latest event?" },
 ];
 
-export function ChatPanel() {
-  const { messages, setMessages, sendMessage, status, regenerate, addToolApprovalResponse } = useChat<OrchestratorMessage>({
+export function ChatPanel({
+  conversationId,
+  initialMessages,
+}: {
+  conversationId?: string;
+  initialMessages?: OrchestratorMessage[];
+} = {}) {
+  const router = useRouter();
+  const {
+    id: chatId,
+    messages,
+    sendMessage,
+    status,
+    regenerate,
+    addToolApprovalResponse,
+  } = useChat<OrchestratorMessage>({
+    id: conversationId,
+    messages: initialMessages,
     transport: new DefaultChatTransport({ api: "/api/chat" }),
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
   });
   const [input, setInput] = useState("");
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const hasSyncedUrl = useRef(false);
+
+  // On a brand-new chat, reflect the generated conversation id in the URL
+  // without a Next.js route transition — a real navigation would remount
+  // the panel and drop the in-flight stream.
+  function syncUrlIfNewChat() {
+    if (!conversationId && !hasSyncedUrl.current) {
+      hasSyncedUrl.current = true;
+      window.history.replaceState(null, "", `/dashboard/chat/${chatId}`);
+    }
+  }
 
   function handleSubmit(message: PromptInputMessage) {
     if (!message.text?.trim()) return;
+    syncUrlIfNewChat();
     sendMessage({ text: message.text });
     setInput("");
   }
 
   function handleSuggestion(text: string) {
+    syncUrlIfNewChat();
     sendMessage({ text });
   }
 
@@ -88,19 +126,31 @@ export function ChatPanel() {
 
   return (
     <div className="flex h-full flex-col bg-background">
-      {/* Header — only show New Chat when there are messages */}
-      {!isEmpty && (
-        <div className="flex items-center justify-end border-b px-4 py-2">
+      <div className="flex items-center justify-end gap-1 border-b px-4 py-2">
+        <button
+          type="button"
+          onClick={() => setHistoryOpen(true)}
+          className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+        >
+          <History className="size-3.5" />
+          History
+        </button>
+        {!isEmpty && (
           <button
             type="button"
-            onClick={() => setMessages([])}
+            onClick={() => router.push("/dashboard/chat")}
             className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
             <SquarePen className="size-3.5" />
             New chat
           </button>
-        </div>
-      )}
+        )}
+      </div>
+      <ChatHistorySheet
+        open={historyOpen}
+        onOpenChange={setHistoryOpen}
+        activeConversationId={conversationId}
+      />
 
       {/* Messages area */}
       <div className="relative flex flex-1 flex-col min-h-0">
@@ -190,8 +240,11 @@ export function ChatPanel() {
                       )}
                       {approvalParts.map((part, idx) => {
                         const toolName = getToolName(part);
-                        const input = (part as { input: Record<string, unknown> }).input;
-                        const toolCallId = (part as { toolCallId: string }).toolCallId;
+                        const input = (
+                          part as { input: Record<string, unknown> }
+                        ).input;
+                        const toolCallId = (part as { toolCallId: string })
+                          .toolCallId;
 
                         let actionText = "";
                         if (toolName === "deleteEvent") {
@@ -210,22 +263,36 @@ export function ChatPanel() {
                             <div className="flex items-start gap-2">
                               <AlertTriangle className="size-4 text-destructive mt-0.5 shrink-0" />
                               <div>
-                                <p className="text-sm font-medium">Confirm action</p>
-                                <p className="text-sm text-muted-foreground">{actionText}</p>
+                                <p className="text-sm font-medium">
+                                  Confirm action
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {actionText}
+                                </p>
                               </div>
                             </div>
                             <div className="flex gap-2">
                               <Button
                                 size="sm"
                                 variant="destructive"
-                                onClick={() => addToolApprovalResponse({ id: toolCallId, approved: true })}
+                                onClick={() =>
+                                  addToolApprovalResponse({
+                                    id: toolCallId,
+                                    approved: true,
+                                  })
+                                }
                               >
                                 Confirm
                               </Button>
                               <Button
                                 size="sm"
                                 variant="outline"
-                                onClick={() => addToolApprovalResponse({ id: toolCallId, approved: false })}
+                                onClick={() =>
+                                  addToolApprovalResponse({
+                                    id: toolCallId,
+                                    approved: false,
+                                  })
+                                }
                               >
                                 Cancel
                               </Button>

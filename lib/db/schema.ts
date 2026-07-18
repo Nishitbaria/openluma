@@ -202,7 +202,8 @@ export const rsvps = pgTable(
       .references(() => user.id, { onDelete: "cascade" }),
     status: rsvpStatusEnum("status").notNull().default("pending"),
     message: text("message"),
-    customAnswers: json("custom_answers").$type<Record<string, string | boolean>>(),
+    customAnswers:
+      json("custom_answers").$type<Record<string, string | boolean>>(),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -308,8 +309,8 @@ export const eventPageviews = pgTable(
   (table) => [index("event_pageviews_event_id_idx").on(table.eventId)],
 );
 
-export const chatMessages = pgTable(
-  "chat_messages",
+export const chatConversations = pgTable(
+  "chat_conversations",
   {
     id: text("id")
       .primaryKey()
@@ -317,13 +318,37 @@ export const chatMessages = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
+    title: text("title").notNull().default("New conversation"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("chat_conversations_user_id_idx").on(table.userId),
+    index("chat_conversations_updated_at_idx").on(table.updatedAt),
+  ],
+);
+
+export const chatMessages = pgTable(
+  "chat_messages",
+  {
+    // No id default: the id must always equal the AI SDK UIMessage.id so
+    // approval continuations resync onto the same rows.
+    id: text("id").primaryKey(),
+    conversationId: text("conversation_id")
+      .notNull()
+      .references(() => chatConversations.id, { onDelete: "cascade" }),
     role: text("role").notNull(),
-    content: text("content").notNull(),
-    toolCallId: text("tool_call_id"),
-    toolName: text("tool_name"),
+    parts: json("parts").notNull().$type<Record<string, unknown>[]>(),
+    order: integer("order").notNull().default(0),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
-  (table) => [index("chat_messages_user_id_idx").on(table.userId)],
+  (table) => [
+    index("chat_messages_conversation_id_idx").on(table.conversationId),
+    uniqueIndex("chat_messages_conversation_order_unique").on(
+      table.conversationId,
+      table.order,
+    ),
+  ],
 );
 
 // ─── Relations ───────────────────────────────────────────────────────────────
@@ -358,7 +383,10 @@ export const eventTagsRelations = relations(eventTags, ({ one }) => ({
 }));
 
 export const eventQuestionsRelations = relations(eventQuestions, ({ one }) => ({
-  event: one(events, { fields: [eventQuestions.eventId], references: [events.id] }),
+  event: one(events, {
+    fields: [eventQuestions.eventId],
+    references: [events.id],
+  }),
 }));
 
 export const rsvpsRelations = relations(rsvps, ({ one, many }) => ({
@@ -369,7 +397,10 @@ export const rsvpsRelations = relations(rsvps, ({ one, many }) => ({
 
 export const rsvpTimelineRelations = relations(rsvpTimeline, ({ one }) => ({
   rsvp: one(rsvps, { fields: [rsvpTimeline.rsvpId], references: [rsvps.id] }),
-  event: one(events, { fields: [rsvpTimeline.eventId], references: [events.id] }),
+  event: one(events, {
+    fields: [rsvpTimeline.eventId],
+    references: [events.id],
+  }),
 }));
 
 export const invitationsRelations = relations(invitations, ({ one }) => ({
@@ -411,9 +442,26 @@ export const attendeeCheckinsRelations = relations(
 );
 
 export const eventPageviewsRelations = relations(eventPageviews, ({ one }) => ({
-  event: one(events, { fields: [eventPageviews.eventId], references: [events.id] }),
+  event: one(events, {
+    fields: [eventPageviews.eventId],
+    references: [events.id],
+  }),
 }));
 
+export const chatConversationsRelations = relations(
+  chatConversations,
+  ({ one, many }) => ({
+    user: one(user, {
+      fields: [chatConversations.userId],
+      references: [user.id],
+    }),
+    messages: many(chatMessages),
+  }),
+);
+
 export const chatMessagesRelations = relations(chatMessages, ({ one }) => ({
-  user: one(user, { fields: [chatMessages.userId], references: [user.id] }),
+  conversation: one(chatConversations, {
+    fields: [chatMessages.conversationId],
+    references: [chatConversations.id],
+  }),
 }));
