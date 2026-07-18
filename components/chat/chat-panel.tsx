@@ -154,23 +154,27 @@ function ChatSession({
   return (
     <div className="flex h-full flex-col bg-background">
       <div className="flex items-center justify-end gap-1 border-b px-4 py-2">
-        <button
+        <Button
           type="button"
+          variant="ghost"
+          size="sm"
           onClick={() => setHistoryOpen(true)}
-          className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          className="text-xs text-muted-foreground hover:text-foreground"
         >
-          <History className="size-3.5" />
+          <History className="size-4" />
           History
-        </button>
+        </Button>
         {!isEmpty && (
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="sm"
             onClick={onNewChat}
-            className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+            className="text-xs text-muted-foreground hover:text-foreground"
           >
-            <SquarePen className="size-3.5" />
+            <SquarePen className="size-4" />
             New chat
-          </button>
+          </Button>
         )}
       </div>
       <ChatHistorySheet
