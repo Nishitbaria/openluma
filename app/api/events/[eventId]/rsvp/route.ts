@@ -152,7 +152,7 @@ export async function POST(
 
   // Send confirmation email (ticket if auto-approved, pending notice otherwise)
   if ((status === "approved" || status === "pending") && session.user.email) {
-    sendRsvpConfirmationEmail(session.user.email, event.title, status, {
+    await sendRsvpConfirmationEmail(session.user.email, event.title, status, {
       id: event.id,
       title: event.title,
       startTime: event.startTime,

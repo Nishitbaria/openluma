@@ -32,7 +32,7 @@ export async function submitRsvpAction(eventId: string, message?: string) {
   });
 
   if (session.user.email) {
-    sendRsvpConfirmationEmail(session.user.email, event.title, status, {
+    await sendRsvpConfirmationEmail(session.user.email, event.title, status, {
       id: event.id,
       slug: event.slug ?? undefined,
       title: event.title,
