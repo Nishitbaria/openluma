@@ -1,4 +1,4 @@
-import { format } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import { Calendar, Globe, Lock, MapPin, Users } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -19,6 +19,7 @@ interface EventCardProps {
     description: string | null;
     coverImage: string | null;
     startTime: Date | string;
+    timezone?: string;
     location: string | null;
     type: "in_person" | "virtual" | "hybrid";
     visibility: "public" | "private";
@@ -75,7 +76,13 @@ export function EventCard({ event, href }: EventCardProps) {
         <CardContent className="space-y-2 pb-2">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Calendar className="h-4 w-4" />
-            <span>{format(startTime, "EEE, MMM d 'at' h:mm a")}</span>
+            <span>
+              {formatInTimeZone(
+                startTime,
+                event.timezone ?? "UTC",
+                "EEE, MMM d 'at' h:mm a",
+              )}
+            </span>
           </div>
           {event.location && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">

@@ -1,4 +1,4 @@
-import { format } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import { and, eq, lte } from "drizzle-orm";
 import { Calendar, Globe, Lock, MapPin, Users } from "lucide-react";
 import { headers } from "next/headers";
@@ -290,11 +290,17 @@ export default async function PublicEventBySlugPage({
                 <Calendar className="h-5 w-5 text-primary" />
                 <div>
                   <p className="font-medium">
-                    {format(startTime, "EEEE, MMMM d, yyyy")}
+                    {formatInTimeZone(
+                      startTime,
+                      event.timezone,
+                      "EEEE, MMMM d, yyyy",
+                    )}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {format(startTime, "h:mm a")}
-                    {endTime && ` - ${format(endTime, "h:mm a")}`}
+                    {formatInTimeZone(startTime, event.timezone, "h:mm a")}
+                    {endTime &&
+                      ` - ${formatInTimeZone(endTime, event.timezone, "h:mm a")}`}{" "}
+                    ({formatInTimeZone(startTime, event.timezone, "zzz")})
                   </p>
                 </div>
               </div>

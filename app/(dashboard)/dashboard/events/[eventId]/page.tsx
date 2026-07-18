@@ -1,4 +1,4 @@
-import { format } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import { and, eq, gte, lte } from "drizzle-orm";
 import {
   Crown,
@@ -18,15 +18,15 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AttendeeList } from "@/components/events/attendee-list";
 import { CalendarExportButton } from "@/components/events/calendar-export-button";
-import { EventAnalytics } from "@/components/events/event-analytics";
 import { CloneEventButton } from "@/components/events/clone-event-button";
-import { QuestionBuilder } from "@/components/events/question-builder";
 import { CopyLinkButton } from "@/components/events/copy-link-button";
 import { DeleteEventButton } from "@/components/events/delete-event-button";
+import { EventAnalytics } from "@/components/events/event-analytics";
 import { EventEditDrawer } from "@/components/events/event-edit-drawer";
 import { EventTabsNav } from "@/components/events/event-tabs-nav";
-import { RichTextRenderer } from "@/components/events/rich-text-renderer";
 import { InviteForm } from "@/components/events/invite-form";
+import { QuestionBuilder } from "@/components/events/question-builder";
+import { RichTextRenderer } from "@/components/events/rich-text-renderer";
 import {
   Avatar,
   AvatarFallback,
@@ -57,11 +57,8 @@ export default async function EventDetailPage({
   params: Promise<{ eventId: string }>;
   searchParams: Promise<{ tab?: string; dateFrom?: string; dateTo?: string }>;
 }) {
-  const [{ eventId }, { tab = "overview", dateFrom, dateTo }, session] = await Promise.all([
-    params,
-    searchParams,
-    getSession(await headers()),
-  ]);
+  const [{ eventId }, { tab = "overview", dateFrom, dateTo }, session] =
+    await Promise.all([params, searchParams, getSession(await headers())]);
 
   const event = await db.query.events.findFirst({
     where: eq(events.id, eventId),
@@ -114,8 +111,13 @@ export default async function EventDetailPage({
     title: event.title,
     description: event.description,
     coverImage: event.coverImage,
-    startTime: Number.isFinite(event.startTime.getTime()) ? event.startTime.toISOString() : new Date().toISOString(),
-    endTime: event.endTime && Number.isFinite(event.endTime.getTime()) ? event.endTime.toISOString() : null,
+    startTime: Number.isFinite(event.startTime.getTime())
+      ? event.startTime.toISOString()
+      : new Date().toISOString(),
+    endTime:
+      event.endTime && Number.isFinite(event.endTime.getTime())
+        ? event.endTime.toISOString()
+        : null,
     timezone: event.timezone,
     location: event.location,
     locationDetails: event.locationDetails,
@@ -165,7 +167,13 @@ export default async function EventDetailPage({
   } | null = null;
 
   let analyticsData: {
-    funnel: { totalViews: number; uniqueViews: number; totalRsvps: number; approved: number; checkedIn: number };
+    funnel: {
+      totalViews: number;
+      uniqueViews: number;
+      totalRsvps: number;
+      approved: number;
+      checkedIn: number;
+    };
     viewsByDay: { date: string; views: number }[];
     referrers: { name: string; count: number }[];
     dateFrom: string;
@@ -173,40 +181,42 @@ export default async function EventDetailPage({
   } | null = null;
 
   if (tab === "guests" && canManage) {
-    const [attendees, eventInvitations, cohostsList, questionsList] = await Promise.all([
-      db.query.rsvps.findMany({
-        where: eq(rsvps.eventId, eventId),
-        with: {
-          user: {
-            columns: { id: true, name: true, email: true, image: true },
+    const [attendees, eventInvitations, cohostsList, questionsList] =
+      await Promise.all([
+        db.query.rsvps.findMany({
+          where: eq(rsvps.eventId, eventId),
+          with: {
+            user: {
+              columns: { id: true, name: true, email: true, image: true },
+            },
+            timeline: { orderBy: (t, { desc }) => [desc(t.createdAt)] },
           },
-          timeline: { orderBy: (t, { desc }) => [desc(t.createdAt)] },
-        },
-        orderBy: (rsvps, { desc }) => [desc(rsvps.createdAt)],
-      }),
-      db.query.invitations.findMany({
-        where: eq(invitations.eventId, eventId),
-        orderBy: (invitations, { desc }) => [desc(invitations.createdAt)],
-      }),
-      db.query.eventCohosts.findMany({
-        where: eq(eventCohosts.eventId, eventId),
-        with: {
-          user: {
-            columns: { id: true, name: true, email: true, image: true },
+          orderBy: (rsvps, { desc }) => [desc(rsvps.createdAt)],
+        }),
+        db.query.invitations.findMany({
+          where: eq(invitations.eventId, eventId),
+          orderBy: (invitations, { desc }) => [desc(invitations.createdAt)],
+        }),
+        db.query.eventCohosts.findMany({
+          where: eq(eventCohosts.eventId, eventId),
+          with: {
+            user: {
+              columns: { id: true, name: true, email: true, image: true },
+            },
           },
-        },
-      }),
-      db.query.eventQuestions.findMany({
-        where: eq(eventQuestions.eventId, eventId),
-        orderBy: (q, { asc }) => [asc(q.order)],
-        columns: { id: true, label: true, type: true },
-      }),
-    ]);
+        }),
+        db.query.eventQuestions.findMany({
+          where: eq(eventQuestions.eventId, eventId),
+          orderBy: (q, { asc }) => [asc(q.order)],
+          columns: { id: true, label: true, type: true },
+        }),
+      ]);
 
     attendeesData = {
       attendees: attendees.map((a) => ({
         ...a,
-        customAnswers: (a.customAnswers as Record<string, string | boolean> | null) ?? null,
+        customAnswers:
+          (a.customAnswers as Record<string, string | boolean> | null) ?? null,
         createdAt: a.createdAt.toISOString(),
         timeline: a.timeline.map((t) => ({
           ...t,
@@ -232,7 +242,9 @@ export default async function EventDetailPage({
   }
 
   if (tab === "insights" && canManage) {
-    const resolvedFrom = dateFrom ? new Date(dateFrom) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const resolvedFrom = dateFrom
+      ? new Date(dateFrom)
+      : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
     const resolvedTo = dateTo ? new Date(dateTo) : new Date();
 
     const [eventRsvps, checkins, views] = await Promise.all([
@@ -276,7 +288,10 @@ export default async function EventDetailPage({
       dayMap.set(day, (dayMap.get(day) ?? 0) + 1);
     }
     const viewsByDay = Array.from(dayMap.entries()).map(([date, count]) => ({
-      date: new Date(date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+      date: new Date(date).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      }),
       views: count,
     }));
 
@@ -374,7 +389,8 @@ export default async function EventDetailPage({
           <div>
             <h2 className="text-lg font-semibold">Registration Questions</h2>
             <p className="text-sm text-muted-foreground">
-              Attendees will answer these when they RSVP. Answers appear in the Guests tab and CSV export.
+              Attendees will answer these when they RSVP. Answers appear in the
+              Guests tab and CSV export.
             </p>
           </div>
           <QuestionBuilder eventId={eventId} />
@@ -707,19 +723,24 @@ function OverviewTab({
               <div className="flex gap-3">
                 <div className="flex h-12 w-12 flex-col items-center justify-center rounded-lg bg-muted text-xs">
                   <span className="font-semibold uppercase text-primary">
-                    {format(startTime, "MMM")}
+                    {formatInTimeZone(startTime, event.timezone, "MMM")}
                   </span>
                   <span className="text-lg font-bold leading-none">
-                    {format(startTime, "d")}
+                    {formatInTimeZone(startTime, event.timezone, "d")}
                   </span>
                 </div>
                 <div>
                   <p className="font-medium">
-                    {format(startTime, "EEEE, MMMM d")}
+                    {formatInTimeZone(
+                      startTime,
+                      event.timezone,
+                      "EEEE, MMMM d",
+                    )}
                   </p>
                   <p className="text-sm text-muted-foreground">
-                    {format(startTime, "h:mm a")}
-                    {endTime && ` - ${format(endTime, "h:mm a")}`}{" "}
+                    {formatInTimeZone(startTime, event.timezone, "h:mm a")}
+                    {endTime &&
+                      ` - ${formatInTimeZone(endTime, event.timezone, "h:mm a")}`}{" "}
                     {event.timezone}
                   </p>
                 </div>

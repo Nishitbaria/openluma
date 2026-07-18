@@ -1,3 +1,4 @@
+import { formatInTimeZone } from "date-fns-tz";
 import { Resend } from "resend";
 
 const apiKey = process.env.RESEND_API_KEY;
@@ -165,7 +166,10 @@ export async function sendRsvpConfirmationEmail(
   }
 
   // Status-specific content
-  const statusConfig: Record<string, { subject: string; heading: string; body: string; color: string }> = {
+  const statusConfig: Record<
+    string,
+    { subject: string; heading: string; body: string; color: string }
+  > = {
     waitlisted: {
       subject: `You're on the waitlist — ${eventTitle}`,
       heading: "You're on the Waitlist",
@@ -232,8 +236,15 @@ export async function sendEventReminderEmail(
   to: string,
   eventTitle: string,
   startTime: Date,
+  timezone: string,
 ) {
   if (!resend) return;
+
+  const when = formatInTimeZone(
+    startTime,
+    timezone,
+    "EEEE, MMMM d, yyyy 'at' h:mm a zzz",
+  );
 
   return resend.emails.send({
     from: fromEmail,
@@ -243,7 +254,7 @@ export async function sendEventReminderEmail(
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
         <h2>Event Reminder</h2>
         <p><strong>${eventTitle}</strong> is starting soon!</p>
-        <p>When: ${startTime.toLocaleString()}</p>
+        <p>When: ${when}</p>
         <a href="${appUrl}" style="color: #000;">View Event</a>
       </div>
     `,

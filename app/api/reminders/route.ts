@@ -28,7 +28,7 @@ export async function GET(request: NextRequest) {
         lte(events.startTime, window24hEnd),
         eq(events.reminderSent24h, false),
       ),
-      columns: { id: true, title: true, startTime: true },
+      columns: { id: true, title: true, startTime: true, timezone: true },
     }),
     db.query.events.findMany({
       where: and(
@@ -36,14 +36,14 @@ export async function GET(request: NextRequest) {
         lte(events.startTime, window1hEnd),
         eq(events.reminderSent1h, false),
       ),
-      columns: { id: true, title: true, startTime: true },
+      columns: { id: true, title: true, startTime: true, timezone: true },
     }),
   ]);
 
   let sent = 0;
 
   async function sendRemindersForEvent(
-    event: { id: string; title: string; startTime: Date },
+    event: { id: string; title: string; startTime: Date; timezone: string },
     flag: "reminderSent24h" | "reminderSent1h",
   ) {
     const approvedRsvps = await db.query.rsvps.findMany({
@@ -55,8 +55,13 @@ export async function GET(request: NextRequest) {
       approvedRsvps
         .filter((r) => r.user.email)
         .map((r) =>
-          sendEventReminderEmail(r.user.email, event.title, event.startTime).catch(
-            (err) => console.error(`Reminder email failed for ${r.user.email}:`, err),
+          sendEventReminderEmail(
+            r.user.email,
+            event.title,
+            event.startTime,
+            event.timezone,
+          ).catch((err) =>
+            console.error(`Reminder email failed for ${r.user.email}:`, err),
           ),
         ),
     );

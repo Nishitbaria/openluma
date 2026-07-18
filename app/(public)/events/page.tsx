@@ -1,4 +1,4 @@
-import { format, isToday, isTomorrow } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import { and, asc, eq, gte, ilike } from "drizzle-orm";
 import { CalendarX } from "lucide-react";
 import { EventCard } from "@/components/events/event-card";
@@ -13,10 +13,18 @@ import {
 import { db } from "@/lib/db";
 import { events } from "@/lib/db/schema";
 
-function dayLabel(date: Date) {
-  if (isToday(date)) return "Today";
-  if (isTomorrow(date)) return "Tomorrow";
-  return format(date, "EEEE, MMMM d");
+function dayLabel(date: Date, timezone: string) {
+  const now = new Date();
+  const dateKey = formatInTimeZone(date, timezone, "yyyy-MM-dd");
+  const todayKey = formatInTimeZone(now, timezone, "yyyy-MM-dd");
+  const tomorrowKey = formatInTimeZone(
+    new Date(now.getTime() + 24 * 60 * 60 * 1000),
+    timezone,
+    "yyyy-MM-dd",
+  );
+  if (dateKey === todayKey) return "Today";
+  if (dateKey === tomorrowKey) return "Tomorrow";
+  return formatInTimeZone(date, timezone, "EEEE, MMMM d");
 }
 
 export default async function PublicEventsPage({
@@ -59,12 +67,16 @@ export default async function PublicEventsPage({
       typeof event.startTime === "string"
         ? new Date(event.startTime)
         : event.startTime;
-    const key = format(startTime, "yyyy-MM-dd");
+    const key = formatInTimeZone(startTime, event.timezone, "yyyy-MM-dd");
     const lastGroup = groups.at(-1);
     if (lastGroup?.key === key) {
       lastGroup.items.push(event);
     } else {
-      groups.push({ key, label: dayLabel(startTime), items: [event] });
+      groups.push({
+        key,
+        label: dayLabel(startTime, event.timezone),
+        items: [event],
+      });
     }
   }
 
