@@ -3,7 +3,13 @@ import { headers } from "next/headers";
 import type { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { events, invitations, rsvps, rsvpTimeline, user } from "@/lib/db/schema";
+import {
+  events,
+  invitations,
+  rsvps,
+  rsvpTimeline,
+  user,
+} from "@/lib/db/schema";
 import { sendRsvpConfirmationEmail } from "@/lib/email";
 
 export async function GET(
@@ -64,6 +70,7 @@ export async function POST(
     },
     columns: {
       id: true,
+      slug: true,
       title: true,
       hostId: true,
       capacity: true,
@@ -72,6 +79,7 @@ export async function POST(
       startTime: true,
       endTime: true,
       location: true,
+      timezone: true,
     },
   });
 
@@ -154,10 +162,12 @@ export async function POST(
   if ((status === "approved" || status === "pending") && session.user.email) {
     await sendRsvpConfirmationEmail(session.user.email, event.title, status, {
       id: event.id,
+      slug: event.slug ?? undefined,
       title: event.title,
       startTime: event.startTime,
       endTime: event.endTime,
       location: event.location,
+      timezone: event.timezone,
     }).catch((err) => console.error("Failed to send ticket email:", err));
   }
 
@@ -179,11 +189,13 @@ export async function PATCH(
     with: { cohosts: true },
     columns: {
       id: true,
+      slug: true,
       title: true,
       hostId: true,
       startTime: true,
       endTime: true,
       location: true,
+      timezone: true,
     },
   });
 
@@ -201,7 +213,10 @@ export async function PATCH(
   const body = await request.json();
   const { rsvpId, status, notifyGuest = true, customMessage } = body;
 
-  if (!rsvpId || !["approved", "rejected", "waitlisted", "pending"].includes(status)) {
+  if (
+    !rsvpId ||
+    !["approved", "rejected", "waitlisted", "pending"].includes(status)
+  ) {
     return Response.json({ message: "Invalid data" }, { status: 400 });
   }
 
@@ -242,15 +257,15 @@ export async function PATCH(
               status,
               {
                 id: event.id,
+                slug: event.slug ?? undefined,
                 title: event.title,
                 startTime: event.startTime,
                 endTime: event.endTime,
                 location: event.location,
+                timezone: event.timezone,
               },
               customMessage?.trim() || undefined,
-            ).catch((err) =>
-              console.error("Failed to send RSVP email:", err),
-            );
+            ).catch((err) => console.error("Failed to send RSVP email:", err));
           }
         })
         .catch((err) => console.error("Failed to fetch user for email:", err));
@@ -311,7 +326,15 @@ export async function DELETE(
   if (cancelledRsvp?.status === "approved") {
     const event = await db.query.events.findFirst({
       where: eq(events.id, eventId),
-      columns: { id: true, title: true, startTime: true, endTime: true, location: true },
+      columns: {
+        id: true,
+        slug: true,
+        title: true,
+        startTime: true,
+        endTime: true,
+        location: true,
+        timezone: true,
+      },
     });
 
     const nextInLine = await db.query.rsvps.findFirst({
@@ -333,12 +356,16 @@ export async function DELETE(
           "approved",
           {
             id: event.id,
+            slug: event.slug ?? undefined,
             title: event.title,
             startTime: event.startTime,
             endTime: event.endTime,
             location: event.location,
+            timezone: event.timezone,
           },
-        ).catch((err) => console.error("Failed to send waitlist promotion email:", err));
+        ).catch((err) =>
+          console.error("Failed to send waitlist promotion email:", err),
+        );
       }
     }
   }
