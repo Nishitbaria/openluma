@@ -1,8 +1,8 @@
 "use client";
 
-import { format } from "date-fns";
-import { CalendarIcon } from "lucide-react";
-import { useMemo } from "react";
+import { format, startOfToday } from "date-fns";
+import { CalendarIcon, ChevronDownIcon } from "lucide-react";
+import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
 import {
@@ -34,7 +34,12 @@ const TIME_OPTIONS = Array.from({ length: 96 }, (_, i) => {
   };
 });
 
-export function DateTimePicker({ value, onChange, label }: DateTimePickerProps) {
+export function DateTimePicker({
+  value,
+  onChange,
+  label,
+}: DateTimePickerProps) {
+  const [open, setOpen] = useState(false);
   const timeValue = useMemo(
     () =>
       `${String(value.getHours()).padStart(2, "0")}:${String(
@@ -48,6 +53,7 @@ export function DateTimePicker({ value, onChange, label }: DateTimePickerProps) 
     const next = new Date(date);
     next.setHours(value.getHours(), value.getMinutes(), 0, 0);
     onChange(next);
+    setOpen(false);
   }
 
   function handleTimeChange(time: string) {
@@ -59,32 +65,36 @@ export function DateTimePicker({ value, onChange, label }: DateTimePickerProps) 
 
   return (
     <div className="space-y-2">
-      {label && (
-        <span className="block text-sm font-medium">{label}</span>
-      )}
+      {label && <span className="block text-sm font-medium">{label}</span>}
       <div className="flex gap-2">
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              type="button"
-              variant="outline"
-              className="flex-1 justify-start font-normal"
-            >
-              <CalendarIcon className="size-4 text-muted-foreground" />
-              {format(value, "EEE, MMM d, yyyy")}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-auto p-0">
-            <Calendar
-              mode="single"
-              selected={value}
-              onSelect={handleDateSelect}
-            />
-          </PopoverContent>
-        </Popover>
+        <div className="flex-1">
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-8 w-full justify-start text-left font-normal"
+              >
+                <CalendarIcon className="size-4 text-muted-foreground" />
+                {format(value, "EEE, MMM d, yyyy")}
+                <ChevronDownIcon className="ml-auto size-4 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0">
+              <Calendar
+                mode="single"
+                selected={value}
+                defaultMonth={value}
+                captionLayout="dropdown"
+                disabled={{ before: startOfToday() }}
+                onSelect={handleDateSelect}
+              />
+            </PopoverContent>
+          </Popover>
+        </div>
 
         <Select value={timeValue} onValueChange={handleTimeChange}>
-          <SelectTrigger className="w-[110px]">
+          <SelectTrigger className="h-8 w-[110px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

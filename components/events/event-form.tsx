@@ -53,8 +53,12 @@ export function EventForm({ event }: EventFormProps) {
     event?.coverImage ?? null,
   );
   const [slug, setSlug] = useState(event?.slug ?? "");
-  const [richDescription, setRichDescription] = useState(event?.richDescription ?? "");
-  const [plainDescription, setPlainDescription] = useState(event?.description ?? "");
+  const [richDescription, setRichDescription] = useState(
+    event?.richDescription ?? "",
+  );
+  const [plainDescription, setPlainDescription] = useState(
+    event?.description ?? "",
+  );
   const isEditing = !!event;
 
   // Default to tomorrow 6 PM – 8 PM for new events
@@ -169,8 +173,9 @@ export function EventForm({ event }: EventFormProps) {
               name="title"
               placeholder="Event name"
               required
+              autoComplete="off"
               defaultValue={event?.title}
-              className="h-auto border-none px-0 text-3xl font-semibold tracking-tight shadow-none placeholder:text-muted-foreground/50 focus-visible:ring-0"
+              className="h-auto rounded-none border-0 bg-transparent px-0 text-3xl font-semibold tracking-tight shadow-none placeholder:text-muted-foreground/40 focus-visible:border-transparent focus-visible:ring-0 dark:bg-transparent md:text-3xl"
             />
           </div>
 
@@ -218,7 +223,11 @@ export function EventForm({ event }: EventFormProps) {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <DateTimePicker value={startTime} onChange={setStartTime} label="Start" />
+            <DateTimePicker
+              value={startTime}
+              onChange={setStartTime}
+              label="Start"
+            />
             <DateTimePicker value={endTime} onChange={setEndTime} label="End" />
           </div>
 
