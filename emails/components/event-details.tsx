@@ -45,13 +45,14 @@ function DetailRow({
         <table
           cellPadding={0}
           cellSpacing={0}
+          border={0}
           role="presentation"
           className="h-[36px] w-[36px]"
         >
           <tbody>
             <tr>
               <td className="h-[36px] w-[36px] rounded-[8px] bg-white text-center align-middle text-[16px]">
-                {icon}
+                <span aria-hidden="true">{icon}</span>
               </td>
             </tr>
           </tbody>

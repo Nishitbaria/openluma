@@ -2,6 +2,7 @@ import {
   Body,
   Container,
   Head,
+  Heading,
   Hr,
   Html,
   Link,
@@ -28,17 +29,24 @@ export const brand = {
 
 interface EmailLayoutProps {
   preview: string;
+  title?: string;
   children: ReactNode;
 }
 
-export function EmailLayout({ preview, children }: EmailLayoutProps) {
+export function EmailLayout({ preview, title, children }: EmailLayoutProps) {
   return (
-    <Html lang="en">
+    <Html lang="en" dir="ltr">
       <Tailwind config={{ presets: [pixelBasedPreset] }}>
-        <Head />
+        <Head>
+          <title>{title ?? preview}</title>
+        </Head>
         <Preview>{preview}</Preview>
         <Body className="m-0 bg-[#f4f4f5] py-[32px] font-sans">
-          <Container className="mx-auto w-full max-w-[560px] px-[16px]">
+          <Container
+            lang="en"
+            dir="ltr"
+            className="mx-auto w-full max-w-[560px] px-[16px]"
+          >
             {/* Brand header */}
             <Section className="pb-[20px] text-center">
               <Link
@@ -84,9 +92,12 @@ export function CardHeader({
 }) {
   return (
     <Section className="bg-[#18181b] px-[32px] py-[28px] text-center">
-      <Text className="m-0 text-[22px] font-bold leading-[28px] text-white">
+      <Heading
+        as="h1"
+        className="m-0 text-[22px] font-bold leading-[28px] text-white"
+      >
         {title}
-      </Text>
+      </Heading>
       {subtitle ? (
         <Text className="m-0 mt-[6px] text-[15px] leading-[22px] text-[#d4d4d8]">
           {subtitle}
@@ -105,7 +116,7 @@ export function StatusPill({
   tone: { bg: string; text: string };
 }) {
   return (
-    <table cellPadding={0} cellSpacing={0} role="presentation">
+    <table cellPadding={0} cellSpacing={0} border={0} role="presentation">
       <tbody>
         <tr>
           <td
