@@ -22,13 +22,13 @@ Thanks for your interest in contributing! OpenLuma is actively maintained and we
 ### Prerequisites
 
 - Node.js 18+
-- pnpm (`npm install -g pnpm`)
+- Bun (`curl -fsSL https://bun.sh/install | bash`)
 - PostgreSQL database (local or remote)
 
 ### Install dependencies
 
 ```bash
-pnpm install
+bun install
 ```
 
 ### Set up environment variables
@@ -47,14 +47,14 @@ Fill in the required values in `.env.local`. Minimum required for local dev:
 ### Run the database
 
 ```bash
-pnpm db:push      # Push schema to database
-pnpm db:studio    # Optional: open Drizzle Studio GUI
+bun run db:push      # Push schema to database
+bun run db:studio    # Optional: open Drizzle Studio GUI
 ```
 
 ### Start the dev server
 
 ```bash
-pnpm dev
+bun dev
 ```
 
 ## How to Contribute
@@ -76,7 +76,7 @@ pnpm dev
 
 ## Code Style
 
-- **Linter/formatter**: Biome (not ESLint/Prettier) — run `pnpm lint` and `pnpm format`
+- **Linter/formatter**: Biome (not ESLint/Prettier) — run `bun run lint` and `bun run format`
 - **TypeScript**: strict mode — no `any` unless unavoidable
 - **Colors**: use theme tokens only (`text-primary`, `text-muted-foreground`, etc.) — never hardcoded Tailwind colors
 - **Components**: Server Components by default; add `"use client"` only when needed
@@ -86,7 +86,7 @@ pnpm dev
 
 ## Submitting a Pull Request
 
-1. Make sure `pnpm build` and `pnpm lint` pass with no errors
+1. Make sure `bun run build` and `bun run lint` pass with no errors
 2. Fill out the PR template completely
 3. Keep PRs focused — one feature or fix per PR
 4. Add screenshots for any UI changes

@@ -2,6 +2,7 @@
   "name": "openluma",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "bun@1.3.13",
   "scripts": {
     "dev": "env -u OPENAI_API_KEY next dev",
     "build": "next build",

@@ -17,7 +17,7 @@ Closes #
 
 - [ ] I've read the [Contributing Guide](../CONTRIBUTING.md)
 - [ ] My code follows the project's design system and conventions (see `CLAUDE.md`)
-- [ ] I've run `pnpm lint` and `pnpm build` locally with no errors
+- [ ] I've run `bun run lint` and `bun run build` locally with no errors
 - [ ] I've tested the change manually (describe below)
 - [ ] I've updated relevant documentation if needed
 

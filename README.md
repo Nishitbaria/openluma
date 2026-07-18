@@ -44,7 +44,7 @@ An open-source event management platform inspired by [Lu.ma](https://lu.ma) — 
 
 - [Node.js](https://nodejs.org/) 18+
 - [PostgreSQL](https://www.postgresql.org/) database
-- [pnpm](https://pnpm.io/) (recommended) or npm
+- [Bun](https://bun.sh/) (recommended) or npm
 
 ### 1. Clone the repository
 
@@ -56,7 +56,7 @@ cd openluma
 ### 2. Install dependencies
 
 ```bash
-pnpm install
+bun install
 ```
 
 ### 3. Set up environment variables
@@ -85,16 +85,16 @@ Fill in your credentials in `.env.local`:
 
 ```bash
 # Generate migrations from the schema
-pnpm db:generate
+bun run db:generate
 
 # Apply migrations
-pnpm db:migrate
+bun run db:migrate
 ```
 
 ### 5. Run the development server
 
 ```bash
-pnpm dev
+bun dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000) in your browser.
@@ -167,15 +167,15 @@ The **Event Agent** has access to these tools:
 ## Available Scripts
 
 ```bash
-pnpm dev            # Start development server
-pnpm build          # Build for production
-pnpm start          # Start production server
-pnpm lint           # Run Biome linter
-pnpm format         # Format code with Biome
-pnpm db:generate    # Generate Drizzle migrations
-pnpm db:migrate     # Run database migrations
-pnpm db:push        # Push schema changes directly
-pnpm db:studio      # Open Drizzle Studio (database GUI)
+bun dev             # Start development server
+bun run build       # Build for production
+bun run start       # Start production server
+bun run lint        # Run Biome linter
+bun run format      # Format code with Biome
+bun run db:generate # Generate Drizzle migrations
+bun run db:migrate  # Run database migrations
+bun run db:push     # Push schema changes directly
+bun run db:studio   # Open Drizzle Studio (database GUI)
 ```
 
 ## Database Schema
@@ -217,7 +217,7 @@ Contributions are welcome! Here's how to get started:
 1. Fork the repository
 2. Create a feature branch: `git checkout -b feature/my-feature`
 3. Make your changes
-4. Run linting: `pnpm lint`
+4. Run linting: `bun run lint`
 5. Commit your changes: `git commit -m "feat: add my feature"`
 6. Push to your fork: `git push origin feature/my-feature`
 7. Open a Pull Request

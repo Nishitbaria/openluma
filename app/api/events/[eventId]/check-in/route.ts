@@ -15,6 +15,20 @@ export async function POST(
     return Response.json({ message: "Unauthorized" }, { status: 401 });
   }
 
+  const event = await db.query.events.findFirst({
+    where: eq(events.id, eventId),
+    with: { cohosts: { columns: { userId: true } } },
+    columns: { hostId: true },
+  });
+  if (!event) {
+    return Response.json({ message: "Event not found" }, { status: 404 });
+  }
+  const isHost = event.hostId === session.user.id;
+  const isCohost = event.cohosts.some((c) => c.userId === session.user.id);
+  if (!isHost && !isCohost) {
+    return Response.json({ message: "Not authorized" }, { status: 403 });
+  }
+
   const body = await request.json();
   const { userId } = body;
 

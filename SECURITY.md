@@ -37,6 +37,7 @@ This policy covers the OpenLuma application code at https://github.com/Nishitbar
 ## Known Security Considerations
 
 - All API routes validate authentication via Better Auth sessions
+- Host/cohost ownership is enforced on RSVP approve/reject server actions and check-in writes
 - Private event visibility is enforced server-side
-- QR ticket tokens are cryptographically random and single-use for check-in
+- Check-in records can only be created by the event host or co-host
 - Environment variables (API keys, secrets) must never be committed — see `.env.example`

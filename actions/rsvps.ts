@@ -40,21 +40,35 @@ export async function approveRsvpAction(rsvpId: string, eventId: string) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) throw new Error("Unauthorized");
 
+  const event = await db.query.events.findFirst({
+    where: eq(events.id, eventId),
+    with: { cohosts: { columns: { userId: true } } },
+    columns: { hostId: true },
+  });
+  if (!event) throw new Error("Event not found");
+  const isHost = event.hostId === session.user.id;
+  const isCohost = event.cohosts.some((c) => c.userId === session.user.id);
+  if (!isHost && !isCohost) throw new Error("Not authorized");
+
   const [updated] = await db
     .update(rsvps)
     .set({ status: "approved", updatedAt: new Date() })
-    .where(eq(rsvps.id, rsvpId))
+    .where(and(eq(rsvps.id, rsvpId), eq(rsvps.eventId, eventId)))
     .returning();
 
   if (updated) {
     const rsvpUser = await db.query.user.findFirst({
       where: eq(user.id, updated.userId),
     });
-    const event = await db.query.events.findFirst({
+    const eventForEmail = await db.query.events.findFirst({
       where: eq(events.id, eventId),
     });
-    if (rsvpUser?.email && event) {
-      await sendRsvpConfirmationEmail(rsvpUser.email, event.title, "approved");
+    if (rsvpUser?.email && eventForEmail) {
+      await sendRsvpConfirmationEmail(
+        rsvpUser.email,
+        eventForEmail.title,
+        "approved",
+      );
     }
   }
 
@@ -65,21 +79,35 @@ export async function rejectRsvpAction(rsvpId: string, eventId: string) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) throw new Error("Unauthorized");
 
+  const event = await db.query.events.findFirst({
+    where: eq(events.id, eventId),
+    with: { cohosts: { columns: { userId: true } } },
+    columns: { hostId: true },
+  });
+  if (!event) throw new Error("Event not found");
+  const isHost = event.hostId === session.user.id;
+  const isCohost = event.cohosts.some((c) => c.userId === session.user.id);
+  if (!isHost && !isCohost) throw new Error("Not authorized");
+
   const [updated] = await db
     .update(rsvps)
     .set({ status: "rejected", updatedAt: new Date() })
-    .where(eq(rsvps.id, rsvpId))
+    .where(and(eq(rsvps.id, rsvpId), eq(rsvps.eventId, eventId)))
     .returning();
 
   if (updated) {
     const rsvpUser = await db.query.user.findFirst({
       where: eq(user.id, updated.userId),
     });
-    const event = await db.query.events.findFirst({
+    const eventForEmail = await db.query.events.findFirst({
       where: eq(events.id, eventId),
     });
-    if (rsvpUser?.email && event) {
-      await sendRsvpConfirmationEmail(rsvpUser.email, event.title, "rejected");
+    if (rsvpUser?.email && eventForEmail) {
+      await sendRsvpConfirmationEmail(
+        rsvpUser.email,
+        eventForEmail.title,
+        "rejected",
+      );
     }
   }
 
