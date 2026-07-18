@@ -65,6 +65,15 @@ import {
 import { ChatHistorySheet } from "@/components/chat/chat-history-sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import type { OrchestratorMessage } from "@/lib/ai/agents/orchestrator";
 
 const suggestions = [
@@ -287,48 +296,22 @@ function ChatSession({
                         }
 
                         return (
-                          <div
+                          <ApprovalCard
                             key={`approval-${toolCallId}-${idx}`}
-                            className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-3"
-                          >
-                            <div className="flex items-start gap-2">
-                              <AlertTriangle className="size-4 text-destructive mt-0.5 shrink-0" />
-                              <div>
-                                <p className="text-sm font-medium">
-                                  Confirm action
-                                </p>
-                                <p className="text-sm text-muted-foreground">
-                                  {actionText}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex gap-2">
-                              <Button
-                                size="sm"
-                                variant="destructive"
-                                onClick={() =>
-                                  addToolApprovalResponse({
-                                    id: toolCallId,
-                                    approved: true,
-                                  })
-                                }
-                              >
-                                Confirm
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() =>
-                                  addToolApprovalResponse({
-                                    id: toolCallId,
-                                    approved: false,
-                                  })
-                                }
-                              >
-                                Cancel
-                              </Button>
-                            </div>
-                          </div>
+                            actionText={actionText}
+                            onConfirm={() =>
+                              addToolApprovalResponse({
+                                id: toolCallId,
+                                approved: true,
+                              })
+                            }
+                            onCancel={() =>
+                              addToolApprovalResponse({
+                                id: toolCallId,
+                                approved: false,
+                              })
+                            }
+                          />
                         );
                       })}
                       {textParts.map(({ part, idx }) => {
@@ -481,6 +464,63 @@ interface EventListArtifactType {
 }
 
 type ChatArtifact = EventCreatedArtifactType | EventListArtifactType;
+
+function ApprovalCard({
+  actionText,
+  onConfirm,
+  onCancel,
+}: {
+  actionText: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-3">
+      <div className="flex items-start gap-2">
+        <AlertTriangle className="size-4 text-destructive mt-0.5 shrink-0" />
+        <div>
+          <p className="text-sm font-medium">Confirm action</p>
+          <p className="text-sm text-muted-foreground">{actionText}</p>
+        </div>
+      </div>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogTrigger asChild>
+          <Button size="sm" variant="destructive">
+            Review action
+          </Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm action</DialogTitle>
+            <DialogDescription>{actionText}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setOpen(false);
+                onCancel();
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setOpen(false);
+                onConfirm();
+              }}
+            >
+              Confirm
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
 
 function extractArtifacts(parts: OrchestratorMessage["parts"]): ChatArtifact[] {
   const artifacts: ChatArtifact[] = [];
