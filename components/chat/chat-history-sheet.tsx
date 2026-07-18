@@ -66,26 +66,24 @@ export function ChatHistorySheet({
   async function handleDelete() {
     if (!pendingDelete) return;
     const target = pendingDelete;
-    // Optimistic: drop it from the list and close the dialog immediately so the
-    // sidebar updates instantly. Snapshot the list to restore on failure.
+    // Optimistic: drop it from the list, close the dialog, and redirect away
+    // from the deleted conversation immediately so the UI updates instantly.
+    // Snapshot the list to restore on failure. Check the live pathname too: a
+    // freshly-created chat updates the URL via history.replaceState without
+    // updating the activeConversationId prop.
     const snapshot = conversations;
+    const isViewingDeleted =
+      target.id === activeConversationId ||
+      pathname === `/dashboard/chat/${target.id}`;
     setConversations((prev) => prev.filter((c) => c.id !== target.id));
     setPendingDelete(null);
     setDeleting(true);
+    if (isViewingDeleted) {
+      onOpenChange(false);
+      router.push("/dashboard/chat");
+    }
     try {
       await deleteConversationAction(target.id);
-      toast.success("Conversation deleted");
-      // Redirect only once the deletion actually succeeds, and only if we're
-      // viewing the deleted conversation. Check the live pathname too: a
-      // freshly-created chat updates the URL via history.replaceState without
-      // updating the activeConversationId prop.
-      const isViewingDeleted =
-        target.id === activeConversationId ||
-        pathname === `/dashboard/chat/${target.id}`;
-      if (isViewingDeleted) {
-        onOpenChange(false);
-        router.push("/dashboard/chat");
-      }
     } catch {
       // Roll back the optimistic removal.
       setConversations(snapshot);
