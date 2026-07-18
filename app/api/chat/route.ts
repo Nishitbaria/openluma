@@ -62,6 +62,20 @@ export async function POST(req: Request) {
       // Full resync each turn: tool-approval continuations extend an
       // existing assistant message id, so per-row diffing can't be trusted.
       await db.transaction(async (tx) => {
+        // Preserve original createdAt for messages that already exist —
+        // otherwise the delete+reinsert below would reset every message's
+        // timestamp to "now" on every turn.
+        const existingRows = await tx
+          .select({
+            id: chatMessages.id,
+            createdAt: chatMessages.createdAt,
+          })
+          .from(chatMessages)
+          .where(eq(chatMessages.conversationId, id));
+        const existingCreatedAt = new Map(
+          existingRows.map((row) => [row.id, row.createdAt]),
+        );
+
         await tx
           .delete(chatMessages)
           .where(eq(chatMessages.conversationId, id));
@@ -73,6 +87,7 @@ export async function POST(req: Request) {
               role: message.role,
               parts: message.parts as Record<string, unknown>[],
               order: index,
+              createdAt: existingCreatedAt.get(message.id) ?? new Date(),
             })),
           );
         }

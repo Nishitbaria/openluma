@@ -146,14 +146,16 @@ export function ChatHistorySheet({
                         })}
                       </p>
                     </Link>
-                    <button
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="icon"
                       onClick={() => setPendingDelete(conversation)}
-                      className="mr-1 rounded-md p-1.5 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
+                      className="mr-1 size-8 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
                       aria-label={`Delete "${conversation.title}"`}
                     >
-                      <Trash2 className="size-3.5" />
-                    </button>
+                      <Trash2 className="size-4" />
+                    </Button>
                   </li>
                 ))}
               </ul>
