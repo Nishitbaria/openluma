@@ -3,7 +3,7 @@
 import { formatDistanceToNow } from "date-fns";
 import { MessageSquare, Trash2 } from "lucide-react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -46,7 +46,6 @@ export function ChatHistorySheet({
   onOpenChange: (open: boolean) => void;
   activeConversationId?: string;
 }) {
-  const router = useRouter();
   const pathname = usePathname();
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [loading, setLoading] = useState(false);
@@ -66,8 +65,7 @@ export function ChatHistorySheet({
   async function handleDelete() {
     if (!pendingDelete) return;
     const target = pendingDelete;
-    // Optimistic: drop it from the list, close the dialog, and redirect away
-    // from the deleted conversation immediately so the UI updates instantly.
+    // Optimistic: drop it from the list and close the dialog immediately.
     // Snapshot the list to restore on failure. Check the live pathname too: a
     // freshly-created chat updates the URL via history.replaceState without
     // updating the activeConversationId prop.
@@ -78,12 +76,19 @@ export function ChatHistorySheet({
     setConversations((prev) => prev.filter((c) => c.id !== target.id));
     setPendingDelete(null);
     setDeleting(true);
-    if (isViewingDeleted) {
-      onOpenChange(false);
-      router.push("/dashboard/chat");
-    }
     try {
       await deleteConversationAction(target.id);
+      if (isViewingDeleted) {
+        // Hard navigation, not router.push: a freshly-created chat set its URL
+        // via history.replaceState, so Next's router still thinks it's on
+        // /dashboard/chat — a push would be a no-op that leaves the deleted
+        // conversation's ChatPanel (and its in-memory messages) mounted. A full
+        // load guarantees the default chat interface renders. Return so the
+        // component isn't touched again while the page unloads.
+        onOpenChange(false);
+        window.location.href = "/dashboard/chat";
+        return;
+      }
     } catch {
       // Roll back the optimistic removal.
       setConversations(snapshot);
