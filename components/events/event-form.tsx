@@ -1,10 +1,10 @@
 "use client";
 
+import { format } from "date-fns";
 import { ChevronsUpDown, Globe } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
-import { DateTimePicker } from "@/components/events/date-time-picker";
 import { EventCoverImagePicker } from "@/components/events/event-cover-image-picker";
 import { RichTextEditor } from "@/components/events/rich-text-editor";
 import { Button } from "@/components/ui/button";
@@ -219,12 +219,29 @@ export function EventForm({ event }: EventFormProps) {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <DateTimePicker
-              value={startTime}
-              onChange={setStartTime}
-              label="Start"
-            />
-            <DateTimePicker value={endTime} onChange={setEndTime} label="End" />
+            <div className="space-y-2">
+              <Label htmlFor="startTime">Start Date & Time</Label>
+              <Input
+                id="startTime"
+                type="datetime-local"
+                required
+                value={format(startTime, "yyyy-MM-dd'T'HH:mm")}
+                onChange={(e) => {
+                  if (e.target.value) setStartTime(new Date(e.target.value));
+                }}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="endTime">End Date & Time</Label>
+              <Input
+                id="endTime"
+                type="datetime-local"
+                value={format(endTime, "yyyy-MM-dd'T'HH:mm")}
+                onChange={(e) => {
+                  if (e.target.value) setEndTime(new Date(e.target.value));
+                }}
+              />
+            </div>
           </div>
 
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
