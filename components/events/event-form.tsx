@@ -165,17 +165,13 @@ export function EventForm({ event }: EventFormProps) {
       <CardContent className="pt-6">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label htmlFor="title" className="sr-only">
-              Event name
-            </Label>
+            <Label htmlFor="title">Event Title</Label>
             <Input
               id="title"
               name="title"
-              placeholder="Event name"
+              placeholder="My awesome event"
               required
-              autoComplete="off"
               defaultValue={event?.title}
-              className="h-auto rounded-none border-0 bg-transparent px-0 text-3xl font-semibold tracking-tight shadow-none placeholder:text-muted-foreground/40 focus-visible:border-transparent focus-visible:ring-0 dark:bg-transparent md:text-3xl"
             />
           </div>
 
