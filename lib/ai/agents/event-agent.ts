@@ -1,4 +1,4 @@
-import { stepCountIs, ToolLoopAgent, tool } from "ai";
+import { isStepCount, ToolLoopAgent, tool } from "ai";
 import { model } from "@/lib/ai/model";
 import { and, desc, eq, gte, ilike } from "drizzle-orm";
 import { z } from "zod/v4";
@@ -402,6 +402,6 @@ RULES:
       }),
 
     },
-    stopWhen: stepCountIs(8),
+    stopWhen: isStepCount(8),
   });
 }
