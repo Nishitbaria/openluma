@@ -3,13 +3,21 @@ import { and, eq, lte } from "drizzle-orm";
 import { Calendar, Globe, Lock, MapPin, Users } from "lucide-react";
 import { headers } from "next/headers";
 import Image from "next/image";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CalendarExportButton } from "@/components/events/calendar-export-button";
 import { CopyLinkButton } from "@/components/events/copy-link-button";
 import { RichTextRenderer } from "@/components/events/rich-text-renderer";
 import { RsvpButton } from "@/components/events/rsvp-button";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
 import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { eventPageviews, eventQuestions, events, rsvps } from "@/lib/db/schema";
@@ -75,7 +83,10 @@ export default async function PublicEventBySlugPage({
         host: { columns: { id: true, name: true, image: true } },
         category: true,
         tags: true,
-        rsvps: { columns: { id: true, status: true } },
+        rsvps: {
+          columns: { id: true, status: true },
+          with: { user: { columns: { id: true, name: true, image: true } } },
+        },
       },
     }),
     getSession(await headers()).catch(() => null),
@@ -102,7 +113,13 @@ export default async function PublicEventBySlugPage({
     db.query.eventQuestions.findMany({
       where: eq(eventQuestions.eventId, event.id),
       orderBy: (q, { asc }) => [asc(q.order)],
-      columns: { id: true, label: true, type: true, required: true, options: true },
+      columns: {
+        id: true,
+        label: true,
+        type: true,
+        required: true,
+        options: true,
+      },
     }),
   ]);
 
@@ -112,21 +129,30 @@ export default async function PublicEventBySlugPage({
   void (async () => {
     try {
       const reqHeaders = await headers();
-      const ip = reqHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+      const ip =
+        reqHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
       const ipHash = Buffer.from(
         await crypto.subtle.digest("SHA-256", new TextEncoder().encode(ip)),
       ).toString("hex");
       const city = reqHeaders.get("x-vercel-ip-city") ?? null;
       const rawRef = reqHeaders.get("referer") ?? null;
       const referrer = rawRef
-        ? (() => { try { return new URL(rawRef).hostname || "direct"; } catch { return "direct"; } })()
+        ? (() => {
+            try {
+              return new URL(rawRef).hostname || "direct";
+            } catch {
+              return "direct";
+            }
+          })()
         : "direct";
 
       const dedupKey = `pv:${event.id}:${ipHash}`;
       const already = redis ? await redis.get(dedupKey) : null;
       if (!already) {
         if (redis) redis.set(dedupKey, "1", { ex: 3600 }).catch(() => {});
-        db.insert(eventPageviews).values({ eventId: event.id, ipHash, referrer, city }).catch(() => {});
+        db.insert(eventPageviews)
+          .values({ eventId: event.id, ipHash, referrer, city })
+          .catch(() => {});
       }
     } catch {
       // silently ignore — never break page load
@@ -159,16 +185,26 @@ export default async function PublicEventBySlugPage({
           <p className="mt-2 text-muted-foreground">
             This event is invite-only. You need an invitation to view it.
           </p>
+          {!session?.user && (
+            <Button asChild className="mt-6">
+              <Link href={`/sign-in?callbackUrl=/e/${slug}`}>
+                Sign in to view invitation
+              </Link>
+            </Button>
+          )}
         </div>
       );
     }
   }
 
-  const approvedCount = event.rsvps.filter(
-    (r) => r.status === "approved",
-  ).length;
+  const approvedRsvps = event.rsvps.filter((r) => r.status === "approved");
+  const approvedCount = approvedRsvps.length;
+  const visibleAttendees = approvedRsvps.slice(0, 5);
+  const remainingAttendeeCount = approvedCount - visibleAttendees.length;
   const startTime = new Date(event.startTime);
   const endTime = event.endTime ? new Date(event.endTime) : null;
+  const showDirectionsLink =
+    !!event.location && (event.type === "in_person" || event.type === "hybrid");
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 sm:px-6 lg:px-8 py-12">
@@ -204,9 +240,49 @@ export default async function PublicEventBySlugPage({
         <h1 className="text-4xl font-bold tracking-tight">{event.title}</h1>
         <CopyLinkButton url={`${appUrl}/e/${slug}`} />
       </div>
-      <p className="text-muted-foreground mt-2">Hosted by {event.host.name}</p>
+      <HoverCard>
+        <HoverCardTrigger asChild>
+          <Link
+            href={`/u/${event.host.id}`}
+            className="mt-2 inline-flex items-center gap-2 text-muted-foreground hover:text-foreground"
+          >
+            <Avatar size="sm">
+              <AvatarImage
+                src={event.host.image ?? undefined}
+                alt={event.host.name}
+              />
+              <AvatarFallback>
+                {event.host.name.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <span>Hosted by {event.host.name}</span>
+          </Link>
+        </HoverCardTrigger>
+        <HoverCardContent className="w-auto">
+          <div className="flex items-center gap-3">
+            <Avatar size="lg">
+              <AvatarImage
+                src={event.host.image ?? undefined}
+                alt={event.host.name}
+              />
+              <AvatarFallback>
+                {event.host.name.charAt(0).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="font-medium">{event.host.name}</p>
+              <Link
+                href={`/u/${event.host.id}`}
+                className="text-sm text-primary hover:underline"
+              >
+                View profile
+              </Link>
+            </div>
+          </div>
+        </HoverCardContent>
+      </HoverCard>
 
-      <div className="grid gap-8 md:grid-cols-3 mt-8">
+      <div className="grid gap-8 md:grid-cols-3 mt-8 items-start">
         <div className="md:col-span-2 space-y-6">
           <Card>
             <CardContent className="pt-6 space-y-4">
@@ -233,16 +309,52 @@ export default async function PublicEventBySlugPage({
                         {event.locationDetails}
                       </p>
                     )}
+                    {showDirectionsLink && (
+                      <a
+                        href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm text-primary hover:underline"
+                      >
+                        Get directions →
+                      </a>
+                    )}
                   </div>
                 </div>
               )}
 
               <div className="flex items-center gap-3">
                 <Users className="h-5 w-5 text-primary" />
-                <p className="font-medium">
-                  {approvedCount} attending
-                  {event.capacity ? ` / ${event.capacity} spots` : null}
-                </p>
+                <div className="flex items-center gap-3">
+                  <p className="font-medium">
+                    {approvedCount} attending
+                    {event.capacity ? ` / ${event.capacity} spots` : null}
+                  </p>
+                  {visibleAttendees.length > 0 && (
+                    <div className="flex -space-x-2">
+                      {visibleAttendees.map((rsvp) => (
+                        <Avatar
+                          key={rsvp.id}
+                          size="sm"
+                          className="ring-2 ring-background"
+                        >
+                          <AvatarImage
+                            src={rsvp.user.image ?? undefined}
+                            alt={rsvp.user.name}
+                          />
+                          <AvatarFallback>
+                            {rsvp.user.name.charAt(0).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                      ))}
+                      {remainingAttendeeCount > 0 && (
+                        <div className="flex size-6 items-center justify-center rounded-full bg-muted text-xs text-muted-foreground ring-2 ring-background">
+                          +{remainingAttendeeCount}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -275,7 +387,7 @@ export default async function PublicEventBySlugPage({
           )}
         </div>
 
-        <div className="space-y-4">
+        <div className="md:sticky md:top-24 space-y-4">
           <Card>
             <CardContent className="pt-6 space-y-4">
               {session?.user?.id === event.host.id ? (

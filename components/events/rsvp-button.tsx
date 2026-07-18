@@ -98,10 +98,13 @@ export function RsvpButton({
   if (status === "approved") {
     return (
       <div className="space-y-2">
-        <Button disabled className="w-full" size="lg" variant="outline">
-          <Check className="mr-2 h-4 w-4 text-green-600" />
-          You&apos;re Attending
-        </Button>
+        <div className="flex items-center justify-center gap-2 rounded-md border bg-primary/10 px-4 py-3 text-sm font-medium text-primary">
+          <Check className="h-4 w-4" />
+          You&apos;re In
+        </div>
+        <p className="text-xs text-center text-muted-foreground">
+          See you there — add it to your calendar below.
+        </p>
         {cancelConfirm("Cancel RSVP")}
         {cancelModal}
       </div>
@@ -111,10 +114,10 @@ export function RsvpButton({
   if (status === "pending") {
     return (
       <div className="space-y-2">
-        <Button disabled className="w-full" size="lg" variant="outline">
-          <Clock className="mr-2 h-4 w-4 text-yellow-600" />
+        <div className="flex items-center justify-center gap-2 rounded-md border bg-muted px-4 py-3 text-sm font-medium text-muted-foreground">
+          <Clock className="h-4 w-4" />
           Pending Approval
-        </Button>
+        </div>
         {cancelConfirm("Cancel RSVP")}
         {cancelModal}
       </div>
@@ -124,15 +127,13 @@ export function RsvpButton({
   if (status === "waitlisted") {
     return (
       <div className="space-y-2">
-        <Button disabled className="w-full" size="lg" variant="outline">
-          <Clock className="mr-2 h-4 w-4 text-orange-600" />
+        <div className="flex items-center justify-center gap-2 rounded-md border bg-muted px-4 py-3 text-sm font-medium text-muted-foreground">
+          <Clock className="h-4 w-4" />
           On Waitlist
           {waitlistPosition != null && (
-            <span className="ml-2 text-xs font-normal text-muted-foreground">
-              #{waitlistPosition}
-            </span>
+            <span className="text-xs font-normal">#{waitlistPosition}</span>
           )}
-        </Button>
+        </div>
         {waitlistPosition != null && (
           <p className="text-xs text-center text-muted-foreground">
             You&apos;re #{waitlistPosition} in line — we&apos;ll notify you if a spot opens.
@@ -147,10 +148,10 @@ export function RsvpButton({
   if (status === "rejected") {
     return (
       <div className="space-y-2">
-        <Button disabled className="w-full" size="lg" variant="outline">
-          <X className="mr-2 h-4 w-4 text-red-600" />
+        <div className="flex items-center justify-center gap-2 rounded-md border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
+          <X className="h-4 w-4" />
           RSVP Declined
-        </Button>
+        </div>
         <Button
           variant="ghost"
           size="sm"
@@ -220,7 +221,9 @@ export function RsvpButton({
       } else if (newStatus === "waitlisted") {
         toast.success("You've been added to the waitlist.");
       } else {
-        toast.success("You're attending this event!");
+        toast.success(
+          "You're in! 🎉 Add it to your calendar so you don't miss it.",
+        );
       }
 
       router.refresh();

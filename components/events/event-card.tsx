@@ -1,6 +1,8 @@
 import { format } from "date-fns";
 import { Calendar, Globe, Lock, MapPin, Users } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -37,13 +39,19 @@ export function EventCard({ event, href }: EventCardProps) {
       href={href ?? (event.slug ? `/e/${event.slug}` : `/events/${event.id}`)}
     >
       <Card className="overflow-hidden transition-shadow hover:shadow-lg">
-        {event.coverImage && (
-          <div className="aspect-video overflow-hidden">
-            <img
+        {event.coverImage ? (
+          <div className="relative aspect-video overflow-hidden">
+            <Image
               src={event.coverImage}
               alt={event.title}
-              className="h-full w-full object-cover"
+              fill
+              sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+              className="object-cover"
             />
+          </div>
+        ) : (
+          <div className="flex aspect-video items-center justify-center bg-gradient-to-br from-primary/20 via-muted to-primary/5">
+            <Calendar className="h-10 w-10 text-muted-foreground/50" />
           </div>
         )}
         <CardHeader className="pb-2">
@@ -81,7 +89,17 @@ export function EventCard({ event, href }: EventCardProps) {
             <Users className="h-4 w-4" />
             <span>{event._count?.rsvps ?? 0} attendees</span>
           </div>
-          {event.host && <span className="ml-auto">by {event.host.name}</span>}
+          {event.host && (
+            <div className="ml-auto flex items-center gap-1.5">
+              <Avatar size="sm">
+                <AvatarImage src={event.host.image ?? undefined} />
+                <AvatarFallback>
+                  {event.host.name.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <span>by {event.host.name}</span>
+            </div>
+          )}
         </CardFooter>
       </Card>
     </Link>

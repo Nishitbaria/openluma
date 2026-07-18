@@ -27,10 +27,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Sheet, SheetContent } from "@/components/ui/sheet";
 import {
-  Sheet,
-  SheetContent,
-} from "@/components/ui/sheet";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 interface TimelineEntry {
   id: string;
@@ -90,8 +95,10 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 function statusBadgeClass(status: string) {
-  if (status === "approved") return "bg-primary/10 text-primary border-primary/20";
-  if (status === "rejected") return "bg-destructive/10 text-destructive border-destructive/20";
+  if (status === "approved")
+    return "bg-primary/10 text-primary border-primary/20";
+  if (status === "rejected")
+    return "bg-destructive/10 text-destructive border-destructive/20";
   return "bg-muted text-muted-foreground";
 }
 
@@ -228,8 +235,10 @@ export function AttendeeList({
       return true;
     });
 
-    if (sort === "name") list.sort((a, b) => a.user.name.localeCompare(b.user.name));
-    else if (sort === "status") list.sort((a, b) => a.status.localeCompare(b.status));
+    if (sort === "name")
+      list.sort((a, b) => a.user.name.localeCompare(b.user.name));
+    else if (sort === "status")
+      list.sort((a, b) => a.status.localeCompare(b.status));
     // default: time — already sorted by createdAt desc from server
 
     return list;
@@ -273,7 +282,9 @@ export function AttendeeList({
                     </AvatarFallback>
                   </Avatar>
                   <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">{cohost.user.name}</p>
+                    <p className="text-sm font-medium truncate">
+                      {cohost.user.name}
+                    </p>
                     {cohost.user.email && (
                       <p className="text-xs text-muted-foreground truncate">
                         {cohost.user.email}
@@ -311,7 +322,12 @@ export function AttendeeList({
       <div className="space-y-3">
         <div className="flex items-center justify-between">
           <h3 className="text-base font-semibold">Guest List</h3>
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={exportCsv}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            onClick={exportCsv}
+          >
             <Download className="h-4 w-4" />
           </Button>
         </div>
@@ -369,37 +385,88 @@ export function AttendeeList({
           </p>
         </div>
       ) : (
-        <div className="divide-y rounded-lg border">
-          {filtered.map((attendee, idx) => (
-            <button
-              key={attendee.id}
-              type="button"
-              onClick={() => setSelectedIdx(idx)}
-              className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50"
-            >
-              <Avatar className="h-8 w-8 flex-shrink-0">
-                <AvatarImage src={attendee.user.image ?? undefined} />
-                <AvatarFallback className="text-xs">
-                  {attendee.user.name?.[0]?.toUpperCase() ?? "?"}
-                </AvatarFallback>
-              </Avatar>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-medium truncate">{attendee.user.name}</p>
-              </div>
-              <p className="hidden sm:block text-xs text-muted-foreground truncate max-w-[180px]">
-                {attendee.user.email}
-              </p>
-              <span
-                className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium flex-shrink-0 ${statusBadgeClass(attendee.status)}`}
+        <>
+          {/* Mobile: stacked cards */}
+          <div className="divide-y rounded-lg border sm:hidden">
+            {filtered.map((attendee, idx) => (
+              <button
+                key={attendee.id}
+                type="button"
+                onClick={() => setSelectedIdx(idx)}
+                className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50"
               >
-                {STATUS_LABELS[attendee.status] ?? attendee.status}
-              </span>
-              <span className="text-xs text-muted-foreground flex-shrink-0 w-12 text-right hidden sm:block">
-                {formatDistanceToNow(new Date(attendee.createdAt), { addSuffix: false })}
-              </span>
-            </button>
-          ))}
-        </div>
+                <Avatar className="h-8 w-8 flex-shrink-0">
+                  <AvatarImage src={attendee.user.image ?? undefined} />
+                  <AvatarFallback className="text-xs">
+                    {attendee.user.name?.[0]?.toUpperCase() ?? "?"}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-medium truncate">
+                    {attendee.user.name}
+                  </p>
+                </div>
+                <span
+                  className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium flex-shrink-0 ${statusBadgeClass(attendee.status)}`}
+                >
+                  {STATUS_LABELS[attendee.status] ?? attendee.status}
+                </span>
+              </button>
+            ))}
+          </div>
+
+          {/* Desktop: table */}
+          <div className="hidden rounded-lg border sm:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Guest</TableHead>
+                  <TableHead>Email</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Registered</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map((attendee, idx) => (
+                  <TableRow
+                    key={attendee.id}
+                    onClick={() => setSelectedIdx(idx)}
+                    className="cursor-pointer"
+                  >
+                    <TableCell>
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-8 w-8 flex-shrink-0">
+                          <AvatarImage src={attendee.user.image ?? undefined} />
+                          <AvatarFallback className="text-xs">
+                            {attendee.user.name?.[0]?.toUpperCase() ?? "?"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="truncate font-medium">
+                          {attendee.user.name}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {attendee.user.email}
+                    </TableCell>
+                    <TableCell>
+                      <span
+                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${statusBadgeClass(attendee.status)}`}
+                      >
+                        {STATUS_LABELS[attendee.status] ?? attendee.status}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right text-muted-foreground">
+                      {formatDistanceToNow(new Date(attendee.createdAt), {
+                        addSuffix: false,
+                      })}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </>
       )}
 
       {/* Guest detail drawer */}
@@ -409,16 +476,17 @@ export function AttendeeList({
           if (!open) setSelectedIdx(null);
         }}
       >
-        <SheetContent side="right" className="w-full sm:max-w-md p-6 overflow-y-auto">
+        <SheetContent
+          side="right"
+          className="w-full sm:max-w-md p-6 overflow-y-auto"
+        >
           {selectedAttendee && (
             <GuestDrawer
               attendee={selectedAttendee}
               questions={questions}
               eventId={eventId}
               isHost={isHost}
-              onPrev={() =>
-                setSelectedIdx((i) => Math.max(0, (i ?? 0) - 1))
-              }
+              onPrev={() => setSelectedIdx((i) => Math.max(0, (i ?? 0) - 1))}
               onNext={() =>
                 setSelectedIdx((i) =>
                   Math.min(filtered.length - 1, (i ?? 0) + 1),
@@ -452,14 +520,18 @@ export function AttendeeList({
                       <Mail className="h-3.5 w-3.5 text-muted-foreground" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{inv.email}</p>
+                      <p className="text-sm font-medium truncate">
+                        {inv.email}
+                      </p>
                       <p className="text-xs text-muted-foreground">
                         Invited {new Date(inv.createdAt).toLocaleDateString()}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="text-xs">invited</Badge>
+                    <Badge variant="secondary" className="text-xs">
+                      invited
+                    </Badge>
                     {inv.role === "cohost" && (
                       <Badge variant="outline" className="text-xs">
                         <ShieldCheck className="mr-1 h-3 w-3" />
@@ -491,7 +563,9 @@ export function AttendeeList({
                       <Mail className="h-3.5 w-3.5 text-muted-foreground" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">{inv.email}</p>
+                      <p className="text-sm font-medium truncate">
+                        {inv.email}
+                      </p>
                       <p className="text-xs text-muted-foreground">
                         Invited {new Date(inv.createdAt).toLocaleDateString()}
                       </p>
@@ -499,7 +573,11 @@ export function AttendeeList({
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge
-                      variant={inv.status === "declined" || inv.status === "expired" ? "destructive" : "secondary"}
+                      variant={
+                        inv.status === "declined" || inv.status === "expired"
+                          ? "destructive"
+                          : "secondary"
+                      }
                       className="text-xs"
                     >
                       {inv.status}

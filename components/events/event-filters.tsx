@@ -2,6 +2,7 @@
 
 import { Search } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useRef } from "react";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -14,6 +15,7 @@ import {
 export function EventFilters() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function updateParam(key: string, value: string) {
     const params = new URLSearchParams(searchParams.toString());
@@ -22,7 +24,16 @@ export function EventFilters() {
     } else {
       params.delete(key);
     }
-    router.push(`/events?${params.toString()}`);
+    router.replace(`/events?${params.toString()}`);
+  }
+
+  function updateParamDebounced(key: string, value: string) {
+    if (debounceRef.current) {
+      clearTimeout(debounceRef.current);
+    }
+    debounceRef.current = setTimeout(() => {
+      updateParam(key, value);
+    }, 300);
   }
 
   return (
@@ -33,7 +44,7 @@ export function EventFilters() {
           placeholder="Search events..."
           className="pl-10"
           defaultValue={searchParams.get("search") ?? ""}
-          onChange={(e) => updateParam("search", e.target.value)}
+          onChange={(e) => updateParamDebounced("search", e.target.value)}
         />
       </div>
       <Select
