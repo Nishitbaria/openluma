@@ -150,9 +150,9 @@ export async function POST(
     .values({ rsvpId: rsvp.id, eventId, type: "registered", toStatus: status })
     .catch(() => {});
 
-  // Send ticket email if auto-approved
-  if (status === "approved" && session.user.email) {
-    sendRsvpConfirmationEmail(session.user.email, event.title, "approved", {
+  // Send confirmation email (ticket if auto-approved, pending notice otherwise)
+  if ((status === "approved" || status === "pending") && session.user.email) {
+    sendRsvpConfirmationEmail(session.user.email, event.title, status, {
       id: event.id,
       title: event.title,
       startTime: event.startTime,
