@@ -27,6 +27,7 @@ import {
   Sparkles,
   SquarePen,
   User,
+  UserCheck,
   Users,
 } from "lucide-react";
 import { Fragment, useRef, useState } from "react";
@@ -462,6 +463,7 @@ interface EventData {
   visibility?: string;
   capacity?: number | null;
   type?: string;
+  requiresApproval?: boolean;
 }
 
 interface EventCreatedArtifactType {
@@ -531,6 +533,7 @@ function parseEventData(d: Record<string, unknown>): EventData {
     eventType: (d.type as string) ?? (d.eventType as string) ?? "in_person",
     visibility: (d.visibility as string) ?? "public",
     capacity: (d.capacity as number | null) ?? null,
+    requiresApproval: (d.requiresApproval as boolean | undefined) ?? undefined,
   };
 }
 
@@ -618,6 +621,12 @@ function EventCreatedCard({ event }: { event: EventData }) {
             <Badge variant="outline" className="text-xs">
               <Users className="mr-1 h-3 w-3" />
               {event.capacity} spots
+            </Badge>
+          )}
+          {event.requiresApproval && (
+            <Badge variant="outline" className="text-xs">
+              <UserCheck className="mr-1 h-3 w-3" />
+              Approval required
             </Badge>
           )}
         </div>
