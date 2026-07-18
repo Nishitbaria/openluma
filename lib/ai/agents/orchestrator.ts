@@ -1,4 +1,4 @@
-import { stepCountIs, ToolLoopAgent, tool, type InferAgentUIMessage } from "ai";
+import { isStepCount, ToolLoopAgent, tool, type InferAgentUIMessage } from "ai";
 import { z } from "zod/v4";
 import { nanoid } from "nanoid";
 import { eq } from "drizzle-orm";
@@ -91,7 +91,6 @@ For these, first get the event details from the user (eventId and title), then c
           eventId: z.string().describe("The event ID to delete"),
           eventTitle: z.string().describe("The event title shown in the confirmation prompt"),
         }),
-        needsApproval: true,
         execute: async ({ eventId }) => {
           const event = await db.query.events.findFirst({
             where: eq(events.id, eventId),
@@ -111,7 +110,6 @@ For these, first get the event details from the user (eventId and title), then c
           email: z.string().describe("Email address to invite"),
           eventTitle: z.string().optional().describe("The event title shown in the confirmation prompt"),
         }),
-        needsApproval: true,
         execute: async ({ eventId, email }) => {
           const event = await db.query.events.findFirst({
             where: eq(events.id, eventId),
@@ -134,7 +132,11 @@ For these, first get the event details from the user (eventId and title), then c
         },
       }),
     },
-    stopWhen: stepCountIs(5),
+    toolApproval: {
+      deleteEvent: "user-approval",
+      sendInvitation: "user-approval",
+    },
+    stopWhen: isStepCount(5),
   });
 }
 

@@ -33,7 +33,7 @@ Use `bun` — not npm, pnpm, or yarn. Use Biome for lint/format — not ESLint o
 | Language | TypeScript (strict) |
 | Database | PostgreSQL + Drizzle ORM (`lib/db/schema.ts`) |
 | Auth | Better Auth (`lib/auth.ts`) — sessions, Google OAuth |
-| AI | Vercel AI SDK v6 + OpenAI GPT-4o-mini (`lib/ai/agents/`) |
+| AI | Vercel AI SDK v7 + OpenAI GPT-5-mini (`lib/ai/agents/`) |
 | Email | Resend (`lib/email.ts`) |
 | Uploads | Uploadthing (`lib/uploadthing.ts`) |
 | Cache | Upstash Redis (`lib/redis.ts`) |
@@ -79,7 +79,7 @@ providers/          # Context providers
 - Entry point: `POST /api/chat` → streams via `createAgentUIStreamResponse`
 - Artifacts pass structured data (`event-created`, `event-list`) to the UI
 - Client: `useChat` with `DefaultChatTransport` in `components/chat/chat-panel.tsx`
-- Tool results rendered via `isToolUIPart()` from AI SDK v6
+- Tool results rendered via `isToolUIPart()` from AI SDK v7
 
 ### Auth
 
