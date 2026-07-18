@@ -31,6 +31,19 @@ export async function submitRsvpAction(eventId: string, message?: string) {
     message,
   });
 
+  if (session.user.email) {
+    await sendRsvpConfirmationEmail(session.user.email, event.title, status, {
+      id: event.id,
+      slug: event.slug ?? undefined,
+      title: event.title,
+      startTime: event.startTime,
+      endTime: event.endTime,
+      location: event.location,
+    }).catch((err) =>
+      console.error("Failed to send RSVP confirmation email:", err),
+    );
+  }
+
   revalidatePath(`/events/${eventId}`);
   if (event.slug) revalidatePath(`/e/${event.slug}`);
   revalidatePath(`/dashboard/events/${eventId}`);

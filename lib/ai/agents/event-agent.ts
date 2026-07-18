@@ -20,6 +20,7 @@ RULES:
 - ALWAYS call getCurrentDate before creating or searching events with relative dates.
 - Never fabricate data — always use your tools to query real information.
 - When creating events, ask for missing required fields (title, start time) before calling the tool.
+- By default, new events require host approval for RSVPs (requiresApproval defaults to true). Only pass requiresApproval: false if the user explicitly asks for open/auto-approved RSVPs.
 - Format dates in a human-friendly way (e.g., "Friday, April 18 at 6:00 PM").
 - Be concise but helpful.
 - When you successfully create an event, share the event link: /e/{eventSlug}
@@ -66,7 +67,12 @@ RULES:
           type: z.enum(["in_person", "virtual", "hybrid"]).optional(),
           visibility: z.enum(["public", "private"]).optional(),
           capacity: z.number().optional(),
-          requiresApproval: z.boolean().optional(),
+          requiresApproval: z
+            .boolean()
+            .optional()
+            .describe(
+              "Whether RSVPs require host approval. Defaults to true (organizer must approve each RSVP). Only set this to false if the user explicitly asks for open/auto-approved RSVPs.",
+            ),
         }),
         execute: async (params) => {
           const [event] = await db
@@ -81,7 +87,7 @@ RULES:
               type: params.type ?? "in_person",
               visibility: params.visibility ?? "public",
               capacity: params.capacity,
-              requiresApproval: params.requiresApproval ?? false,
+              requiresApproval: params.requiresApproval ?? true,
               hostId: userId,
             })
             .returning();
@@ -98,6 +104,7 @@ RULES:
               type: event.type,
               visibility: event.visibility,
               capacity: event.capacity,
+              requiresApproval: event.requiresApproval,
             },
           };
         },
