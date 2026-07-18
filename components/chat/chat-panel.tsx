@@ -29,7 +29,6 @@ import {
   User,
   Users,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { Fragment, useRef, useState } from "react";
 import { toast } from "sonner";
 import { Streamdown } from "streamdown";
@@ -81,7 +80,34 @@ export function ChatPanel({
   conversationId?: string;
   initialMessages?: OrchestratorMessage[];
 } = {}) {
-  const router = useRouter();
+  // Track a client-side "New chat" reset. Bumping this key remounts
+  // ChatSession with a fresh useChat instance instantly — no server round-trip.
+  const [newChatKey, setNewChatKey] = useState<number | null>(null);
+  const inNewChat = newChatKey !== null;
+
+  return (
+    <ChatSession
+      key={inNewChat ? `new-${newChatKey}` : (conversationId ?? "root")}
+      conversationId={inNewChat ? undefined : conversationId}
+      initialMessages={inNewChat ? undefined : initialMessages}
+      onNewChat={() => {
+        // Swap the URL without a Next.js navigation, then remount locally.
+        window.history.replaceState(null, "", "/dashboard/chat");
+        setNewChatKey((k) => (k ?? 0) + 1);
+      }}
+    />
+  );
+}
+
+function ChatSession({
+  conversationId,
+  initialMessages,
+  onNewChat,
+}: {
+  conversationId?: string;
+  initialMessages?: OrchestratorMessage[];
+  onNewChat: () => void;
+}) {
   const {
     id: chatId,
     messages,
@@ -138,7 +164,7 @@ export function ChatPanel({
         {!isEmpty && (
           <button
             type="button"
-            onClick={() => router.push("/dashboard/chat")}
+            onClick={onNewChat}
             className="flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
           >
             <SquarePen className="size-3.5" />
