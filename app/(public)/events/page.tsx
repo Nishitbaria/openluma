@@ -59,26 +59,31 @@ export default async function PublicEventsPage({
     limit: 30,
   });
 
-  const groups: { key: string; label: string; items: typeof publicEvents }[] =
-    [];
+  const groupsByKey = new Map<
+    string,
+    { key: string; label: string; items: typeof publicEvents }
+  >();
 
   for (const event of publicEvents) {
     const startTime =
       typeof event.startTime === "string"
         ? new Date(event.startTime)
         : event.startTime;
-    const key = formatInTimeZone(startTime, event.timezone, "yyyy-MM-dd");
-    const lastGroup = groups.at(-1);
-    if (lastGroup?.key === key) {
-      lastGroup.items.push(event);
+    const dateKey = formatInTimeZone(startTime, event.timezone, "yyyy-MM-dd");
+    const key = `${event.timezone}|${dateKey}`;
+    const existing = groupsByKey.get(key);
+    if (existing) {
+      existing.items.push(event);
     } else {
-      groups.push({
+      groupsByKey.set(key, {
         key,
         label: dayLabel(startTime, event.timezone),
         items: [event],
       });
     }
   }
+
+  const groups = [...groupsByKey.values()];
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-12">
