@@ -3,11 +3,12 @@ import { Resend } from "resend";
 import EventReminderEmail from "@/emails/event-reminder-email";
 import InvitationEmail from "@/emails/invitation-email";
 import RsvpStatusEmail from "@/emails/rsvp-status-email";
+import { getAppUrl } from "@/lib/app-url";
 
 const apiKey = process.env.RESEND_API_KEY;
 export const resend = apiKey ? new Resend(apiKey) : null;
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+const appUrl = getAppUrl();
 const fromEmail =
   process.env.EMAIL_FROM ?? "OpenLuma <noreply@openluma.nishitbaria.pro>";
 

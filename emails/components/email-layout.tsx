@@ -13,8 +13,9 @@ import {
   Text,
 } from "@react-email/components";
 import type { ReactNode } from "react";
+import { getAppUrl } from "@/lib/app-url";
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "https://openluma.vercel.app";
+const appUrl = getAppUrl();
 
 export const brand = {
   ink: "#18181b",
