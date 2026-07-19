@@ -91,7 +91,10 @@ export async function GET(request: NextRequest) {
               location: event.location,
             },
           ).catch((err) =>
-            console.error(`Reminder email failed for ${r.user.email}:`, err),
+            console.error(
+              `Reminder email failed (event ${event.id}, rsvp ${r.id}):`,
+              err,
+            ),
           ),
         ),
     );
