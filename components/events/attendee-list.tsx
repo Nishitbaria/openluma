@@ -456,7 +456,10 @@ export function AttendeeList({
                         {STATUS_LABELS[attendee.status] ?? attendee.status}
                       </span>
                     </TableCell>
-                    <TableCell className="text-right text-muted-foreground">
+                    <TableCell
+                      className="text-right text-muted-foreground"
+                      suppressHydrationWarning
+                    >
                       {formatDistanceToNow(new Date(attendee.createdAt), {
                         addSuffix: false,
                       })}
