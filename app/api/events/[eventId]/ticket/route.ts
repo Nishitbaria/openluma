@@ -31,6 +31,7 @@ export async function GET(
         startTime: true,
         endTime: true,
         location: true,
+        timezone: true,
       },
     }),
   ]);
@@ -67,6 +68,7 @@ export async function GET(
       startTime: event.startTime,
       endTime: event.endTime,
       location: event.location,
+      timezone: event.timezone,
       userName: session.user.name,
       userEmail: session.user.email,
       rsvpId: rsvp.id,

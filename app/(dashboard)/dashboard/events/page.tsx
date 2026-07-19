@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { EventTimeline } from "@/components/events/event-timeline";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getSession } from "@/lib/auth";
@@ -98,14 +99,28 @@ export default async function EventsPage() {
       <Tabs defaultValue="upcoming">
         <TabsList>
           <TabsTrigger value="upcoming">
-            Upcoming ({upcomingEvents.length})
+            Upcoming
+            <Badge variant="secondary" className="ml-1.5 px-1.5 text-xs">
+              {upcomingEvents.length}
+            </Badge>
           </TabsTrigger>
-          <TabsTrigger value="past">Past ({pastEvents.length})</TabsTrigger>
+          <TabsTrigger value="past">
+            Past
+            <Badge variant="secondary" className="ml-1.5 px-1.5 text-xs">
+              {pastEvents.length}
+            </Badge>
+          </TabsTrigger>
           <TabsTrigger value="cohosting">
-            Co-hosting ({cohostingEvents.length})
+            Co-hosting
+            <Badge variant="secondary" className="ml-1.5 px-1.5 text-xs">
+              {cohostingEvents.length}
+            </Badge>
           </TabsTrigger>
           <TabsTrigger value="attending">
-            Attending ({attendingEvents.length})
+            Attending
+            <Badge variant="secondary" className="ml-1.5 px-1.5 text-xs">
+              {attendingEvents.length}
+            </Badge>
           </TabsTrigger>
         </TabsList>
 

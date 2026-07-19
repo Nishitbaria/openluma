@@ -24,8 +24,12 @@ export const updateEventSchema = createEventSchema
       .string()
       .min(3, "Slug must be at least 3 characters")
       .max(100, "Slug must be at most 100 characters")
-      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, {
-        message: "Slug must be lowercase letters, numbers, and hyphens only",
+      // Accept the character set actually used by generated slugs, which
+      // includes uppercase letters and underscores from legacy nanoid suffixes,
+      // so existing events remain editable. New user input is lowercased by the
+      // form's slug field before it reaches here.
+      .regex(/^[A-Za-z0-9_-]+$/, {
+        message: "Slug can only contain letters, numbers, hyphens, underscores",
       })
       .optional(),
   })

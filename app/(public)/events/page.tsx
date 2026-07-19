@@ -1,8 +1,31 @@
-import { and, desc, eq, gte, ilike } from "drizzle-orm";
+import { formatInTimeZone } from "date-fns-tz";
+import { and, asc, eq, gte, ilike } from "drizzle-orm";
+import { CalendarX } from "lucide-react";
 import { EventCard } from "@/components/events/event-card";
 import { EventFilters } from "@/components/events/event-filters";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
 import { db } from "@/lib/db";
 import { events } from "@/lib/db/schema";
+
+function dayLabel(date: Date, timezone: string) {
+  const now = new Date();
+  const dateKey = formatInTimeZone(date, timezone, "yyyy-MM-dd");
+  const todayKey = formatInTimeZone(now, timezone, "yyyy-MM-dd");
+  const tomorrowKey = formatInTimeZone(
+    new Date(now.getTime() + 24 * 60 * 60 * 1000),
+    timezone,
+    "yyyy-MM-dd",
+  );
+  if (dateKey === todayKey) return "Today";
+  if (dateKey === tomorrowKey) return "Tomorrow";
+  return formatInTimeZone(date, timezone, "EEEE, MMMM d");
+}
 
 export default async function PublicEventsPage({
   searchParams,
@@ -11,7 +34,10 @@ export default async function PublicEventsPage({
 }) {
   const params = await searchParams;
 
-  const conditions = [eq(events.visibility, "public")];
+  const conditions = [
+    eq(events.visibility, "public"),
+    gte(events.startTime, new Date()),
+  ];
 
   if (params.search) {
     conditions.push(ilike(events.title, `%${params.search}%`));
@@ -29,9 +55,35 @@ export default async function PublicEventsPage({
       host: { columns: { id: true, name: true, image: true } },
       rsvps: { columns: { id: true } },
     },
-    orderBy: [desc(events.startTime)],
+    orderBy: [asc(events.startTime)],
     limit: 30,
   });
+
+  const groupsByKey = new Map<
+    string,
+    { key: string; label: string; items: typeof publicEvents }
+  >();
+
+  for (const event of publicEvents) {
+    const startTime =
+      typeof event.startTime === "string"
+        ? new Date(event.startTime)
+        : event.startTime;
+    const dateKey = formatInTimeZone(startTime, event.timezone, "yyyy-MM-dd");
+    const key = `${event.timezone}|${dateKey}`;
+    const existing = groupsByKey.get(key);
+    if (existing) {
+      existing.items.push(event);
+    } else {
+      groupsByKey.set(key, {
+        key,
+        label: dayLabel(startTime, event.timezone),
+        items: [event],
+      });
+    }
+  }
+
+  const groups = [...groupsByKey.values()];
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-12">
@@ -47,23 +99,38 @@ export default async function PublicEventsPage({
       </div>
 
       {publicEvents.length === 0 ? (
-        <div className="flex flex-col items-center justify-center rounded-lg border border-dashed p-12">
-          <p className="text-muted-foreground">
-            {params.search
-              ? `No events found for "${params.search}".`
-              : "No public events yet. Be the first to create one!"}
-          </p>
-        </div>
+        <Empty className="border border-dashed">
+          <EmptyHeader>
+            <EmptyMedia variant="icon">
+              <CalendarX />
+            </EmptyMedia>
+            <EmptyTitle>No events found</EmptyTitle>
+            <EmptyDescription>
+              {params.search
+                ? `No upcoming events found for "${params.search}".`
+                : "No public events yet. Be the first to create one!"}
+            </EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       ) : (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {publicEvents.map((event) => (
-            <EventCard
-              key={event.id}
-              event={{
-                ...event,
-                _count: { rsvps: event.rsvps.length },
-              }}
-            />
+        <div className="space-y-10">
+          {groups.map((group) => (
+            <div key={group.key}>
+              <h2 className="mb-4 text-xl font-semibold tracking-tight">
+                {group.label}
+              </h2>
+              <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {group.items.map((event) => (
+                  <EventCard
+                    key={event.id}
+                    event={{
+                      ...event,
+                      _count: { rsvps: event.rsvps.length },
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       )}

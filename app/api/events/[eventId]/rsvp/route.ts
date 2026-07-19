@@ -3,7 +3,13 @@ import { headers } from "next/headers";
 import type { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { events, invitations, rsvps, rsvpTimeline, user } from "@/lib/db/schema";
+import {
+  events,
+  invitations,
+  rsvps,
+  rsvpTimeline,
+  user,
+} from "@/lib/db/schema";
 import { sendRsvpConfirmationEmail } from "@/lib/email";
 
 export async function GET(
@@ -64,6 +70,7 @@ export async function POST(
     },
     columns: {
       id: true,
+      slug: true,
       title: true,
       hostId: true,
       capacity: true,
@@ -72,6 +79,7 @@ export async function POST(
       startTime: true,
       endTime: true,
       location: true,
+      timezone: true,
     },
   });
 
@@ -87,15 +95,22 @@ export async function POST(
     );
   }
 
+  // Look up this user's invitation once — used both to gate private-event
+  // access and to auto-approve invited guests once they complete registration.
+  const userInvitation = session.user.email
+    ? await db.query.invitations.findFirst({
+        where: and(
+          eq(invitations.eventId, eventId),
+          eq(invitations.email, session.user.email),
+        ),
+        columns: { status: true },
+      })
+    : undefined;
+  const hasAcceptedInvite = userInvitation?.status === "accepted";
+
   // Private events require an accepted invitation to RSVP
   if (event.visibility === "private" && event.hostId !== session.user.id) {
-    const invitation = await db.query.invitations.findFirst({
-      where: and(
-        eq(invitations.eventId, eventId),
-        eq(invitations.email, session.user.email),
-      ),
-    });
-    if (!invitation || invitation.status !== "accepted") {
+    if (!hasAcceptedInvite) {
       return Response.json(
         { message: "This is a private event. You need an invitation to RSVP." },
         { status: 403 },
@@ -104,6 +119,16 @@ export async function POST(
   }
 
   const isFull = !!(event.capacity && event.rsvps.length >= event.capacity);
+  // Invited guests who accepted are approved outright; everyone else follows
+  // the event's approval and capacity rules.
+  const resolveStatus = () =>
+    hasAcceptedInvite
+      ? "approved"
+      : isFull
+        ? "waitlisted"
+        : event.requiresApproval
+          ? "pending"
+          : "approved";
 
   const existing = await db.query.rsvps.findFirst({
     where: and(eq(rsvps.eventId, eventId), eq(rsvps.userId, session.user.id)),
@@ -112,11 +137,7 @@ export async function POST(
   if (existing) {
     // Allow re-RSVP if previously rejected
     if (existing.status === "rejected") {
-      const newStatus = isFull
-        ? "waitlisted"
-        : event.requiresApproval
-          ? "pending"
-          : "approved";
+      const newStatus = resolveStatus();
       const [updated] = await db
         .update(rsvps)
         .set({ status: newStatus, updatedAt: new Date() })
@@ -128,11 +149,7 @@ export async function POST(
   }
 
   const body = await request.json().catch(() => ({}));
-  const status = isFull
-    ? "waitlisted"
-    : event.requiresApproval
-      ? "pending"
-      : "approved";
+  const status = resolveStatus();
 
   const [rsvp] = await db
     .insert(rsvps)
@@ -154,10 +171,12 @@ export async function POST(
   if ((status === "approved" || status === "pending") && session.user.email) {
     await sendRsvpConfirmationEmail(session.user.email, event.title, status, {
       id: event.id,
+      slug: event.slug ?? undefined,
       title: event.title,
       startTime: event.startTime,
       endTime: event.endTime,
       location: event.location,
+      timezone: event.timezone,
     }).catch((err) => console.error("Failed to send ticket email:", err));
   }
 
@@ -179,11 +198,13 @@ export async function PATCH(
     with: { cohosts: true },
     columns: {
       id: true,
+      slug: true,
       title: true,
       hostId: true,
       startTime: true,
       endTime: true,
       location: true,
+      timezone: true,
     },
   });
 
@@ -201,7 +222,10 @@ export async function PATCH(
   const body = await request.json();
   const { rsvpId, status, notifyGuest = true, customMessage } = body;
 
-  if (!rsvpId || !["approved", "rejected", "waitlisted", "pending"].includes(status)) {
+  if (
+    !rsvpId ||
+    !["approved", "rejected", "waitlisted", "pending"].includes(status)
+  ) {
     return Response.json({ message: "Invalid data" }, { status: 400 });
   }
 
@@ -242,15 +266,15 @@ export async function PATCH(
               status,
               {
                 id: event.id,
+                slug: event.slug ?? undefined,
                 title: event.title,
                 startTime: event.startTime,
                 endTime: event.endTime,
                 location: event.location,
+                timezone: event.timezone,
               },
               customMessage?.trim() || undefined,
-            ).catch((err) =>
-              console.error("Failed to send RSVP email:", err),
-            );
+            ).catch((err) => console.error("Failed to send RSVP email:", err));
           }
         })
         .catch((err) => console.error("Failed to fetch user for email:", err));
@@ -311,7 +335,15 @@ export async function DELETE(
   if (cancelledRsvp?.status === "approved") {
     const event = await db.query.events.findFirst({
       where: eq(events.id, eventId),
-      columns: { id: true, title: true, startTime: true, endTime: true, location: true },
+      columns: {
+        id: true,
+        slug: true,
+        title: true,
+        startTime: true,
+        endTime: true,
+        location: true,
+        timezone: true,
+      },
     });
 
     const nextInLine = await db.query.rsvps.findFirst({
@@ -333,12 +365,16 @@ export async function DELETE(
           "approved",
           {
             id: event.id,
+            slug: event.slug ?? undefined,
             title: event.title,
             startTime: event.startTime,
             endTime: event.endTime,
             location: event.location,
+            timezone: event.timezone,
           },
-        ).catch((err) => console.error("Failed to send waitlist promotion email:", err));
+        ).catch((err) =>
+          console.error("Failed to send waitlist promotion email:", err),
+        );
       }
     }
   }

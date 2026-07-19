@@ -1,6 +1,6 @@
 "use client";
 
-import { format } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import { ArrowLeft, Calendar, Download, MapPin, Ticket } from "lucide-react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
@@ -16,6 +16,7 @@ interface TicketData {
   startTime: string;
   endTime: string | null;
   location: string | null;
+  timezone: string;
   userName: string;
   userEmail: string;
   rsvpId: string;
@@ -116,11 +117,16 @@ export default function TicketPage() {
               <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
               <div>
                 <p className="text-sm font-medium">
-                  {format(startTime, "EEEE, MMMM d, yyyy")}
+                  {formatInTimeZone(
+                    startTime,
+                    ticket.timezone,
+                    "EEEE, MMMM d, yyyy",
+                  )}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {format(startTime, "h:mm a")}
-                  {endTime && ` - ${format(endTime, "h:mm a")}`}
+                  {formatInTimeZone(startTime, ticket.timezone, "h:mm a")}
+                  {endTime &&
+                    ` - ${formatInTimeZone(endTime, ticket.timezone, "h:mm a")}`}
                 </p>
               </div>
             </div>

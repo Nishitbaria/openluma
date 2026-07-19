@@ -28,7 +28,15 @@ export async function GET(request: NextRequest) {
         lte(events.startTime, window24hEnd),
         eq(events.reminderSent24h, false),
       ),
-      columns: { id: true, title: true, startTime: true },
+      columns: {
+        id: true,
+        slug: true,
+        title: true,
+        startTime: true,
+        endTime: true,
+        location: true,
+        timezone: true,
+      },
     }),
     db.query.events.findMany({
       where: and(
@@ -36,14 +44,30 @@ export async function GET(request: NextRequest) {
         lte(events.startTime, window1hEnd),
         eq(events.reminderSent1h, false),
       ),
-      columns: { id: true, title: true, startTime: true },
+      columns: {
+        id: true,
+        slug: true,
+        title: true,
+        startTime: true,
+        endTime: true,
+        location: true,
+        timezone: true,
+      },
     }),
   ]);
 
   let sent = 0;
 
   async function sendRemindersForEvent(
-    event: { id: string; title: string; startTime: Date },
+    event: {
+      id: string;
+      slug: string | null;
+      title: string;
+      startTime: Date;
+      endTime: Date | null;
+      location: string | null;
+      timezone: string;
+    },
     flag: "reminderSent24h" | "reminderSent1h",
   ) {
     const approvedRsvps = await db.query.rsvps.findMany({
@@ -51,22 +75,47 @@ export async function GET(request: NextRequest) {
       with: { user: { columns: { email: true } } },
     });
 
-    await Promise.all(
-      approvedRsvps
-        .filter((r) => r.user.email)
-        .map((r) =>
-          sendEventReminderEmail(r.user.email, event.title, event.startTime).catch(
-            (err) => console.error(`Reminder email failed for ${r.user.email}:`, err),
-          ),
+    const recipients = approvedRsvps.filter((r) => r.user.email);
+
+    const results = await Promise.allSettled(
+      recipients.map((r) =>
+        sendEventReminderEmail(
+          r.user.email,
+          event.title,
+          event.startTime,
+          event.timezone,
+          {
+            id: event.id,
+            slug: event.slug ?? undefined,
+            endTime: event.endTime,
+            location: event.location,
+          },
         ),
+      ),
     );
 
-    await db
-      .update(events)
-      .set({ [flag]: true })
-      .where(eq(events.id, event.id));
+    let failures = 0;
+    results.forEach((result, i) => {
+      if (result.status === "rejected") {
+        failures++;
+        console.error(
+          `Reminder email failed (event ${event.id}, rsvp ${recipients[i].id}):`,
+          result.reason,
+        );
+      }
+    });
 
-    sent += approvedRsvps.length;
+    // Only mark the reminder as sent when every delivery succeeded, so a failed
+    // run is retried next time. Retries are safe: sendEventReminderEmail passes
+    // a Resend idempotency key, so already-delivered recipients aren't re-sent.
+    if (failures === 0) {
+      await db
+        .update(events)
+        .set({ [flag]: true })
+        .where(eq(events.id, event.id));
+    }
+
+    sent += recipients.length - failures;
   }
 
   await Promise.all([

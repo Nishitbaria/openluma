@@ -118,7 +118,7 @@ export function ChatHistorySheet({
               </ul>
             ) : conversations.length === 0 ? (
               <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
-                <MessageSquare className="size-6 text-muted-foreground" />
+                <MessageSquare className="size-8 text-muted-foreground" />
                 <p className="text-sm font-medium">No conversations yet</p>
                 <p className="text-xs text-muted-foreground">
                   Start chatting and your conversations will appear here.

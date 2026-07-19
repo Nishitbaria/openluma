@@ -39,6 +39,7 @@ export async function submitRsvpAction(eventId: string, message?: string) {
       startTime: event.startTime,
       endTime: event.endTime,
       location: event.location,
+      timezone: event.timezone,
     }).catch((err) =>
       console.error("Failed to send RSVP confirmation email:", err),
     );
@@ -81,6 +82,17 @@ export async function approveRsvpAction(rsvpId: string, eventId: string) {
         rsvpUser.email,
         eventForEmail.title,
         "approved",
+        {
+          id: eventForEmail.id,
+          slug: eventForEmail.slug ?? undefined,
+          title: eventForEmail.title,
+          startTime: eventForEmail.startTime,
+          endTime: eventForEmail.endTime,
+          location: eventForEmail.location,
+          timezone: eventForEmail.timezone,
+        },
+      ).catch((err) =>
+        console.error("Failed to send RSVP approval email:", err),
       );
     }
   }
@@ -120,6 +132,17 @@ export async function rejectRsvpAction(rsvpId: string, eventId: string) {
         rsvpUser.email,
         eventForEmail.title,
         "rejected",
+        {
+          id: eventForEmail.id,
+          slug: eventForEmail.slug ?? undefined,
+          title: eventForEmail.title,
+          startTime: eventForEmail.startTime,
+          endTime: eventForEmail.endTime,
+          location: eventForEmail.location,
+          timezone: eventForEmail.timezone,
+        },
+      ).catch((err) =>
+        console.error("Failed to send RSVP rejection email:", err),
       );
     }
   }
