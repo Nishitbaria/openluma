@@ -210,24 +210,19 @@ export function EventForm({ event }: EventFormProps) {
           {isEditing && (
             <div className="space-y-2">
               <Label htmlFor="slug">Event URL</Label>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground shrink-0">
-                  /e/
-                </span>
-                <Input
-                  id="slug"
-                  placeholder="custom-url"
-                  value={slug}
-                  onChange={(e) =>
-                    setSlug(
-                      e.target.value
-                        .toLowerCase()
-                        .replace(/[^a-z0-9-]/g, "")
-                        .replace(/-+/g, "-"),
-                    )
-                  }
-                />
-              </div>
+              <Input
+                id="slug"
+                placeholder="custom-url"
+                value={slug}
+                onChange={(e) =>
+                  setSlug(
+                    e.target.value
+                      .toLowerCase()
+                      .replace(/[^a-z0-9-]/g, "")
+                      .replace(/-+/g, "-"),
+                  )
+                }
+              />
             </div>
           )}
 

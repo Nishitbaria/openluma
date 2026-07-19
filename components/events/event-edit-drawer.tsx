@@ -138,9 +138,6 @@ export function EventEditDrawer({ event, trigger }: EventEditDrawerProps) {
             <div className="mt-2 space-y-1.5">
               <Label className="text-sm text-muted-foreground">Event URL</Label>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground shrink-0">
-                  /e/
-                </span>
                 <Input
                   placeholder="custom-url"
                   value={slug}
