@@ -20,7 +20,13 @@ import {
 } from "@/components/ui/hover-card";
 import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { eventPageviews, eventQuestions, events, rsvps } from "@/lib/db/schema";
+import {
+  eventPageviews,
+  eventQuestions,
+  events,
+  invitations,
+  rsvps,
+} from "@/lib/db/schema";
 import { redis } from "@/lib/redis";
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
@@ -100,7 +106,7 @@ export default async function PublicEventBySlugPage({
     | "waitlisted"
     | null = null;
 
-  const [userRsvpResult, questions] = await Promise.all([
+  const [userRsvpResult, questions, invitationResult] = await Promise.all([
     session?.user
       ? db.query.rsvps.findFirst({
           where: and(
@@ -121,9 +127,20 @@ export default async function PublicEventBySlugPage({
         options: true,
       },
     }),
+    session?.user?.email && event.visibility === "private"
+      ? db.query.invitations.findFirst({
+          where: and(
+            eq(invitations.eventId, event.id),
+            eq(invitations.email, session.user.email),
+          ),
+          columns: { token: true, status: true },
+        })
+      : Promise.resolve(undefined),
   ]);
 
   currentRsvpStatus = userRsvpResult?.status ?? null;
+  const pendingInvitation =
+    invitationResult?.status === "pending" ? invitationResult : null;
 
   // ── Non-blocking pageview tracking ──────────────────────────────────────────
   void (async () => {
@@ -182,15 +199,32 @@ export default async function PublicEventBySlugPage({
         <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-24 text-center">
           <Lock className="mx-auto h-12 w-12 text-muted-foreground" />
           <h1 className="mt-4 text-2xl font-bold">Private Event</h1>
-          <p className="mt-2 text-muted-foreground">
-            This event is invite-only. You need an invitation to view it.
-          </p>
-          {!session?.user && (
-            <Button asChild className="mt-6">
-              <Link href={`/sign-in?callbackUrl=/e/${slug}`}>
-                Sign in to view invitation
-              </Link>
-            </Button>
+          {pendingInvitation ? (
+            <>
+              <p className="mt-2 text-muted-foreground">
+                You have a pending invitation to this event.
+              </p>
+              <Button asChild className="mt-6">
+                <Link
+                  href={`/api/invitations/${pendingInvitation.token}?action=accept`}
+                >
+                  Accept invitation
+                </Link>
+              </Button>
+            </>
+          ) : (
+            <>
+              <p className="mt-2 text-muted-foreground">
+                This event is invite-only. You need an invitation to view it.
+              </p>
+              {!session?.user && (
+                <Button asChild className="mt-6">
+                  <Link href={`/sign-in?callbackUrl=/e/${slug}`}>
+                    Sign in to view invitation
+                  </Link>
+                </Button>
+              )}
+            </>
           )}
         </div>
       );
