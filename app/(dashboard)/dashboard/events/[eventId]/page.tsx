@@ -365,7 +365,6 @@ export default async function EventDetailPage({
           isHost={isHost}
           hasTicket={hasTicket}
           eventId={eventId}
-          publicEventUrl={publicEventUrl}
           shareUrl={shareUrl}
         />
       )}
@@ -496,7 +495,6 @@ function OverviewTab({
   isHost,
   hasTicket,
   eventId,
-  publicEventUrl,
   shareUrl,
 }: {
   event: {
@@ -556,7 +554,6 @@ function OverviewTab({
   isHost: boolean;
   hasTicket: boolean;
   eventId: string;
-  publicEventUrl: string;
   shareUrl: string;
 }) {
   return (

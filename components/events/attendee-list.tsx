@@ -143,24 +143,6 @@ export function AttendeeList({
     }
   }
 
-  async function promoteToCohost(userId: string) {
-    setLoading(userId);
-    try {
-      const res = await fetch(`/api/events/${eventId}/cohosts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId }),
-      });
-      if (!res.ok) throw new Error("Failed");
-      toast.success("Promoted to co-host");
-      router.refresh();
-    } catch {
-      toast.error("Failed to promote to co-host");
-    } finally {
-      setLoading(null);
-    }
-  }
-
   async function removeCohost(userId: string) {
     setLoading(userId);
     try {
@@ -217,11 +199,6 @@ export function AttendeeList({
   }
 
   // ── Filtering + sorting ────────────────────────────────────────────────
-  const cohostUserIds = useMemo(
-    () => new Set(cohosts.map((c) => c.userId)),
-    [cohosts],
-  );
-
   const filtered = useMemo(() => {
     const searchLower = search.toLowerCase();
     const list = attendees.filter((a) => {

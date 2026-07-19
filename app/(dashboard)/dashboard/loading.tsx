@@ -11,8 +11,8 @@ export default function DashboardLoading() {
 
       {/* Stats cards */}
       <div className="grid gap-4 md:grid-cols-3">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <Card key={i}>
+        {["stat-a", "stat-b", "stat-c"].map((k) => (
+          <Card key={k}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <Skeleton className="h-4 w-24" />
               <Skeleton className="h-4 w-4" />
@@ -27,15 +27,15 @@ export default function DashboardLoading() {
 
       {/* Upcoming events + Pending approvals */}
       <div className="grid gap-4 md:grid-cols-2">
-        {Array.from({ length: 2 }).map((_, i) => (
-          <Card key={i}>
+        {["col-a", "col-b"].map((k) => (
+          <Card key={k}>
             <CardHeader>
               <Skeleton className="h-5 w-36" />
             </CardHeader>
             <CardContent className="space-y-3">
-              {Array.from({ length: 3 }).map((_, j) => (
+              {["r1", "r2", "r3"].map((rk) => (
                 <div
-                  key={j}
+                  key={rk}
                   className="flex items-center justify-between rounded-lg border p-3"
                 >
                   <div className="space-y-1.5">

@@ -1,17 +1,17 @@
 "use client";
 
 import {
+  closestCenter,
   DndContext,
   type DragEndEvent,
   KeyboardSensor,
   PointerSensor,
-  closestCenter,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
 import {
-  SortableContext,
   arrayMove,
+  SortableContext,
   sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
@@ -79,18 +79,57 @@ const TYPE_META: Record<
   QuestionType,
   { label: string; description: string; icon: React.ElementType }
 > = {
-  text:           { label: "Short Text",     description: "Ask for a free-form response",           icon: Text },
-  paragraph:      { label: "Paragraph",      description: "Ask for a long-form response",            icon: AlignLeft },
-  checkbox:       { label: "Checkbox",       description: "Ask guests to check a box",               icon: CheckSquare },
-  dropdown:       { label: "Options",        description: "Let the guest choose from a list",         icon: List },
-  social_profile: { label: "Social Profile", description: "Ask for a social network username",       icon: AtSign },
-  company:        { label: "Company",        description: "Ask for the company the guest works for", icon: Building2 },
-  phone:          { label: "Phone",          description: "Ask for a phone number",                  icon: Phone },
-  website:        { label: "Website",        description: "Ask for a website URL",                   icon: Link },
-  terms:          { label: "Terms",          description: "Ask guests to agree to terms",            icon: FileText },
+  text: {
+    label: "Short Text",
+    description: "Ask for a free-form response",
+    icon: Text,
+  },
+  paragraph: {
+    label: "Paragraph",
+    description: "Ask for a long-form response",
+    icon: AlignLeft,
+  },
+  checkbox: {
+    label: "Checkbox",
+    description: "Ask guests to check a box",
+    icon: CheckSquare,
+  },
+  dropdown: {
+    label: "Options",
+    description: "Let the guest choose from a list",
+    icon: List,
+  },
+  social_profile: {
+    label: "Social Profile",
+    description: "Ask for a social network username",
+    icon: AtSign,
+  },
+  company: {
+    label: "Company",
+    description: "Ask for the company the guest works for",
+    icon: Building2,
+  },
+  phone: { label: "Phone", description: "Ask for a phone number", icon: Phone },
+  website: {
+    label: "Website",
+    description: "Ask for a website URL",
+    icon: Link,
+  },
+  terms: {
+    label: "Terms",
+    description: "Ask guests to agree to terms",
+    icon: FileText,
+  },
 };
 
-const SOCIAL_PLATFORMS = ["Instagram", "LinkedIn", "X (Twitter)", "YouTube", "GitHub", "Telegram"];
+const SOCIAL_PLATFORMS = [
+  "Instagram",
+  "LinkedIn",
+  "X (Twitter)",
+  "YouTube",
+  "GitHub",
+  "Telegram",
+];
 
 type ModalStep = "pick-type" | "edit-form";
 
@@ -126,7 +165,7 @@ const EMPTY_MODAL: ModalState = {
 };
 
 const DEFAULT_LABELS: Partial<Record<QuestionType, string>> = {
-  phone:   "What is your phone number?",
+  phone: "What is your phone number?",
   website: "What is your website URL?",
   company: "What company do you work for?",
 };
@@ -140,7 +179,9 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
 
   const sensors = useSensors(
     useSensor(PointerSensor),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
   );
 
   useEffect(() => {
@@ -157,9 +198,15 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
   }
 
   function openEdit(q: Question) {
-    const platform = q.type === "social_profile" ? (q.options?.[0] ?? "Instagram") : "Instagram";
-    const collectJobTitle = q.type === "company" && q.options != null && q.options.length > 0;
-    const jobTitleLabel = collectJobTitle ? q.options![0] : "What is your job title?";
+    const platform =
+      q.type === "social_profile"
+        ? (q.options?.[0] ?? "Instagram")
+        : "Instagram";
+    const collectJobTitle =
+      q.type === "company" && q.options != null && q.options.length > 0;
+    const jobTitleLabel = collectJobTitle
+      ? q.options![0]
+      : "What is your job title?";
     setModal({
       open: true,
       step: "edit-form",
@@ -226,9 +273,11 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
 
   // ── Build options payload by type ─────────────────────────────────────────
   function buildOptions(): string[] | null {
-    if (modal.type === "dropdown") return modal.options.length > 0 ? modal.options : null;
+    if (modal.type === "dropdown")
+      return modal.options.length > 0 ? modal.options : null;
     if (modal.type === "social_profile") return [modal.platform];
-    if (modal.type === "company") return modal.collectJobTitle ? [modal.jobTitleLabel] : null;
+    if (modal.type === "company")
+      return modal.collectJobTitle ? [modal.jobTitleLabel] : null;
     return null;
   }
 
@@ -236,9 +285,13 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
   async function handleSave() {
     const label = modal.label.trim();
 
-    if (!label) { toast.error("Question label is required"); return; }
+    if (!label) {
+      toast.error("Question label is required");
+      return;
+    }
     if (modal.type === "dropdown" && modal.options.length === 0) {
-      toast.error("Add at least one option"); return;
+      toast.error("Add at least one option");
+      return;
     }
 
     setSaving(true);
@@ -256,9 +309,14 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id: modal.editingId, ...payload }),
         });
-        if (!res.ok) { toast.error("Failed to save"); return; }
+        if (!res.ok) {
+          toast.error("Failed to save");
+          return;
+        }
         const updated = await res.json();
-        setQuestions((prev) => prev.map((q) => (q.id === modal.editingId ? updated : q)));
+        setQuestions((prev) =>
+          prev.map((q) => (q.id === modal.editingId ? updated : q)),
+        );
         toast.success("Question updated");
       } else {
         const res = await fetch(`/api/events/${eventId}/questions`, {
@@ -266,7 +324,10 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ...payload, order: questions.length }),
         });
-        if (!res.ok) { toast.error("Failed to add question"); return; }
+        if (!res.ok) {
+          toast.error("Failed to add question");
+          return;
+        }
         const created = await res.json();
         setQuestions((prev) => [...prev, created]);
         toast.success("Question added");
@@ -285,7 +346,10 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id }),
     });
-    if (!res.ok) { toast.error("Failed to delete"); return; }
+    if (!res.ok) {
+      toast.error("Failed to delete");
+      return;
+    }
     setQuestions((prev) => prev.filter((q) => q.id !== id));
     router.refresh();
   }
@@ -296,7 +360,10 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
     if (!over || active.id === over.id) return;
     const oldIndex = questions.findIndex((q) => q.id === active.id);
     const newIndex = questions.findIndex((q) => q.id === over.id);
-    const reordered = arrayMove(questions, oldIndex, newIndex).map((q, i) => ({ ...q, order: i }));
+    const reordered = arrayMove(questions, oldIndex, newIndex).map((q, i) => ({
+      ...q,
+      order: i,
+    }));
     setQuestions(reordered);
     await Promise.all(
       reordered.map((q) =>
@@ -309,7 +376,8 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
     );
   }
 
-  if (loading) return <p className="text-sm text-muted-foreground">Loading questions…</p>;
+  if (loading)
+    return <p className="text-sm text-muted-foreground">Loading questions…</p>;
 
   const SelectedIcon = TYPE_META[modal.type].icon;
 
@@ -326,8 +394,15 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
             </p>
           </div>
         ) : (
-          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-            <SortableContext items={questions.map((q) => q.id)} strategy={verticalListSortingStrategy}>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={questions.map((q) => q.id)}
+              strategy={verticalListSortingStrategy}
+            >
               {questions.map((q) => (
                 <SortableQuestionRow
                   key={q.id}
@@ -349,7 +424,6 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
       {/* ── Modal ── */}
       <Dialog open={modal.open} onOpenChange={(open) => !open && closeModal()}>
         <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden">
-
           {/* Step 1 — Pick type */}
           {modal.step === "pick-type" && (
             <>
@@ -360,22 +434,25 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
                 </p>
               </DialogHeader>
               <div className="grid grid-cols-2 gap-2 px-6 pb-6">
-                {(Object.entries(TYPE_META) as [QuestionType, typeof TYPE_META[QuestionType]][]).map(
-                  ([type, meta]) => {
-                    const Icon = meta.icon;
-                    return (
-                      <button
-                        key={type}
-                        type="button"
-                        onClick={() => selectType(type)}
-                        className="flex items-center gap-3 rounded-lg border bg-muted/30 hover:bg-muted px-4 py-3 text-left transition-colors"
-                      >
-                        <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
-                        <span className="text-sm font-medium">{meta.label}</span>
-                      </button>
-                    );
-                  },
-                )}
+                {(
+                  Object.entries(TYPE_META) as [
+                    QuestionType,
+                    (typeof TYPE_META)[QuestionType],
+                  ][]
+                ).map(([type, meta]) => {
+                  const Icon = meta.icon;
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => selectType(type)}
+                      className="flex items-center gap-3 rounded-lg border bg-muted/30 hover:bg-muted px-4 py-3 text-left transition-colors"
+                    >
+                      <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
+                      <span className="text-sm font-medium">{meta.label}</span>
+                    </button>
+                  );
+                })}
               </div>
             </>
           )}
@@ -388,7 +465,9 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
                   {!modal.editingId && (
                     <button
                       type="button"
-                      onClick={() => setModal((m) => ({ ...m, step: "pick-type" }))}
+                      onClick={() =>
+                        setModal((m) => ({ ...m, step: "pick-type" }))
+                      }
                       className="rounded-md p-1 hover:bg-muted transition-colors"
                     >
                       <ChevronLeft className="h-4 w-4" />
@@ -400,26 +479,34 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
                 </div>
                 <div className="flex items-center gap-2 mt-1 pb-4 border-b">
                   <SelectedIcon className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">{TYPE_META[modal.type].label}</span>
+                  <span className="text-sm text-muted-foreground">
+                    {TYPE_META[modal.type].label}
+                  </span>
                   <span className="text-xs text-muted-foreground">·</span>
-                  <span className="text-xs text-muted-foreground">{TYPE_META[modal.type].description}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {TYPE_META[modal.type].description}
+                  </span>
                 </div>
               </DialogHeader>
 
               <div className="px-6 py-4 space-y-4">
-
                 {/* Social Profile — platform first, then auto-label */}
                 {modal.type === "social_profile" && (
                   <>
                     <div className="space-y-1.5">
                       <Label className="text-sm">Platform</Label>
-                      <Select value={modal.platform} onValueChange={handlePlatformChange}>
+                      <Select
+                        value={modal.platform}
+                        onValueChange={handlePlatformChange}
+                      >
                         <SelectTrigger>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                           {SOCIAL_PLATFORMS.map((p) => (
-                            <SelectItem key={p} value={p}>{p}</SelectItem>
+                            <SelectItem key={p} value={p}>
+                              {p}
+                            </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
@@ -428,7 +515,9 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
                       <Label className="text-sm">Question</Label>
                       <Input
                         value={modal.label}
-                        onChange={(e) => setModal((m) => ({ ...m, label: e.target.value }))}
+                        onChange={(e) =>
+                          setModal((m) => ({ ...m, label: e.target.value }))
+                        }
                         placeholder={getSocialLabel(modal.platform)}
                         onKeyDown={(e) => e.key === "Enter" && handleSave()}
                       />
@@ -447,16 +536,22 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
                       <Input
                         autoFocus
                         value={modal.label}
-                        onChange={(e) => setModal((m) => ({ ...m, label: e.target.value }))}
+                        onChange={(e) =>
+                          setModal((m) => ({ ...m, label: e.target.value }))
+                        }
                         placeholder="What company do you work for?"
                       />
                     </div>
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="collect-job" className="text-sm">Collect Job Title</Label>
+                      <Label htmlFor="collect-job" className="text-sm">
+                        Collect Job Title
+                      </Label>
                       <Switch
                         id="collect-job"
                         checked={modal.collectJobTitle}
-                        onCheckedChange={(v) => setModal((m) => ({ ...m, collectJobTitle: v }))}
+                        onCheckedChange={(v) =>
+                          setModal((m) => ({ ...m, collectJobTitle: v }))
+                        }
                       />
                     </div>
                     {modal.collectJobTitle && (
@@ -464,7 +559,12 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
                         <Label className="text-sm">Job Title Question</Label>
                         <Input
                           value={modal.jobTitleLabel}
-                          onChange={(e) => setModal((m) => ({ ...m, jobTitleLabel: e.target.value }))}
+                          onChange={(e) =>
+                            setModal((m) => ({
+                              ...m,
+                              jobTitleLabel: e.target.value,
+                            }))
+                          }
                           placeholder="What is your job title?"
                         />
                       </div>
@@ -480,7 +580,9 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
                       <Input
                         autoFocus
                         value={modal.label}
-                        onChange={(e) => setModal((m) => ({ ...m, label: e.target.value }))}
+                        onChange={(e) =>
+                          setModal((m) => ({ ...m, label: e.target.value }))
+                        }
                         placeholder="e.g. Which session will you attend?"
                       />
                     </div>
@@ -488,36 +590,60 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
                       <Label className="text-sm">Options</Label>
                       <div className="flex flex-wrap gap-1.5 min-h-[40px] rounded-md border bg-background px-3 py-2">
                         {modal.options.map((opt) => (
-                          <span key={opt} className="flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-sm">
+                          <span
+                            key={opt}
+                            className="flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-sm"
+                          >
                             {opt}
-                            <button type="button" onClick={() => removeOption(opt)} className="text-muted-foreground hover:text-foreground">
+                            <button
+                              type="button"
+                              onClick={() => removeOption(opt)}
+                              className="text-muted-foreground hover:text-foreground"
+                            >
                               <X className="h-3 w-3" />
                             </button>
                           </span>
                         ))}
                         <input
                           className="flex-1 min-w-[120px] bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-                          placeholder={modal.options.length === 0 ? "Add options…" : "Add another…"}
+                          placeholder={
+                            modal.options.length === 0
+                              ? "Add options…"
+                              : "Add another…"
+                          }
                           value={modal.optionInput}
-                          onChange={(e) => setModal((m) => ({ ...m, optionInput: e.target.value }))}
+                          onChange={(e) =>
+                            setModal((m) => ({
+                              ...m,
+                              optionInput: e.target.value,
+                            }))
+                          }
                           onKeyDown={handleOptionKeyDown}
                           onBlur={addOption}
                         />
                       </div>
-                      <p className="text-xs text-muted-foreground">Press Enter or Tab to add an option.</p>
+                      <p className="text-xs text-muted-foreground">
+                        Press Enter or Tab to add an option.
+                      </p>
                     </div>
                   </>
                 )}
 
                 {/* All other types — just a label input */}
-                {!["social_profile", "company", "dropdown"].includes(modal.type) && (
+                {!["social_profile", "company", "dropdown"].includes(
+                  modal.type,
+                ) && (
                   <div className="space-y-1.5">
                     <Label className="text-sm">Question</Label>
                     <Input
                       autoFocus
                       value={modal.label}
-                      onChange={(e) => setModal((m) => ({ ...m, label: e.target.value }))}
-                      placeholder={DEFAULT_LABELS[modal.type] ?? "e.g. What is your…"}
+                      onChange={(e) =>
+                        setModal((m) => ({ ...m, label: e.target.value }))
+                      }
+                      placeholder={
+                        DEFAULT_LABELS[modal.type] ?? "e.g. What is your…"
+                      }
                       onKeyDown={(e) => e.key === "Enter" && handleSave()}
                     />
                   </div>
@@ -526,24 +652,37 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
                 {/* Required toggle */}
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="required-toggle" className="text-sm">Required</Label>
+                    <Label htmlFor="required-toggle" className="text-sm">
+                      Required
+                    </Label>
                     <Switch
                       id="required-toggle"
                       checked={modal.required}
-                      onCheckedChange={(v) => setModal((m) => ({ ...m, required: v }))}
+                      onCheckedChange={(v) =>
+                        setModal((m) => ({ ...m, required: v }))
+                      }
                     />
                   </div>
                   {modal.type === "checkbox" && modal.required && (
                     <p className="text-xs text-muted-foreground">
-                      When set to Required, guests must check the box (answer Yes) to proceed.
+                      When set to Required, guests must check the box (answer
+                      Yes) to proceed.
                     </p>
                   )}
                 </div>
               </div>
 
               <div className="px-6 pb-6">
-                <Button className="w-full" onClick={handleSave} disabled={saving}>
-                  {saving ? "Saving…" : modal.editingId ? "Save Changes" : "Add Question"}
+                <Button
+                  className="w-full"
+                  onClick={handleSave}
+                  disabled={saving}
+                >
+                  {saving
+                    ? "Saving…"
+                    : modal.editingId
+                      ? "Save Changes"
+                      : "Add Question"}
                 </Button>
               </div>
             </>
@@ -565,7 +704,14 @@ function SortableQuestionRow({
   onEdit: (q: Question) => void;
   onDelete: (id: string) => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({
     id: question.id,
   });
 
@@ -598,12 +744,18 @@ function SortableQuestionRow({
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium truncate">{question.label}</p>
         <p className="text-xs text-muted-foreground">
-          {Meta.label}{question.required ? " · Required" : ""}
+          {Meta.label}
+          {question.required ? " · Required" : ""}
         </p>
       </div>
 
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => onEdit(question)}>
+        <Button
+          size="icon"
+          variant="ghost"
+          className="h-7 w-7"
+          onClick={() => onEdit(question)}
+        >
           <Pencil className="h-3.5 w-3.5" />
         </Button>
         <Button

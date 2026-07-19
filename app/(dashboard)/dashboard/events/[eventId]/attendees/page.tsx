@@ -8,7 +8,13 @@ import { InviteForm } from "@/components/events/invite-form";
 import { Button } from "@/components/ui/button";
 import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { eventCohosts, eventQuestions, events, invitations, rsvps } from "@/lib/db/schema";
+import {
+  eventCohosts,
+  eventQuestions,
+  events,
+  invitations,
+  rsvps,
+} from "@/lib/db/schema";
 
 export default async function AttendeesPage({
   params,

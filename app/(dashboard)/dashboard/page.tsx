@@ -1,11 +1,6 @@
 import { format } from "date-fns";
 import { and, desc, eq, gte } from "drizzle-orm";
-import {
-  Calendar,
-  CalendarCheck,
-  Clock,
-  ShieldCheck,
-} from "lucide-react";
+import { Calendar, CalendarCheck, Clock, ShieldCheck } from "lucide-react";
 import { headers } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";

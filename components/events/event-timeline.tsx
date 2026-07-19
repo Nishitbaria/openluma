@@ -2,7 +2,6 @@ import { formatInTimeZone } from "date-fns-tz";
 import { Calendar, MapPin, Video } from "lucide-react";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 
 export interface TimelineEvent {
   id: string;

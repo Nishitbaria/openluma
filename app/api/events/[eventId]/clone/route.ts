@@ -3,7 +3,7 @@ import { headers } from "next/headers";
 import type { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { eventTags, events } from "@/lib/db/schema";
+import { events, eventTags } from "@/lib/db/schema";
 import { generateEventSlug } from "@/lib/utils/slugify";
 
 export async function POST(
@@ -55,9 +55,9 @@ export async function POST(
     .returning();
 
   if (source.tags.length > 0) {
-    await db.insert(eventTags).values(
-      source.tags.map((t) => ({ eventId: cloned.id, tag: t.tag })),
-    );
+    await db
+      .insert(eventTags)
+      .values(source.tags.map((t) => ({ eventId: cloned.id, tag: t.tag })));
   }
 
   return Response.json({ id: cloned.id, slug: cloned.slug });

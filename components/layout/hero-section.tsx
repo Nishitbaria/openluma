@@ -1,26 +1,29 @@
-"use client"
+"use client";
 
-import { ArrowRight, Sparkles } from "lucide-react"
-import Link from "next/link"
-import { useTheme } from "next-themes"
+import { ArrowRight, Sparkles } from "lucide-react";
+import Link from "next/link";
+import { useTheme } from "next-themes";
 
-import { AnimatedShinyText } from "@/components/ui/animated-shiny-text"
-import { FlickeringGrid } from "@/components/ui/flickering-grid"
-import { MetalButton } from "@/components/ui/metal-button"
-import { Button } from "@/components/ui/button"
-import { PixelHeading } from "@/components/ui/pixel-heading-character"
-import { PixelParagraph } from "@/components/ui/pixel-paragraph-words"
+import { AnimatedShinyText } from "@/components/ui/animated-shiny-text";
+import { Button } from "@/components/ui/button";
+import { FlickeringGrid } from "@/components/ui/flickering-grid";
+import { MetalButton } from "@/components/ui/metal-button";
+import { PixelHeading } from "@/components/ui/pixel-heading-character";
+import { PixelParagraph } from "@/components/ui/pixel-paragraph-words";
 
 export function HeroSection() {
-  const { resolvedTheme } = useTheme()
-  const gridColor = resolvedTheme === "dark" ? "rgb(255,255,255)" : "rgb(0,0,0)"
+  const { resolvedTheme } = useTheme();
+  const gridColor =
+    resolvedTheme === "dark" ? "rgb(255,255,255)" : "rgb(0,0,0)";
 
   return (
     <section className="relative mx-auto w-full max-w-7xl overflow-hidden px-4 sm:px-6 lg:px-8 py-24 md:py-36 text-center">
       {/* Flickering grid background — fades out toward bottom */}
       <div
         className="pointer-events-none absolute inset-0 -z-10"
-        style={{ maskImage: "linear-gradient(to bottom, black 40%, transparent 100%)" }}
+        style={{
+          maskImage: "linear-gradient(to bottom, black 40%, transparent 100%)",
+        }}
       >
         <FlickeringGrid
           squareSize={4}
@@ -36,7 +39,9 @@ export function HeroSection() {
         {/* Badge with AnimatedShinyText */}
         <div className="mb-8 inline-flex items-center gap-2 rounded-full border bg-muted/50 px-4 py-1.5 text-sm text-muted-foreground">
           <Sparkles className="size-3.5 shrink-0" />
-          <AnimatedShinyText>Open source · Self-hostable · AI-powered</AnimatedShinyText>
+          <AnimatedShinyText>
+            Open source · Self-hostable · AI-powered
+          </AnimatedShinyText>
         </div>
 
         {/* Pixel headings */}
@@ -86,5 +91,5 @@ export function HeroSection() {
         </div>
       </div>
     </section>
-  )
+  );
 }

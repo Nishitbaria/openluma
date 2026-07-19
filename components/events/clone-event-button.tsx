@@ -24,7 +24,9 @@ export function CloneEventButton({ eventId }: { eventId: string }) {
       toast.success("Event duplicated! Set new dates before publishing.");
       router.push(`/dashboard/events/${id}/edit`);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Something went wrong");
+      toast.error(
+        error instanceof Error ? error.message : "Something went wrong",
+      );
     } finally {
       setLoading(false);
     }

@@ -1,5 +1,7 @@
-"use client"
+"use client";
 
+import { cva, type VariantProps } from "class-variance-authority";
+import { MetalFx, type MetalFxProps, type MetalFxVariant } from "metal-fx";
 /**
  * `metal-fx` around `Button` — liquid metal ring for controls.
  * `className` styles the button; `metalFxClassName` styles the MetalFx wrapper.
@@ -9,13 +11,10 @@
  * `normalizeHostStyles={false}` to keep all shadcn chrome on the button (filled
  * variants will cover most of the metal).
  */
-import type { ComponentProps, CSSProperties } from "react"
-import { forwardRef } from "react"
-import { cva, type VariantProps } from "class-variance-authority"
-import { MetalFx, type MetalFxProps, type MetalFxVariant } from "metal-fx"
-
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
+import type { ComponentProps, CSSProperties } from "react";
+import { forwardRef } from "react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 const metalSurfaceVariants = cva("transition-colors", {
   variants: {
@@ -35,19 +34,19 @@ const metalSurfaceVariants = cva("transition-colors", {
   defaultVariants: {
     variant: "default",
   },
-})
+});
 
 /** Strip outer chrome on the host; MetalFx punches the ring around the interior. */
 const metalHostChromeReset =
-  "border-0! bg-transparent! shadow-none! hover:bg-transparent! aria-expanded:bg-transparent!"
+  "border-0! bg-transparent! shadow-none! hover:bg-transparent! aria-expanded:bg-transparent!";
 
 /** Keep a stable edge above the animated shader so bright frames cannot erase it. */
 const metalStableEdge =
-  "relative isolate before:pointer-events-none before:absolute before:inset-0 before:z-10 before:rounded-[inherit] before:ring-1 before:ring-border/70 before:ring-inset dark:before:ring-border/80"
+  "relative isolate before:pointer-events-none before:absolute before:inset-0 before:z-10 before:rounded-[inherit] before:ring-1 before:ring-border/70 before:ring-inset dark:before:ring-border/80";
 
 type MetalSurfaceVariant = NonNullable<
   VariantProps<typeof metalSurfaceVariants>["variant"]
->
+>;
 
 type MetalShellProps = Pick<
   MetalFxProps,
@@ -63,14 +62,14 @@ type MetalShellProps = Pick<
   | "scale"
   | "normalizeHostStyles"
 > & {
-  metalVariant?: MetalFxVariant
-  metalFxClassName?: string
-  metalFxStyle?: CSSProperties
-}
+  metalVariant?: MetalFxVariant;
+  metalFxClassName?: string;
+  metalFxStyle?: CSSProperties;
+};
 
-export type MetalButtonProps = ComponentProps<typeof Button> & MetalShellProps
+export type MetalButtonProps = ComponentProps<typeof Button> & MetalShellProps;
 
-export type MetalIconButtonProps = MetalButtonProps
+export type MetalIconButtonProps = MetalButtonProps;
 
 export const MetalButton = forwardRef<HTMLDivElement, MetalButtonProps>(
   function MetalButton(
@@ -93,9 +92,9 @@ export const MetalButton = forwardRef<HTMLDivElement, MetalButtonProps>(
       className,
       ...buttonProps
     },
-    ref
+    ref,
   ) {
-    const surfaceVariant = variant as MetalSurfaceVariant
+    const surfaceVariant = variant as MetalSurfaceVariant;
 
     return (
       <MetalFx
@@ -105,7 +104,7 @@ export const MetalButton = forwardRef<HTMLDivElement, MetalButtonProps>(
           metalStableEdge,
           normalizeHostStyles &&
             metalSurfaceVariants({ variant: surfaceVariant }),
-          metalFxClassName
+          metalFxClassName,
         )}
         disableGlow={disableGlow}
         normalizeHostStyles={normalizeHostStyles}
@@ -127,30 +126,30 @@ export const MetalButton = forwardRef<HTMLDivElement, MetalButtonProps>(
           {...buttonProps}
         />
       </MetalFx>
-    )
-  }
-)
+    );
+  },
+);
 
-MetalButton.displayName = "MetalButton"
+MetalButton.displayName = "MetalButton";
 
 export const MetalIconButton = forwardRef<HTMLDivElement, MetalIconButtonProps>(
   function MetalIconButton(
     { size = "icon-sm", metalVariant = "circle", className, ...props },
-    ref
+    ref,
   ) {
     return (
       <MetalButton
         className={cn(
           "leading-none! [&_svg]:block [&_svg]:shrink-0",
-          className
+          className,
         )}
         metalVariant={metalVariant}
         ref={ref}
         size={size}
         {...props}
       />
-    )
-  }
-)
+    );
+  },
+);
 
-MetalIconButton.displayName = "MetalIconButton"
+MetalIconButton.displayName = "MetalIconButton";

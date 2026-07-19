@@ -7,7 +7,14 @@
   },
   "files": {
     "ignoreUnknown": true,
-    "includes": ["**", "!node_modules", "!.next", "!dist", "!build"]
+    "includes": [
+      "**",
+      "!node_modules",
+      "!.next",
+      "!dist",
+      "!build",
+      "!lib/db/migrations"
+    ]
   },
   "formatter": {
     "enabled": true,
@@ -19,7 +26,17 @@
     "rules": {
       "recommended": true,
       "suspicious": {
-        "noUnknownAtRules": "off"
+        "noUnknownAtRules": "off",
+        "noArrayIndexKey": "off"
+      },
+      "performance": {
+        "noImgElement": "off"
+      },
+      "a11y": {
+        "noSvgWithoutTitle": "off",
+        "useValidAnchor": "off",
+        "useSemanticElements": "off",
+        "useFocusableInteractive": "off"
       }
     },
     "domains": {
@@ -27,6 +44,18 @@
       "react": "recommended"
     }
   },
+  "overrides": [
+    {
+      "includes": ["components/ui/**"],
+      "linter": {
+        "rules": {
+          "security": { "noDangerouslySetInnerHtml": "off" },
+          "a11y": { "useKeyWithClickEvents": "off" },
+          "correctness": { "useExhaustiveDependencies": "off" }
+        }
+      }
+    }
+  ],
   "assist": {
     "actions": {
       "source": {

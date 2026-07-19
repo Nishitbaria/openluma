@@ -23,7 +23,16 @@ import { Switch } from "@/components/ui/switch";
 export interface EventQuestion {
   id: string;
   label: string;
-  type: "text" | "paragraph" | "checkbox" | "dropdown" | "social_profile" | "company" | "phone" | "website" | "terms";
+  type:
+    | "text"
+    | "paragraph"
+    | "checkbox"
+    | "dropdown"
+    | "social_profile"
+    | "company"
+    | "phone"
+    | "website"
+    | "terms";
   required: boolean;
   options: string[] | null;
 }
@@ -110,7 +119,10 @@ export function RsvpQuestionsDialog({
                     checked={(answers[q.id] as boolean) ?? false}
                     onCheckedChange={(checked) => setAnswer(q.id, checked)}
                   />
-                  <Label htmlFor={`answer-${q.id}`} className="text-sm text-muted-foreground">
+                  <Label
+                    htmlFor={`answer-${q.id}`}
+                    className="text-sm text-muted-foreground"
+                  >
                     Yes
                   </Label>
                 </div>
@@ -137,12 +149,18 @@ export function RsvpQuestionsDialog({
               {q.type === "social_profile" && (
                 <div className="space-y-2">
                   {q.options?.[0] && (
-                    <p className="text-xs text-muted-foreground">Platform: {q.options[0]}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Platform: {q.options[0]}
+                    </p>
                   )}
                   <Input
                     value={(answers[q.id] as string) ?? ""}
                     onChange={(e) => setAnswer(q.id, e.target.value)}
-                    placeholder={q.options?.[0] ? `Your ${q.options[0]} username` : "Your username"}
+                    placeholder={
+                      q.options?.[0]
+                        ? `Your ${q.options[0]} username`
+                        : "Your username"
+                    }
                   />
                 </div>
               )}
@@ -157,7 +175,9 @@ export function RsvpQuestionsDialog({
                   {q.options?.[0] && (
                     <Input
                       value={(answers[`${q.id}_jobtitle`] as string) ?? ""}
-                      onChange={(e) => setAnswer(`${q.id}_jobtitle`, e.target.value)}
+                      onChange={(e) =>
+                        setAnswer(`${q.id}_jobtitle`, e.target.value)
+                      }
                       placeholder={q.options[0]}
                     />
                   )}
@@ -190,9 +210,14 @@ export function RsvpQuestionsDialog({
                     onCheckedChange={(checked) => setAnswer(q.id, checked)}
                     className="mt-0.5"
                   />
-                  <Label htmlFor={`answer-${q.id}`} className="text-sm leading-snug cursor-pointer">
+                  <Label
+                    htmlFor={`answer-${q.id}`}
+                    className="text-sm leading-snug cursor-pointer"
+                  >
                     I agree to the terms and conditions
-                    {q.required && <span className="text-destructive ml-1">*</span>}
+                    {q.required && (
+                      <span className="text-destructive ml-1">*</span>
+                    )}
                   </Label>
                 </div>
               )}
@@ -201,7 +226,11 @@ export function RsvpQuestionsDialog({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={loading}
+          >
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={loading}>
