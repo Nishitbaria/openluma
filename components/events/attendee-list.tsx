@@ -1,6 +1,6 @@
 "use client";
 
-import { formatDistanceToNow } from "date-fns";
+import { format, formatDistanceToNow } from "date-fns";
 import {
   Crown,
   Download,
@@ -527,7 +527,7 @@ export function AttendeeList({
                         {inv.email}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Invited {new Date(inv.createdAt).toLocaleDateString()}
+                        Invited {format(new Date(inv.createdAt), "MMM d, yyyy")}
                       </p>
                     </div>
                   </div>
@@ -570,7 +570,7 @@ export function AttendeeList({
                         {inv.email}
                       </p>
                       <p className="text-xs text-muted-foreground">
-                        Invited {new Date(inv.createdAt).toLocaleDateString()}
+                        Invited {format(new Date(inv.createdAt), "MMM d, yyyy")}
                       </p>
                     </div>
                   </div>
