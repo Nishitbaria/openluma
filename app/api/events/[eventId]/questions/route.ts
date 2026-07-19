@@ -4,11 +4,11 @@ import type { NextRequest } from "next/server";
 import { z } from "zod/v4";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { eventQuestions, events } from "@/lib/db/schema";
+import { eventQuestions, events, questionTypeEnum } from "@/lib/db/schema";
 
 const questionSchema = z.object({
   label: z.string().min(1).max(300),
-  type: z.enum(["text", "paragraph", "checkbox", "dropdown"]),
+  type: z.enum(questionTypeEnum.enumValues),
   required: z.boolean().default(false),
   order: z.number().int().default(0),
   options: z.array(z.string()).nullish(),
@@ -45,7 +45,8 @@ export async function POST(
   { params }: { params: Promise<{ eventId: string }> },
 ) {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) return Response.json({ message: "Unauthorized" }, { status: 401 });
+  if (!session?.user)
+    return Response.json({ message: "Unauthorized" }, { status: 401 });
 
   const { eventId } = await params;
   const event = await getHostOrCohost(eventId, session.user.id);
@@ -53,7 +54,8 @@ export async function POST(
 
   const body = await req.json();
   const parsed = questionSchema.safeParse(body);
-  if (!parsed.success) return Response.json({ message: "Invalid data" }, { status: 400 });
+  if (!parsed.success)
+    return Response.json({ message: "Invalid data" }, { status: 400 });
 
   const [question] = await db
     .insert(eventQuestions)
@@ -68,7 +70,8 @@ export async function PUT(
   { params }: { params: Promise<{ eventId: string }> },
 ) {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) return Response.json({ message: "Unauthorized" }, { status: 401 });
+  if (!session?.user)
+    return Response.json({ message: "Unauthorized" }, { status: 401 });
 
   const { eventId } = await params;
   const event = await getHostOrCohost(eventId, session.user.id);
@@ -79,7 +82,8 @@ export async function PUT(
   if (!id) return Response.json({ message: "Missing id" }, { status: 400 });
 
   const parsed = questionSchema.partial().safeParse(rest);
-  if (!parsed.success) return Response.json({ message: "Invalid data" }, { status: 400 });
+  if (!parsed.success)
+    return Response.json({ message: "Invalid data" }, { status: 400 });
 
   const [updated] = await db
     .update(eventQuestions)
@@ -95,7 +99,8 @@ export async function DELETE(
   { params }: { params: Promise<{ eventId: string }> },
 ) {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) return Response.json({ message: "Unauthorized" }, { status: 401 });
+  if (!session?.user)
+    return Response.json({ message: "Unauthorized" }, { status: 401 });
 
   const { eventId } = await params;
   const event = await getHostOrCohost(eventId, session.user.id);

@@ -1,4 +1,4 @@
-import { format } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
 import { Calendar, MapPin, Video } from "lucide-react";
 import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -9,6 +9,7 @@ export interface TimelineEvent {
   slug?: string | null;
   title: string;
   startTime: Date | string;
+  timezone?: string;
   coverImage: string | null;
   location: string | null;
   type: "in_person" | "virtual" | "hybrid";
@@ -25,22 +26,31 @@ interface EventTimelineProps {
 }
 
 function groupByDate(events: TimelineEvent[]) {
-  const groups: { dateKey: string; date: Date; events: TimelineEvent[] }[] = [];
+  const groups: {
+    dateKey: string;
+    date: Date;
+    timezone: string;
+    events: TimelineEvent[];
+  }[] = [];
   for (const event of events) {
     const d =
       typeof event.startTime === "string"
         ? new Date(event.startTime)
         : event.startTime;
-    const key = format(d, "yyyy-MM-dd");
+    const timezone = event.timezone ?? "UTC";
+    // Group by the event's own local day, so the day header matches the
+    // time printed on each card (rather than the server's local day).
+    const key = formatInTimeZone(d, timezone, "yyyy-MM-dd");
     const existing = groups.find((g) => g.dateKey === key);
     if (existing) existing.events.push(event);
-    else groups.push({ dateKey: key, date: d, events: [event] });
+    else groups.push({ dateKey: key, date: d, timezone, events: [event] });
   }
   return groups;
 }
 
 function rsvpBadgeStyle(status: string) {
-  if (status === "approved") return "bg-primary/10 text-primary border-primary/20";
+  if (status === "approved")
+    return "bg-primary/10 text-primary border-primary/20";
   if (status === "waitlisted") return "bg-muted text-muted-foreground";
   return "bg-muted text-muted-foreground"; // pending, rejected
 }
@@ -80,10 +90,10 @@ export function EventTimeline({
           {/* Date label */}
           <div className="w-20 flex-shrink-0 pt-4 text-right">
             <p className="text-sm font-semibold leading-tight">
-              {format(group.date, "d MMM")}
+              {formatInTimeZone(group.date, group.timezone, "d MMM")}
             </p>
             <p className="text-xs text-muted-foreground">
-              {format(group.date, "EEEE")}
+              {formatInTimeZone(group.date, group.timezone, "EEEE")}
             </p>
           </div>
 
@@ -100,6 +110,7 @@ export function EventTimeline({
                 typeof event.startTime === "string"
                   ? new Date(event.startTime)
                   : event.startTime;
+              const eventTimezone = event.timezone ?? "UTC";
               const eventHref =
                 href?.(event) ??
                 (event.slug ? `/e/${event.slug}` : `/events/${event.id}`);
@@ -113,7 +124,7 @@ export function EventTimeline({
                     {/* Content */}
                     <div className="min-w-0 flex-1 space-y-1">
                       <p className="text-xs text-muted-foreground">
-                        {format(startTime, "h:mm a")}
+                        {formatInTimeZone(startTime, eventTimezone, "h:mm a")}
                       </p>
                       <p className="truncate text-sm font-semibold leading-snug">
                         {event.title}
@@ -144,7 +155,9 @@ export function EventTimeline({
                             <MapPin className="h-3 w-3 flex-shrink-0" />
                           )}
                           <span className="truncate">
-                            {isVirtual ? event.location ?? "Online" : event.location}
+                            {isVirtual
+                              ? (event.location ?? "Online")
+                              : event.location}
                           </span>
                         </div>
                       )}
@@ -169,10 +182,10 @@ export function EventTimeline({
                       ) : (
                         <div className="flex h-14 w-14 flex-col items-center justify-center rounded-lg bg-muted">
                           <span className="text-lg font-bold leading-none text-muted-foreground">
-                            {format(startTime, "d")}
+                            {formatInTimeZone(startTime, eventTimezone, "d")}
                           </span>
                           <span className="text-[10px] uppercase text-muted-foreground">
-                            {format(startTime, "MMM")}
+                            {formatInTimeZone(startTime, eventTimezone, "MMM")}
                           </span>
                         </div>
                       )}

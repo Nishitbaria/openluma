@@ -1,5 +1,8 @@
 "use client";
 
+import { format } from "date-fns";
+import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
+import { ChevronsUpDown, Globe } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -7,6 +10,11 @@ import { EventCoverImagePicker } from "@/components/events/event-cover-image-pic
 import { RichTextEditor } from "@/components/events/rich-text-editor";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -46,8 +54,12 @@ export function EventForm({ event }: EventFormProps) {
     event?.coverImage ?? null,
   );
   const [slug, setSlug] = useState(event?.slug ?? "");
-  const [richDescription, setRichDescription] = useState(event?.richDescription ?? "");
-  const [plainDescription, setPlainDescription] = useState(event?.description ?? "");
+  const [richDescription, setRichDescription] = useState(
+    event?.richDescription ?? "",
+  );
+  const [plainDescription, setPlainDescription] = useState(
+    event?.description ?? "",
+  );
   const isEditing = !!event;
 
   // Default to tomorrow 6 PM – 8 PM for new events
@@ -55,14 +67,61 @@ export function EventForm({ event }: EventFormProps) {
     const d = new Date();
     d.setDate(d.getDate() + 1);
     d.setHours(18, 0, 0, 0);
-    return d.toISOString().slice(0, 16);
+    return d;
   })();
   const defaultEnd = (() => {
     const d = new Date();
     d.setDate(d.getDate() + 1);
     d.setHours(20, 0, 0, 0);
-    return d.toISOString().slice(0, 16);
+    return d;
   })();
+
+  // Preserve the event's stored timezone while editing; fall back to the
+  // browser zone for new events. Wall-time inputs are interpreted in this zone.
+  const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const timezone = event?.timezone ?? browserTimezone;
+
+  // Datetime-local inputs hold wall-time strings ("yyyy-MM-ddTHH:mm") in the
+  // event's timezone. endTime is nullable: a stored null stays empty.
+  const [startTime, setStartTime] = useState<string>(
+    event?.startTime
+      ? formatInTimeZone(
+          new Date(event.startTime),
+          timezone,
+          "yyyy-MM-dd'T'HH:mm",
+        )
+      : format(defaultStart, "yyyy-MM-dd'T'HH:mm"),
+  );
+  const [endTime, setEndTime] = useState<string>(
+    event?.endTime
+      ? formatInTimeZone(
+          new Date(event.endTime),
+          timezone,
+          "yyyy-MM-dd'T'HH:mm",
+        )
+      : isEditing
+        ? ""
+        : format(defaultEnd, "yyyy-MM-dd'T'HH:mm"),
+  );
+
+  // Secondary/collapsed fields are held in controlled state so the submitted
+  // payload is identical whether "More options" is open or closed.
+  const [locationDetails, setLocationDetails] = useState(
+    event?.locationDetails ?? "",
+  );
+  const [type, setType] = useState<"in_person" | "virtual" | "hybrid">(
+    event?.type ?? "in_person",
+  );
+  const [visibility, setVisibility] = useState<"public" | "private">(
+    event?.visibility ?? "public",
+  );
+  const [capacity, setCapacity] = useState(
+    event?.capacity != null ? String(event.capacity) : "",
+  );
+  const [requiresApproval, setRequiresApproval] = useState(
+    event?.requiresApproval ?? false,
+  );
+  const [moreOptionsOpen, setMoreOptionsOpen] = useState(isEditing);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -74,17 +133,17 @@ export function EventForm({ event }: EventFormProps) {
       description: plainDescription || undefined,
       richDescription: richDescription || undefined,
       coverImage: coverImage || undefined,
-      startTime: formData.get("startTime") as string,
-      endTime: (formData.get("endTime") as string) || undefined,
-      timezone: formData.get("timezone") as string,
-      location: (formData.get("location") as string) || undefined,
-      locationDetails: (formData.get("locationDetails") as string) || undefined,
-      type: formData.get("type") as "in_person" | "virtual" | "hybrid",
-      visibility: formData.get("visibility") as "public" | "private",
-      capacity: formData.get("capacity")
-        ? Number(formData.get("capacity"))
+      startTime: fromZonedTime(startTime, timezone).toISOString(),
+      endTime: endTime
+        ? fromZonedTime(endTime, timezone).toISOString()
         : undefined,
-      requiresApproval: formData.get("requiresApproval") === "on",
+      timezone,
+      location: (formData.get("location") as string) || undefined,
+      locationDetails: locationDetails || undefined,
+      type,
+      visibility,
+      capacity: capacity ? Number(capacity) : undefined,
+      requiresApproval,
       ...(isEditing && slug ? { slug } : {}),
     };
 
@@ -130,14 +189,6 @@ export function EventForm({ event }: EventFormProps) {
       <CardContent className="pt-6">
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-2">
-            <Label>Cover Image</Label>
-            <EventCoverImagePicker
-              value={coverImage}
-              onChange={setCoverImage}
-            />
-          </div>
-
-          <div className="space-y-2">
             <Label htmlFor="title">Event Title</Label>
             <Input
               id="title"
@@ -148,27 +199,30 @@ export function EventForm({ event }: EventFormProps) {
             />
           </div>
 
+          <div className="space-y-2">
+            <Label>Cover Image</Label>
+            <EventCoverImagePicker
+              value={coverImage}
+              onChange={setCoverImage}
+            />
+          </div>
+
           {isEditing && (
             <div className="space-y-2">
               <Label htmlFor="slug">Event URL</Label>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground shrink-0">
-                  /e/
-                </span>
-                <Input
-                  id="slug"
-                  placeholder="custom-url"
-                  value={slug}
-                  onChange={(e) =>
-                    setSlug(
-                      e.target.value
-                        .toLowerCase()
-                        .replace(/[^a-z0-9-]/g, "")
-                        .replace(/-+/g, "-"),
-                    )
-                  }
-                />
-              </div>
+              <Input
+                id="slug"
+                placeholder="custom-url"
+                value={slug}
+                onChange={(e) =>
+                  setSlug(
+                    e.target.value
+                      .toLowerCase()
+                      .replace(/[^a-z0-9-]/g, "")
+                      .replace(/-+/g, "-"),
+                  )
+                }
+              />
             </div>
           )}
 
@@ -188,36 +242,27 @@ export function EventForm({ event }: EventFormProps) {
               <Label htmlFor="startTime">Start Date & Time</Label>
               <Input
                 id="startTime"
-                name="startTime"
                 type="datetime-local"
                 required
-                defaultValue={
-                  event?.startTime
-                    ? new Date(event.startTime).toISOString().slice(0, 16)
-                    : defaultStart
-                }
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="endTime">End Date & Time</Label>
               <Input
                 id="endTime"
-                name="endTime"
                 type="datetime-local"
-                defaultValue={
-                  event?.endTime
-                    ? new Date(event.endTime).toISOString().slice(0, 16)
-                    : defaultEnd
-                }
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
               />
             </div>
           </div>
 
-          <input
-            type="hidden"
-            name="timezone"
-            value={Intl.DateTimeFormat().resolvedOptions().timeZone}
-          />
+          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+            <Globe className="size-3.5" />
+            {timezone}
+          </div>
 
           <div className="space-y-2">
             <Label htmlFor="location">Location</Label>
@@ -229,68 +274,91 @@ export function EventForm({ event }: EventFormProps) {
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="locationDetails">Location Details</Label>
-            <Input
-              id="locationDetails"
-              name="locationDetails"
-              placeholder="Room 101, 2nd floor"
-              defaultValue={event?.locationDetails ?? ""}
-            />
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-3">
-            <div className="space-y-2">
-              <Label htmlFor="type">Event Type</Label>
-              <Select name="type" defaultValue={event?.type ?? "in_person"}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="in_person">In Person</SelectItem>
-                  <SelectItem value="virtual">Virtual</SelectItem>
-                  <SelectItem value="hybrid">Hybrid</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="visibility">Visibility</Label>
-              <Select
-                name="visibility"
-                defaultValue={event?.visibility ?? "public"}
+          <Collapsible open={moreOptionsOpen} onOpenChange={setMoreOptionsOpen}>
+            <CollapsibleTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                className="h-auto gap-1.5 px-0 text-sm text-muted-foreground hover:bg-transparent hover:text-foreground"
               >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="public">Public</SelectItem>
-                  <SelectItem value="private">Private</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+                <ChevronsUpDown className="size-4" />
+                More options
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-6 pt-4">
+              <div className="space-y-2">
+                <Label htmlFor="locationDetails">Location Details</Label>
+                <Input
+                  id="locationDetails"
+                  placeholder="Room 101, 2nd floor"
+                  value={locationDetails}
+                  onChange={(e) => setLocationDetails(e.target.value)}
+                />
+              </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="capacity">Capacity</Label>
-              <Input
-                id="capacity"
-                name="capacity"
-                type="number"
-                min={1}
-                placeholder="Unlimited"
-                defaultValue={event?.capacity ?? ""}
-              />
-            </div>
-          </div>
+              <div className="grid gap-4 sm:grid-cols-3">
+                <div className="space-y-2">
+                  <Label htmlFor="type">Event Type</Label>
+                  <Select
+                    value={type}
+                    onValueChange={(v) =>
+                      setType(v as "in_person" | "virtual" | "hybrid")
+                    }
+                  >
+                    <SelectTrigger id="type">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="in_person">In Person</SelectItem>
+                      <SelectItem value="virtual">Virtual</SelectItem>
+                      <SelectItem value="hybrid">Hybrid</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
 
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="requiresApproval"
-              name="requiresApproval"
-              defaultChecked={event?.requiresApproval ?? false}
-            />
-            <Label htmlFor="requiresApproval">Require approval for RSVPs</Label>
-          </div>
+                <div className="space-y-2">
+                  <Label htmlFor="visibility">Visibility</Label>
+                  <Select
+                    value={visibility}
+                    onValueChange={(v) =>
+                      setVisibility(v as "public" | "private")
+                    }
+                  >
+                    <SelectTrigger id="visibility">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="public">Public</SelectItem>
+                      <SelectItem value="private">Private</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="capacity">Capacity</Label>
+                  <Input
+                    id="capacity"
+                    type="number"
+                    min={1}
+                    placeholder="Unlimited"
+                    value={capacity}
+                    onChange={(e) => setCapacity(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="requiresApproval"
+                  checked={requiresApproval}
+                  onCheckedChange={setRequiresApproval}
+                />
+                <Label htmlFor="requiresApproval">
+                  Require approval for RSVPs
+                </Label>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
 
           <div className="flex gap-3">
             <Button type="submit" disabled={loading}>
