@@ -1,6 +1,7 @@
 "use client";
 
 import { format } from "date-fns";
+import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 import { ChevronsUpDown, Globe } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -75,11 +76,32 @@ export function EventForm({ event }: EventFormProps) {
     return d;
   })();
 
-  const [startTime, setStartTime] = useState<Date>(
-    event?.startTime ? new Date(event.startTime) : defaultStart,
+  // Preserve the event's stored timezone while editing; fall back to the
+  // browser zone for new events. Wall-time inputs are interpreted in this zone.
+  const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  const timezone = event?.timezone ?? browserTimezone;
+
+  // Datetime-local inputs hold wall-time strings ("yyyy-MM-ddTHH:mm") in the
+  // event's timezone. endTime is nullable: a stored null stays empty.
+  const [startTime, setStartTime] = useState<string>(
+    event?.startTime
+      ? formatInTimeZone(
+          new Date(event.startTime),
+          timezone,
+          "yyyy-MM-dd'T'HH:mm",
+        )
+      : format(defaultStart, "yyyy-MM-dd'T'HH:mm"),
   );
-  const [endTime, setEndTime] = useState<Date>(
-    event?.endTime ? new Date(event.endTime) : defaultEnd,
+  const [endTime, setEndTime] = useState<string>(
+    event?.endTime
+      ? formatInTimeZone(
+          new Date(event.endTime),
+          timezone,
+          "yyyy-MM-dd'T'HH:mm",
+        )
+      : isEditing
+        ? ""
+        : format(defaultEnd, "yyyy-MM-dd'T'HH:mm"),
   );
 
   // Secondary/collapsed fields are held in controlled state so the submitted
@@ -111,9 +133,11 @@ export function EventForm({ event }: EventFormProps) {
       description: plainDescription || undefined,
       richDescription: richDescription || undefined,
       coverImage: coverImage || undefined,
-      startTime: startTime.toISOString(),
-      endTime: endTime ? endTime.toISOString() : undefined,
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      startTime: fromZonedTime(startTime, timezone).toISOString(),
+      endTime: endTime
+        ? fromZonedTime(endTime, timezone).toISOString()
+        : undefined,
+      timezone,
       location: (formData.get("location") as string) || undefined,
       locationDetails: locationDetails || undefined,
       type,
@@ -225,10 +249,8 @@ export function EventForm({ event }: EventFormProps) {
                 id="startTime"
                 type="datetime-local"
                 required
-                value={format(startTime, "yyyy-MM-dd'T'HH:mm")}
-                onChange={(e) => {
-                  if (e.target.value) setStartTime(new Date(e.target.value));
-                }}
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
               />
             </div>
             <div className="space-y-2">
@@ -236,17 +258,15 @@ export function EventForm({ event }: EventFormProps) {
               <Input
                 id="endTime"
                 type="datetime-local"
-                value={format(endTime, "yyyy-MM-dd'T'HH:mm")}
-                onChange={(e) => {
-                  if (e.target.value) setEndTime(new Date(e.target.value));
-                }}
+                value={endTime}
+                onChange={(e) => setEndTime(e.target.value)}
               />
             </div>
           </div>
 
           <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <Globe className="size-3.5" />
-            {Intl.DateTimeFormat().resolvedOptions().timeZone}
+            {timezone}
           </div>
 
           <div className="space-y-2">
