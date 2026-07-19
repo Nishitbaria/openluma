@@ -2,7 +2,7 @@
 
 import { Check, Clock, LogIn, X } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,6 +26,7 @@ export function RsvpButton({
   currentRsvpStatus,
   questions = [],
   waitlistPosition,
+  autoRegister = false,
 }: {
   eventId: string;
   eventSlug?: string;
@@ -33,6 +34,7 @@ export function RsvpButton({
   currentRsvpStatus?: "pending" | "approved" | "rejected" | "waitlisted" | null;
   questions?: EventQuestion[];
   waitlistPosition?: number | null;
+  autoRegister?: boolean;
 }) {
   const router = useRouter();
   const { data: session } = authClient.useSession();
@@ -43,6 +45,14 @@ export function RsvpButton({
   const [cancelLabel, setCancelLabel] = useState("");
 
   const isLoggedIn = !!session?.user;
+
+  // Invited guests arrive from the accept flow with ?register=1 — open the
+  // questions dialog automatically so they complete registration before joining.
+  useEffect(() => {
+    if (autoRegister && isLoggedIn && questions.length > 0 && !status) {
+      setDialogOpen(true);
+    }
+  }, [autoRegister, isLoggedIn, questions.length, status]);
 
   const openCancelModal = (label: string) => {
     setCancelLabel(label);
@@ -66,7 +76,9 @@ export function RsvpButton({
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>
-            {cancelLabel === "Leave Waitlist" ? "Leave Waitlist?" : "Cancel RSVP?"}
+            {cancelLabel === "Leave Waitlist"
+              ? "Leave Waitlist?"
+              : "Cancel RSVP?"}
           </DialogTitle>
           <DialogDescription>
             {cancelLabel === "Leave Waitlist"
@@ -84,10 +96,17 @@ export function RsvpButton({
           </Button>
           <Button
             variant="destructive"
-            onClick={() => { setCancelModalOpen(false); handleCancel(); }}
+            onClick={() => {
+              setCancelModalOpen(false);
+              handleCancel();
+            }}
             disabled={loading}
           >
-            {loading ? "Cancelling..." : cancelLabel === "Leave Waitlist" ? "Leave Waitlist" : "Cancel RSVP"}
+            {loading
+              ? "Cancelling..."
+              : cancelLabel === "Leave Waitlist"
+                ? "Leave Waitlist"
+                : "Cancel RSVP"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -136,7 +155,8 @@ export function RsvpButton({
         </div>
         {waitlistPosition != null && (
           <p className="text-xs text-center text-muted-foreground">
-            You&apos;re #{waitlistPosition} in line — we&apos;ll notify you if a spot opens.
+            You&apos;re #{waitlistPosition} in line — we&apos;ll notify you if a
+            spot opens.
           </p>
         )}
         {cancelConfirm("Leave Waitlist")}
@@ -277,7 +297,9 @@ export function RsvpButton({
           questions={questions}
           onSubmit={(answers) => handleRsvp(answers)}
           loading={loading}
-          submitLabel={requiresApproval ? "Request to Attend" : "RSVP - I'm Going!"}
+          submitLabel={
+            requiresApproval ? "Request to Attend" : "RSVP - I'm Going!"
+          }
         />
       )}
     </>

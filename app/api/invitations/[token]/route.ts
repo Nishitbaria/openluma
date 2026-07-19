@@ -4,7 +4,12 @@ import { redirect } from "next/navigation";
 import type { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { eventCohosts, invitations, rsvps } from "@/lib/db/schema";
+import {
+  eventCohosts,
+  eventQuestions,
+  invitations,
+  rsvps,
+} from "@/lib/db/schema";
 
 export async function GET(
   request: NextRequest,
@@ -61,6 +66,31 @@ export async function GET(
     return redirect(
       `/invitation-error?reason=wrong-email&expected=${encodeURIComponent(invitation.email)}`,
     );
+  }
+
+  // Attendees invited to an event with registration questions must answer them
+  // before an RSVP is created. Grant access by accepting the invitation, then
+  // send them to the event page to complete registration (which creates the
+  // approved RSVP together with their answers). Cohosts skip this — they're
+  // organizers, not registrants.
+  if (invitation.role !== "cohost") {
+    const hasQuestions = !!(await db.query.eventQuestions.findFirst({
+      where: eq(eventQuestions.eventId, invitation.eventId),
+      columns: { id: true },
+    }));
+
+    if (hasQuestions) {
+      await db
+        .update(invitations)
+        .set({ status: "accepted" })
+        .where(eq(invitations.id, invitation.id));
+
+      return redirect(
+        invitation.event.slug
+          ? `/e/${invitation.event.slug}?register=1`
+          : `/events/${invitation.eventId}?register=1`,
+      );
+    }
   }
 
   // Use a transaction to atomically accept invitation + create RSVP/cohost

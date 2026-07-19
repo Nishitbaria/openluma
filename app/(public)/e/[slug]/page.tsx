@@ -77,10 +77,13 @@ export async function generateMetadata({
 
 export default async function PublicEventBySlugPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ register?: string }>;
 }) {
   const { slug } = await params;
+  const { register } = await searchParams;
 
   const [event, session] = await Promise.all([
     db.query.events.findFirst({
@@ -141,6 +144,9 @@ export default async function PublicEventBySlugPage({
   currentRsvpStatus = userRsvpResult?.status ?? null;
   const pendingInvitation =
     invitationResult?.status === "pending" ? invitationResult : null;
+  // An accepted invitation grants access so the invitee can still complete
+  // registration (answering the event's questions) even before their RSVP.
+  const hasAcceptedInvitation = invitationResult?.status === "accepted";
 
   // ── Non-blocking pageview tracking ──────────────────────────────────────────
   void (async () => {
@@ -194,7 +200,7 @@ export default async function PublicEventBySlugPage({
     const isHost = session?.user?.id === event.host.id;
     const hasApprovedRsvp = currentRsvpStatus === "approved";
 
-    if (!isHost && !hasApprovedRsvp) {
+    if (!isHost && !hasApprovedRsvp && !hasAcceptedInvitation) {
       return (
         <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-24 text-center">
           <Lock className="mx-auto h-12 w-12 text-muted-foreground" />
@@ -442,6 +448,7 @@ export default async function PublicEventBySlugPage({
                   currentRsvpStatus={currentRsvpStatus}
                   questions={questions}
                   waitlistPosition={waitlistPosition}
+                  autoRegister={register === "1"}
                 />
               )}
               <CalendarExportButton

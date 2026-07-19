@@ -95,15 +95,22 @@ export async function POST(
     );
   }
 
+  // Look up this user's invitation once — used both to gate private-event
+  // access and to auto-approve invited guests once they complete registration.
+  const userInvitation = session.user.email
+    ? await db.query.invitations.findFirst({
+        where: and(
+          eq(invitations.eventId, eventId),
+          eq(invitations.email, session.user.email),
+        ),
+        columns: { status: true },
+      })
+    : undefined;
+  const hasAcceptedInvite = userInvitation?.status === "accepted";
+
   // Private events require an accepted invitation to RSVP
   if (event.visibility === "private" && event.hostId !== session.user.id) {
-    const invitation = await db.query.invitations.findFirst({
-      where: and(
-        eq(invitations.eventId, eventId),
-        eq(invitations.email, session.user.email),
-      ),
-    });
-    if (!invitation || invitation.status !== "accepted") {
+    if (!hasAcceptedInvite) {
       return Response.json(
         { message: "This is a private event. You need an invitation to RSVP." },
         { status: 403 },
@@ -112,6 +119,16 @@ export async function POST(
   }
 
   const isFull = !!(event.capacity && event.rsvps.length >= event.capacity);
+  // Invited guests who accepted are approved outright; everyone else follows
+  // the event's approval and capacity rules.
+  const resolveStatus = () =>
+    hasAcceptedInvite
+      ? "approved"
+      : isFull
+        ? "waitlisted"
+        : event.requiresApproval
+          ? "pending"
+          : "approved";
 
   const existing = await db.query.rsvps.findFirst({
     where: and(eq(rsvps.eventId, eventId), eq(rsvps.userId, session.user.id)),
@@ -120,11 +137,7 @@ export async function POST(
   if (existing) {
     // Allow re-RSVP if previously rejected
     if (existing.status === "rejected") {
-      const newStatus = isFull
-        ? "waitlisted"
-        : event.requiresApproval
-          ? "pending"
-          : "approved";
+      const newStatus = resolveStatus();
       const [updated] = await db
         .update(rsvps)
         .set({ status: newStatus, updatedAt: new Date() })
@@ -136,11 +149,7 @@ export async function POST(
   }
 
   const body = await request.json().catch(() => ({}));
-  const status = isFull
-    ? "waitlisted"
-    : event.requiresApproval
-      ? "pending"
-      : "approved";
+  const status = resolveStatus();
 
   const [rsvp] = await db
     .insert(rsvps)
