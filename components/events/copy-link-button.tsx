@@ -16,7 +16,9 @@ export function CopyLinkButton({ url, variant = "icon" }: CopyLinkButtonProps) {
 
   async function handleCopy() {
     // Always copy the full absolute URL
-    const fullUrl = url.startsWith("http") ? url : `${window.location.origin}${url}`;
+    const fullUrl = url.startsWith("http")
+      ? url
+      : `${window.location.origin}${url}`;
     await navigator.clipboard.writeText(fullUrl);
     setCopied(true);
     toast.success("Link copied to clipboard");

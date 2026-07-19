@@ -14,15 +14,15 @@ export default function EventsLoading() {
 
       {/* Tabs */}
       <div className="flex gap-2">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <Skeleton key={i} className="h-9 w-28 rounded-md" />
+        {Array.from({ length: 3 }, (_, i) => `sk-${i}`).map((k) => (
+          <Skeleton key={k} className="h-9 w-28 rounded-md" />
         ))}
       </div>
 
       {/* Event cards grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="rounded-lg border overflow-hidden">
+        {Array.from({ length: 6 }, (_, i) => `sk-${i}`).map((k) => (
+          <div key={k} className="rounded-lg border overflow-hidden">
             <Skeleton className="aspect-video w-full" />
             <div className="p-4 space-y-2">
               <Skeleton className="h-5 w-3/4" />

@@ -1,9 +1,22 @@
 "use client";
 
-import { Eye, MousePointerClick, TrendingUp, UserCheck, Users } from "lucide-react";
+import {
+  Eye,
+  MousePointerClick,
+  TrendingUp,
+  UserCheck,
+  Users,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Area, AreaChart, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
@@ -55,15 +68,36 @@ export function EventAnalytics({
   }
 
   const statCards = [
-    { label: "Total Views", value: funnel.totalViews, icon: Eye, description: "All page visits" },
-    { label: "Unique Views", value: funnel.uniqueViews, icon: Users, description: "Distinct visitors" },
-    { label: "Total RSVPs", value: funnel.totalRsvps, icon: MousePointerClick, description: "All registrations" },
-    { label: "Approved", value: funnel.approved, icon: UserCheck, description: "Confirmed attendees" },
+    {
+      label: "Total Views",
+      value: funnel.totalViews,
+      icon: Eye,
+      description: "All page visits",
+    },
+    {
+      label: "Unique Views",
+      value: funnel.uniqueViews,
+      icon: Users,
+      description: "Distinct visitors",
+    },
+    {
+      label: "Total RSVPs",
+      value: funnel.totalRsvps,
+      icon: MousePointerClick,
+      description: "All registrations",
+    },
+    {
+      label: "Approved",
+      value: funnel.approved,
+      icon: UserCheck,
+      description: "Confirmed attendees",
+    },
     {
       label: "Conversion",
-      value: funnel.totalViews > 0
-        ? `${((funnel.totalRsvps / funnel.totalViews) * 100).toFixed(1)}%`
-        : "0%",
+      value:
+        funnel.totalViews > 0
+          ? `${((funnel.totalRsvps / funnel.totalViews) * 100).toFixed(1)}%`
+          : "0%",
       icon: TrendingUp,
       description: "Views → RSVPs",
     },
@@ -80,13 +114,20 @@ export function EventAnalytics({
   if (funnel.totalViews === 0 && funnel.totalRsvps === 0) {
     return (
       <div className="space-y-4">
-        <DateRangePicker from={from} to={to} setFrom={setFrom} setTo={setTo} onApply={applyDateRange} />
+        <DateRangePicker
+          from={from}
+          to={to}
+          setFrom={setFrom}
+          setTo={setTo}
+          onApply={applyDateRange}
+        />
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
             <Eye className="h-10 w-10 text-muted-foreground/40" />
             <p className="font-medium">No data yet</p>
             <p className="text-sm text-muted-foreground max-w-xs">
-              Share your event link to start tracking page views and registrations.
+              Share your event link to start tracking page views and
+              registrations.
             </p>
           </CardContent>
         </Card>
@@ -97,19 +138,29 @@ export function EventAnalytics({
   return (
     <div className="space-y-6">
       {/* Date range picker */}
-      <DateRangePicker from={from} to={to} setFrom={setFrom} setTo={setTo} onApply={applyDateRange} />
+      <DateRangePicker
+        from={from}
+        to={to}
+        setFrom={setFrom}
+        setTo={setTo}
+        onApply={applyDateRange}
+      />
 
       {/* Stat cards */}
       <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
         {statCards.map((s) => (
           <Card key={s.label}>
             <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4 px-4">
-              <CardTitle className="text-xs font-medium text-muted-foreground">{s.label}</CardTitle>
+              <CardTitle className="text-xs font-medium text-muted-foreground">
+                {s.label}
+              </CardTitle>
               <s.icon className="h-3.5 w-3.5 text-muted-foreground" />
             </CardHeader>
             <CardContent className="px-4 pb-4">
               <p className="text-2xl font-bold">{s.value}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">{s.description}</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                {s.description}
+              </p>
             </CardContent>
           </Card>
         ))}
@@ -122,11 +173,22 @@ export function EventAnalytics({
         </CardHeader>
         <CardContent>
           <ChartContainer config={chartConfig} className="h-[220px] w-full">
-            <AreaChart data={viewsByDay} margin={{ top: 4, right: 8, left: -20, bottom: 0 }}>
+            <AreaChart
+              data={viewsByDay}
+              margin={{ top: 4, right: 8, left: -20, bottom: 0 }}
+            >
               <defs>
                 <linearGradient id="viewsGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
+                  <stop
+                    offset="5%"
+                    stopColor="hsl(var(--primary))"
+                    stopOpacity={0.3}
+                  />
+                  <stop
+                    offset="95%"
+                    stopColor="hsl(var(--primary))"
+                    stopOpacity={0}
+                  />
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
@@ -137,7 +199,12 @@ export function EventAnalytics({
                 axisLine={false}
                 interval="preserveStartEnd"
               />
-              <YAxis tick={{ fontSize: 11 }} tickLine={false} axisLine={false} allowDecimals={false} />
+              <YAxis
+                tick={{ fontSize: 11 }}
+                tickLine={false}
+                axisLine={false}
+                allowDecimals={false}
+              />
               <Tooltip content={<ChartTooltipContent />} />
               <Area
                 type="monotone"
@@ -169,7 +236,11 @@ export function EventAnalytics({
                     {step.value}
                     {i > 0 && funnelSteps[i - 1].value > 0 && (
                       <span className="ml-1.5 text-xs text-muted-foreground font-normal">
-                        ({Math.round((step.value / funnelSteps[i - 1].value) * 100)}%)
+                        (
+                        {Math.round(
+                          (step.value / funnelSteps[i - 1].value) * 100,
+                        )}
+                        %)
                       </span>
                     )}
                   </span>
@@ -177,7 +248,9 @@ export function EventAnalytics({
                 <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
                   <div
                     className={`h-full rounded-full ${step.color} transition-all`}
-                    style={{ width: `${Math.round((step.value / funnelMax) * 100)}%` }}
+                    style={{
+                      width: `${Math.round((step.value / funnelMax) * 100)}%`,
+                    }}
                   />
                 </div>
               </div>
@@ -192,23 +265,33 @@ export function EventAnalytics({
           </CardHeader>
           <CardContent className="space-y-3">
             {referrers.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-4 text-center">No referrer data yet.</p>
+              <p className="text-sm text-muted-foreground py-4 text-center">
+                No referrer data yet.
+              </p>
             ) : (
               referrers.map((ref) => (
                 <div key={ref.name} className="space-y-1">
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground truncate max-w-[160px]">{ref.name}</span>
+                    <span className="text-muted-foreground truncate max-w-[160px]">
+                      {ref.name}
+                    </span>
                     <span className="font-medium tabular-nums">
                       {ref.count}
                       <span className="ml-1.5 text-xs text-muted-foreground font-normal">
-                        ({funnel.totalViews > 0 ? Math.round((ref.count / funnel.totalViews) * 100) : 0}%)
+                        (
+                        {funnel.totalViews > 0
+                          ? Math.round((ref.count / funnel.totalViews) * 100)
+                          : 0}
+                        %)
                       </span>
                     </span>
                   </div>
                   <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
                     <div
                       className="h-full rounded-full bg-primary/70 transition-all"
-                      style={{ width: `${funnel.totalViews > 0 ? Math.round((ref.count / funnel.totalViews) * 100) : 0}%` }}
+                      style={{
+                        width: `${funnel.totalViews > 0 ? Math.round((ref.count / funnel.totalViews) * 100) : 0}%`,
+                      }}
                     />
                   </div>
                 </div>
@@ -238,11 +321,21 @@ function DateRangePicker({
     <div className="flex flex-wrap items-end gap-3">
       <div className="space-y-1">
         <Label className="text-xs text-muted-foreground">From</Label>
-        <Input type="date" className="h-8 w-36 text-sm" value={from} onChange={(e) => setFrom(e.target.value)} />
+        <Input
+          type="date"
+          className="h-8 w-36 text-sm"
+          value={from}
+          onChange={(e) => setFrom(e.target.value)}
+        />
       </div>
       <div className="space-y-1">
         <Label className="text-xs text-muted-foreground">To</Label>
-        <Input type="date" className="h-8 w-36 text-sm" value={to} onChange={(e) => setTo(e.target.value)} />
+        <Input
+          type="date"
+          className="h-8 w-36 text-sm"
+          value={to}
+          onChange={(e) => setTo(e.target.value)}
+        />
       </div>
       <Button size="sm" className="h-8" onClick={onApply}>
         Apply

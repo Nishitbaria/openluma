@@ -32,8 +32,8 @@ export default function EventDetailLoading() {
               <Skeleton className="h-5 w-20" />
             </CardHeader>
             <CardContent className="space-y-4">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-3">
+              {Array.from({ length: 3 }, (_, i) => `sk-${i}`).map((k) => (
+                <div key={k} className="flex items-center gap-3">
                   <Skeleton className="h-5 w-5 rounded" />
                   <div className="space-y-1">
                     <Skeleton className="h-4 w-48" />
@@ -53,8 +53,8 @@ export default function EventDetailLoading() {
               <Skeleton className="h-4 w-36 mt-1" />
             </CardHeader>
             <CardContent className="space-y-3">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-2">
+              {Array.from({ length: 5 }, (_, i) => `sk-${i}`).map((k) => (
+                <div key={k} className="flex items-center gap-2">
                   <Skeleton className="h-8 w-8 rounded-full" />
                   <div className="space-y-1">
                     <Skeleton className="h-4 w-28" />

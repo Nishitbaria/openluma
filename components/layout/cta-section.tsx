@@ -1,13 +1,12 @@
-"use client"
+"use client";
 
-import { ArrowRight, Code2 } from "lucide-react"
-import Link from "next/link"
-
-import { PixelParagraph } from "@/components/ui/pixel-paragraph-words"
-import { PixelHeading } from "@/components/ui/pixel-heading-character"
-import { MetalButton } from "@/components/ui/metal-button"
-import { Button } from "@/components/ui/button"
-import { GitHubIcon } from "@/components/icons"
+import { ArrowRight, Code2 } from "lucide-react";
+import Link from "next/link";
+import { GitHubIcon } from "@/components/icons";
+import { Button } from "@/components/ui/button";
+import { MetalButton } from "@/components/ui/metal-button";
+import { PixelHeading } from "@/components/ui/pixel-heading-character";
+import { PixelParagraph } from "@/components/ui/pixel-paragraph-words";
 
 export function CtaSection() {
   return (
@@ -54,5 +53,5 @@ export function CtaSection() {
         </div>
       </div>
     </section>
-  )
+  );
 }

@@ -1,9 +1,9 @@
 import { isStepCount, ToolLoopAgent, tool } from "ai";
-import { model } from "@/lib/ai/model";
 import { and, desc, eq, gte, ilike } from "drizzle-orm";
 import { z } from "zod/v4";
+import { model } from "@/lib/ai/model";
 import { db } from "@/lib/db";
-import { eventTags, events, invitations, rsvps, user } from "@/lib/db/schema";
+import { events, eventTags, invitations, rsvps, user } from "@/lib/db/schema";
 import { generateEventSlug } from "@/lib/utils/slugify";
 
 export function createEventAgent(userId: string) {
@@ -267,7 +267,6 @@ RULES:
         },
       }),
 
-
       submitRsvp: tool({
         description: "RSVP to an event on behalf of the user.",
         inputSchema: z.object({
@@ -293,12 +292,15 @@ RULES:
                   where: and(
                     eq(invitations.eventId, eventId),
                     eq(invitations.email, currentUser.email),
-                    eq(invitations.status, "accepted")
+                    eq(invitations.status, "accepted"),
                   ),
                 })
               : null;
             if (!invitation) {
-              return { error: "This is a private event. You need an accepted invitation to RSVP." };
+              return {
+                error:
+                  "This is a private event. You need an accepted invitation to RSVP.",
+              };
             }
           }
 
@@ -393,9 +395,11 @@ RULES:
             .returning();
 
           if (source.tags.length > 0) {
-            await db.insert(eventTags).values(
-              source.tags.map((t) => ({ eventId: cloned.id, tag: t.tag })),
-            );
+            await db
+              .insert(eventTags)
+              .values(
+                source.tags.map((t) => ({ eventId: cloned.id, tag: t.tag })),
+              );
           }
 
           return {
@@ -407,7 +411,6 @@ RULES:
           };
         },
       }),
-
     },
     stopWhen: isStepCount(8),
   });

@@ -55,8 +55,12 @@ export function EventEditDrawer({ event, trigger }: EventEditDrawerProps) {
   const [loading, setLoading] = useState(false);
   const [coverImage, setCoverImage] = useState<string | null>(event.coverImage);
   const [slug, setSlug] = useState(event.slug ?? "");
-  const [richDescription, setRichDescription] = useState(event.richDescription ?? "");
-  const [plainDescription, setPlainDescription] = useState(event.description ?? "");
+  const [richDescription, setRichDescription] = useState(
+    event.richDescription ?? "",
+  );
+  const [plainDescription, setPlainDescription] = useState(
+    event.description ?? "",
+  );
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();

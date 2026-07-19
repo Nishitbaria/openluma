@@ -1,9 +1,9 @@
 "use client";
 
 import { AtSignIcon, Loader2Icon, LockIcon, UserIcon } from "lucide-react";
-import { useTheme } from "next-themes";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTheme } from "next-themes";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AuthDivider } from "@/components/auth-divider";
@@ -11,7 +11,11 @@ import { GoogleIcon } from "@/components/icons";
 import { Logo } from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { FlickeringGrid } from "@/components/ui/flickering-grid";
-import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import { MetalButton } from "@/components/ui/metal-button";
 import { PixelHeading } from "@/components/ui/pixel-heading-character";
 import { PixelParagraph } from "@/components/ui/pixel-paragraph-words";
@@ -22,7 +26,8 @@ export default function SignUpPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const { resolvedTheme } = useTheme();
-  const gridColor = resolvedTheme === "dark" ? "rgb(255,255,255)" : "rgb(0,0,0)";
+  const gridColor =
+    resolvedTheme === "dark" ? "rgb(255,255,255)" : "rgb(0,0,0)";
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -54,7 +59,9 @@ export default function SignUpPage() {
     <div className="relative w-full overflow-hidden md:h-screen">
       <div
         className="pointer-events-none absolute inset-0 -z-10"
-        style={{ maskImage: "linear-gradient(to bottom, black 60%, transparent 100%)" }}
+        style={{
+          maskImage: "linear-gradient(to bottom, black 60%, transparent 100%)",
+        }}
       >
         <FlickeringGrid
           squareSize={4}
@@ -136,7 +143,13 @@ export default function SignUpPage() {
               </InputGroupAddon>
             </InputGroup>
 
-            <MetalButton className="w-full" metalFxClassName="w-full" size="sm" type="submit" disabled={loading}>
+            <MetalButton
+              className="w-full"
+              metalFxClassName="w-full"
+              size="sm"
+              type="submit"
+              disabled={loading}
+            >
               {loading && <Loader2Icon className="mr-2 size-4 animate-spin" />}
               {loading ? "Creating account..." : "Continue With Email"}
             </MetalButton>

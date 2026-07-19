@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import { MetalIconButton } from "@/components/ui/metal-button"
-import { PixelParagraph } from "@/components/ui/pixel-paragraph-words"
+import { MetalIconButton } from "@/components/ui/metal-button";
+import { PixelParagraph } from "@/components/ui/pixel-paragraph-words";
 
 const steps = [
   {
@@ -24,7 +24,7 @@ const steps = [
       "Share the link, manage RSVPs, send invites, and check in attendees on the day.",
     pixelWords: ["RSVPs", "check in"],
   },
-]
+];
 
 export function HowItWorks() {
   return (
@@ -59,5 +59,5 @@ export function HowItWorks() {
         </div>
       ))}
     </div>
-  )
+  );
 }

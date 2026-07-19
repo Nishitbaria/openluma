@@ -1,6 +1,4 @@
 import { NextSSRPlugin } from "@uploadthing/react/next-ssr-plugin";
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import {
   GeistPixelCircle,
   GeistPixelGrid,
@@ -8,6 +6,8 @@ import {
   GeistPixelSquare,
   GeistPixelTriangle,
 } from "geist/font/pixel";
+import type { Metadata } from "next";
+import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { extractRouterConfig } from "uploadthing/server";
 import { Toaster } from "@/components/ui/sonner";

@@ -1,9 +1,9 @@
 "use client";
 
 import { AtSignIcon, Loader2Icon, LockIcon } from "lucide-react";
-import { useTheme } from "next-themes";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTheme } from "next-themes";
 import { useState } from "react";
 import { toast } from "sonner";
 import { AuthDivider } from "@/components/auth-divider";
@@ -26,7 +26,8 @@ export default function SignInPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const raw = searchParams.get("callbackUrl") ?? "/dashboard";
-  const callbackUrl = raw.startsWith("/") && !raw.startsWith("//") ? raw : "/dashboard";
+  const callbackUrl =
+    raw.startsWith("/") && !raw.startsWith("//") ? raw : "/dashboard";
   const [loading, setLoading] = useState(false);
   const { resolvedTheme } = useTheme();
   const gridColor =

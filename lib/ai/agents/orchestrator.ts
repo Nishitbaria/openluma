@@ -1,7 +1,7 @@
-import { isStepCount, ToolLoopAgent, tool, type InferAgentUIMessage } from "ai";
-import { z } from "zod/v4";
-import { nanoid } from "nanoid";
+import { type InferAgentUIMessage, isStepCount, ToolLoopAgent, tool } from "ai";
 import { eq } from "drizzle-orm";
+import { nanoid } from "nanoid";
+import { z } from "zod/v4";
 import { model } from "@/lib/ai/model";
 import { db } from "@/lib/db";
 import { events, invitations } from "@/lib/db/schema";
@@ -65,7 +65,11 @@ For these, first get the event details from the user (eventId and title), then c
                 if (res?.success && res.event) {
                   artifacts.push({ type: "event-created", data: res.event });
                 }
-                if (res?.events && Array.isArray(res.events) && res.events.length > 0) {
+                if (
+                  res?.events &&
+                  Array.isArray(res.events) &&
+                  res.events.length > 0
+                ) {
                   artifacts.push({ type: "event-list", data: res.events });
                 }
               }
@@ -89,7 +93,9 @@ For these, first get the event details from the user (eventId and title), then c
           "Delete an event permanently. Requires explicit user approval before executing.",
         inputSchema: z.object({
           eventId: z.string().describe("The event ID to delete"),
-          eventTitle: z.string().describe("The event title shown in the confirmation prompt"),
+          eventTitle: z
+            .string()
+            .describe("The event title shown in the confirmation prompt"),
         }),
         execute: async ({ eventId }) => {
           const event = await db.query.events.findFirst({
@@ -98,7 +104,10 @@ For these, first get the event details from the user (eventId and title), then c
           if (!event) return { error: "Event not found" };
           if (event.hostId !== userId) return { error: "Not authorized" };
           await db.delete(events).where(eq(events.id, eventId));
-          return { success: true, message: `Event "${event.title}" deleted successfully` };
+          return {
+            success: true,
+            message: `Event "${event.title}" deleted successfully`,
+          };
         },
       }),
 
@@ -108,7 +117,10 @@ For these, first get the event details from the user (eventId and title), then c
         inputSchema: z.object({
           eventId: z.string().describe("The event ID"),
           email: z.string().describe("Email address to invite"),
-          eventTitle: z.string().optional().describe("The event title shown in the confirmation prompt"),
+          eventTitle: z
+            .string()
+            .optional()
+            .describe("The event title shown in the confirmation prompt"),
         }),
         execute: async ({ eventId, email }) => {
           const event = await db.query.events.findFirst({
@@ -140,4 +152,6 @@ For these, first get the event details from the user (eventId and title), then c
   });
 }
 
-export type OrchestratorMessage = InferAgentUIMessage<ReturnType<typeof createOrchestrator>>;
+export type OrchestratorMessage = InferAgentUIMessage<
+  ReturnType<typeof createOrchestrator>
+>;

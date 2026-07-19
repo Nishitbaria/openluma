@@ -1,5 +1,5 @@
-import { openai } from "@ai-sdk/openai";
 import { devToolsMiddleware } from "@ai-sdk/devtools";
+import { openai } from "@ai-sdk/openai";
 import { wrapLanguageModel } from "ai";
 
 const base = openai("gpt-5-mini");

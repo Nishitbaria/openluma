@@ -99,7 +99,7 @@ export async function PUT(
     );
   }
 
-  const { tags, slug, ...updateData } = parsed.data;
+  const { tags: _tags, slug, ...updateData } = parsed.data;
 
   if (slug) {
     const existing = await db.query.events.findFirst({

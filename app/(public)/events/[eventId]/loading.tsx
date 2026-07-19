@@ -22,8 +22,8 @@ export default function EventDetailLoading() {
         <div className="space-y-6 md:col-span-2">
           <Card>
             <CardContent className="space-y-4 pt-6">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <div key={i} className="flex items-center gap-3">
+              {Array.from({ length: 3 }, (_, i) => `sk-${i}`).map((k) => (
+                <div key={k} className="flex items-center gap-3">
                   <Skeleton className="size-5 rounded" />
                   <div className="space-y-1">
                     <Skeleton className="h-4 w-48" />

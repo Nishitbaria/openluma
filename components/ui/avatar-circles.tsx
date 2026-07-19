@@ -3,16 +3,16 @@ import {
   AvatarGroup,
   AvatarGroupCount,
   AvatarImage,
-} from "@/components/ui/avatar"
+} from "@/components/ui/avatar";
 
 interface AvatarData {
-  imageUrl: string
-  profileUrl: string
+  imageUrl: string;
+  profileUrl: string;
 }
 interface AvatarCirclesProps {
-  className?: string
-  numPeople?: number
-  avatarUrls: AvatarData[]
+  className?: string;
+  numPeople?: number;
+  avatarUrls: AvatarData[];
 }
 
 export const AvatarCircles = ({
@@ -34,7 +34,9 @@ export const AvatarCircles = ({
           </Avatar>
         </a>
       ))}
-      {(numPeople ?? 0) > 0 && <AvatarGroupCount>+{numPeople}</AvatarGroupCount>}
+      {(numPeople ?? 0) > 0 && (
+        <AvatarGroupCount>+{numPeople}</AvatarGroupCount>
+      )}
     </AvatarGroup>
-  )
-}
+  );
+};

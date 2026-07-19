@@ -105,7 +105,7 @@ export function AppSidebar() {
                         (other) =>
                           other.url !== item.url &&
                           other.url.startsWith(item.url) &&
-                          pathname.startsWith(other.url)
+                          pathname.startsWith(other.url),
                       )
                     }
                     tooltip={item.title}

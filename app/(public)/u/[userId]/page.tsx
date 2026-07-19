@@ -29,7 +29,13 @@ export default async function PublicProfilePage({
   const [profile, hostedEvents] = await Promise.all([
     db.query.user.findFirst({
       where: eq(user.id, userId),
-      columns: { id: true, name: true, image: true, bio: true, createdAt: true },
+      columns: {
+        id: true,
+        name: true,
+        image: true,
+        bio: true,
+        createdAt: true,
+      },
     }),
     db.query.events.findMany({
       where: and(eq(events.hostId, userId), eq(events.visibility, "public")),
