@@ -63,7 +63,12 @@ async function sendWithReliability(
         resend.emails.send(payload, { idempotencyKey }),
         new Promise<never>((_, reject) =>
           setTimeout(
-            () => reject(Object.assign(new Error("Email send timed out"), { code: "ETIMEDOUT" })),
+            () =>
+              reject(
+                Object.assign(new Error("Email send timed out"), {
+                  code: "ETIMEDOUT",
+                }),
+              ),
             SEND_TIMEOUT_MS,
           ),
         ),
@@ -102,7 +107,8 @@ async function sendWithReliability(
       );
     }
 
-    const backoff = Math.min(1000 * 2 ** attempt, 30_000) + Math.random() * 1000;
+    const backoff =
+      Math.min(1000 * 2 ** attempt, 30_000) + Math.random() * 1000;
     await sleep(backoff);
   }
 
@@ -301,6 +307,10 @@ export async function sendEventReminderEmail(
     `reminder-${event?.id ?? eventTitle}-${to}-${startTime.toISOString()}`,
   );
 
-  if (error) console.error("Failed to send reminder email:", error);
-  return { data, error };
+  if (error) {
+    throw Object.assign(new Error("Failed to send reminder email"), {
+      cause: error,
+    });
+  }
+  return { data };
 }
