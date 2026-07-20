@@ -1,8 +1,8 @@
-type TiptapNode = {
-  type: string;
-  text?: string;
+interface TiptapNode {
   content?: TiptapNode[];
-};
+  text?: string;
+  type: string;
+}
 
 export function extractPlainText(richDescription: string): string {
   try {
@@ -22,8 +22,12 @@ export function extractPlainText(richDescription: string): string {
           "blockquote",
         ];
         const isBlock = blockTypes.includes(node.type);
-        if (isBlock && lines.length > 0) lines.push(" ");
-        for (const child of node.content) walk(child);
+        if (isBlock && lines.length > 0) {
+          lines.push(" ");
+        }
+        for (const child of node.content) {
+          walk(child);
+        }
       }
     }
 

@@ -39,14 +39,14 @@ export function EventFilters() {
   }
 
   return (
-    <div className="flex flex-col sm:flex-row gap-4">
+    <div className="flex flex-col gap-4 sm:flex-row">
       <div className="relative flex-1">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Search events..."
           className="pl-10"
           defaultValue={searchParams.get("search") ?? ""}
           onChange={(e) => updateParamDebounced("search", e.target.value)}
+          placeholder="Search events..."
         />
       </div>
       <Select

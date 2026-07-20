@@ -23,44 +23,50 @@ export default async function AttendeesPage({
 }) {
   const { eventId } = await params;
   const session = await getSession(await headers());
-  if (!session?.user) redirect("/sign-in");
+  if (!session?.user) {
+    redirect("/sign-in");
+  }
 
   const event = await db.query.events.findFirst({
+    columns: { hostId: true, id: true, title: true },
     where: eq(events.id, eventId),
     with: { cohosts: { columns: { userId: true } } },
-    columns: { id: true, title: true, hostId: true },
   });
 
-  if (!event) notFound();
+  if (!event) {
+    notFound();
+  }
 
   const isHost = event.hostId === session.user.id;
   const isCohost = event.cohosts.some((c) => c.userId === session.user.id);
 
-  if (!isHost && !isCohost) notFound();
+  if (!(isHost || isCohost)) {
+    notFound();
+  }
 
   const [attendees, eventInvitations, cohosts, questions] = await Promise.all([
     db.query.rsvps.findMany({
+      orderBy: (rsvpRows, { desc }) => [desc(rsvpRows.createdAt)],
       where: eq(rsvps.eventId, eventId),
       with: {
-        user: { columns: { id: true, name: true, email: true, image: true } },
         timeline: { orderBy: (t, { desc }) => [desc(t.createdAt)] },
+        user: { columns: { email: true, id: true, image: true, name: true } },
       },
-      orderBy: (rsvps, { desc }) => [desc(rsvps.createdAt)],
     }),
     db.query.invitations.findMany({
+      orderBy: (invitationRows, { desc }) => [desc(invitationRows.createdAt)],
       where: eq(invitations.eventId, eventId),
-      orderBy: (invitations, { desc }) => [desc(invitations.createdAt)],
     }),
     db.query.eventCohosts.findMany({
       where: eq(eventCohosts.eventId, eventId),
       with: {
-        user: { columns: { id: true, name: true, email: true, image: true } },
+        user: { columns: { email: true, id: true, image: true, name: true } },
       },
     }),
     db.query.eventQuestions.findMany({
-      where: eq(eventQuestions.eventId, eventId),
-      orderBy: (q, { asc }) => [asc(q.order)],
       columns: { id: true, label: true, type: true },
+      orderBy: (q, { asc }) => [asc(q.order)],
+      where: eq(eventQuestions.eventId, eventId),
     }),
   ]);
 
@@ -68,19 +74,19 @@ export default async function AttendeesPage({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Button asChild variant="ghost" size="icon">
+          <Button asChild size="icon" variant="ghost">
             <Link href={`/dashboard/events/${eventId}`}>
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">Attendees</h1>
+            <h1 className="font-bold text-3xl tracking-tight">Attendees</h1>
             <p className="text-muted-foreground">{event.title}</p>
           </div>
         </div>
       </div>
 
-      {(isHost || isCohost) && <InviteForm eventId={eventId} />}
+      {isHost || isCohost ? <InviteForm eventId={eventId} /> : null}
 
       <AttendeeList
         attendees={attendees.map((a) => ({
@@ -93,17 +99,17 @@ export default async function AttendeesPage({
         }))}
         cohosts={cohosts.map((c) => ({
           id: c.id,
-          userId: c.userId,
           user: c.user,
+          userId: c.userId,
         }))}
+        eventId={eventId}
         invitations={eventInvitations.map((inv) => ({
           ...inv,
           createdAt: inv.createdAt.toISOString(),
           expiresAt: inv.expiresAt?.toISOString() ?? null,
         }))}
-        questions={questions}
-        eventId={eventId}
         isHost={isHost}
+        questions={questions}
       />
     </div>
   );

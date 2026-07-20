@@ -10,7 +10,7 @@ const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ eventId: string }> },
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   const { eventId } = await params;
   const session = await auth.api.getSession({ headers: await headers() });
@@ -23,23 +23,23 @@ export async function GET(
       where: and(eq(rsvps.eventId, eventId), eq(rsvps.userId, session.user.id)),
     }),
     db.query.events.findFirst({
-      where: eq(events.id, eventId),
       columns: {
-        id: true,
-        slug: true,
-        title: true,
-        startTime: true,
         endTime: true,
+        id: true,
         location: true,
+        slug: true,
+        startTime: true,
         timezone: true,
+        title: true,
       },
+      where: eq(events.id, eventId),
     }),
   ]);
 
-  if (!rsvp || rsvp.status !== "approved") {
+  if (rsvp?.status !== "approved") {
     return Response.json(
       { message: "No approved RSVP found" },
-      { status: 404 },
+      { status: 404 }
     );
   }
 
@@ -50,29 +50,29 @@ export async function GET(
   // QR code payload: check-in URL the host scans
   const checkInPayload = JSON.stringify({
     eventId,
-    userId: session.user.id,
     url: `${appUrl}/api/events/${eventId}/check-in`,
+    userId: session.user.id,
   });
 
   const qrDataUrl = await QRCode.toDataURL(checkInPayload, {
-    width: 300,
-    margin: 2,
     color: { dark: "#000000", light: "#ffffff" },
+    margin: 2,
+    width: 300,
   });
 
   return Response.json({
     ticket: {
+      endTime: event.endTime,
       eventId,
       eventSlug: event.slug,
       eventTitle: event.title,
-      startTime: event.startTime,
-      endTime: event.endTime,
       location: event.location,
-      timezone: event.timezone,
-      userName: session.user.name,
-      userEmail: session.user.email,
-      rsvpId: rsvp.id,
       qrCode: qrDataUrl,
+      rsvpId: rsvp.id,
+      startTime: event.startTime,
+      timezone: event.timezone,
+      userEmail: session.user.email,
+      userName: session.user.name,
     },
   });
 }

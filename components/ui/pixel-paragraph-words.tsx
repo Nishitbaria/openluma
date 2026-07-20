@@ -7,11 +7,11 @@ import { cn } from "@/lib/utils";
 type PixelFont = "square" | "grid" | "circle" | "triangle" | "line";
 
 const PIXEL_FONT_MAP: Record<PixelFont, string> = {
-  square: "font-pixel-square",
-  grid: "font-pixel-grid",
   circle: "font-pixel-circle",
-  triangle: "font-pixel-triangle",
+  grid: "font-pixel-grid",
   line: "font-pixel-line",
+  square: "font-pixel-square",
+  triangle: "font-pixel-triangle",
 };
 
 /* ------------------------------------------------------------------ */
@@ -28,7 +28,9 @@ type Segment =
  * "shadcn/ui" wins over a hypothetical "ui" match.
  */
 function splitTextByPixelWords(text: string, pixelWords: string[]): Segment[] {
-  if (pixelWords.length === 0) return [{ type: "plain", text }];
+  if (pixelWords.length === 0) {
+    return [{ text, type: "plain" }];
+  }
 
   // Sort by length descending so longer matches take priority
   const sorted = [...pixelWords].sort((a, b) => b.length - a.length);
@@ -44,14 +46,14 @@ function splitTextByPixelWords(text: string, pixelWords: string[]): Segment[] {
   for (const match of text.matchAll(pattern)) {
     const matchStart = match.index ?? 0;
     if (matchStart > lastIndex) {
-      segments.push({ type: "plain", text: text.slice(lastIndex, matchStart) });
+      segments.push({ text: text.slice(lastIndex, matchStart), type: "plain" });
     }
-    segments.push({ type: "pixel", text: match[0] });
+    segments.push({ text: match[0], type: "pixel" });
     lastIndex = matchStart + match[0].length;
   }
 
   if (lastIndex < text.length) {
-    segments.push({ type: "plain", text: text.slice(lastIndex) });
+    segments.push({ text: text.slice(lastIndex), type: "plain" });
   }
 
   return segments;
@@ -62,19 +64,19 @@ function splitTextByPixelWords(text: string, pixelWords: string[]): Segment[] {
 /* ------------------------------------------------------------------ */
 
 export interface PixelParagraphProps extends React.ComponentProps<"p"> {
-  /** The paragraph text to render. */
-  text: string;
-  /**
-   * Words or phrases within `text` to render in a pixel font.
-   * Matching is case-sensitive and longest-match-first.
-   */
-  pixelWords?: string[];
   /** The wrapper element to render. @default "p" */
   as?: "p" | "span" | "div";
   /** The pixel font for highlighted words. @default "square" */
   font?: PixelFont;
   /** Extra className applied to each pixel-word span. */
   pixelWordClassName?: string;
+  /**
+   * Words or phrases within `text` to render in a pixel font.
+   * Matching is case-sensitive and longest-match-first.
+   */
+  pixelWords?: string[];
+  /** The paragraph text to render. */
+  text: string;
 }
 
 /**
@@ -102,14 +104,14 @@ export function PixelParagraph({
   const fontClass = PIXEL_FONT_MAP[font];
 
   return (
-    <Tag data-slot="pixel-paragraph" className={cn(className)} {...props}>
+    <Tag className={cn(className)} data-slot="pixel-paragraph" {...props}>
       {segments.map((segment, index) => {
         const key = `${segment.type}-${segment.text}-${index}`;
         return segment.type === "pixel" ? (
           <span
-            key={key}
-            data-slot="pixel-word"
             className={cn(fontClass, pixelWordClassName)}
+            data-slot="pixel-word"
+            key={key}
           >
             {segment.text}
           </span>

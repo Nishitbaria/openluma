@@ -8,19 +8,21 @@ import { eventQuestions, events, questionTypeEnum } from "@/lib/db/schema";
 
 const questionSchema = z.object({
   label: z.string().min(1).max(300),
-  type: z.enum(questionTypeEnum.enumValues),
-  required: z.boolean().default(false),
-  order: z.number().int().default(0),
   options: z.array(z.string()).nullish(),
+  order: z.number().int().default(0),
+  required: z.boolean().default(false),
+  type: z.enum(questionTypeEnum.enumValues),
 });
 
 async function getHostOrCohost(eventId: string, userId: string) {
   const event = await db.query.events.findFirst({
+    columns: { hostId: true },
     where: eq(events.id, eventId),
     with: { cohosts: { columns: { userId: true } } },
-    columns: { hostId: true },
   });
-  if (!event) return null;
+  if (!event) {
+    return null;
+  }
   const isHost = event.hostId === userId;
   const isCohost = event.cohosts.some((c) => c.userId === userId);
   return isHost || isCohost ? event : null;
@@ -28,13 +30,13 @@ async function getHostOrCohost(eventId: string, userId: string) {
 
 export async function GET(
   _req: NextRequest,
-  { params }: { params: Promise<{ eventId: string }> },
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   const { eventId } = await params;
 
   const questions = await db.query.eventQuestions.findMany({
-    where: eq(eventQuestions.eventId, eventId),
     orderBy: [asc(eventQuestions.order)],
+    where: eq(eventQuestions.eventId, eventId),
   });
 
   return Response.json(questions);
@@ -42,20 +44,24 @@ export async function GET(
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ eventId: string }> },
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user)
+  if (!session?.user) {
     return Response.json({ message: "Unauthorized" }, { status: 401 });
+  }
 
   const { eventId } = await params;
   const event = await getHostOrCohost(eventId, session.user.id);
-  if (!event) return Response.json({ message: "Forbidden" }, { status: 403 });
+  if (!event) {
+    return Response.json({ message: "Forbidden" }, { status: 403 });
+  }
 
   const body = await req.json();
   const parsed = questionSchema.safeParse(body);
-  if (!parsed.success)
+  if (!parsed.success) {
     return Response.json({ message: "Invalid data" }, { status: 400 });
+  }
 
   const [question] = await db
     .insert(eventQuestions)
@@ -67,23 +73,29 @@ export async function POST(
 
 export async function PUT(
   req: NextRequest,
-  { params }: { params: Promise<{ eventId: string }> },
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user)
+  if (!session?.user) {
     return Response.json({ message: "Unauthorized" }, { status: 401 });
+  }
 
   const { eventId } = await params;
   const event = await getHostOrCohost(eventId, session.user.id);
-  if (!event) return Response.json({ message: "Forbidden" }, { status: 403 });
+  if (!event) {
+    return Response.json({ message: "Forbidden" }, { status: 403 });
+  }
 
   const body = await req.json();
   const { id, ...rest } = body;
-  if (!id) return Response.json({ message: "Missing id" }, { status: 400 });
+  if (!id) {
+    return Response.json({ message: "Missing id" }, { status: 400 });
+  }
 
   const parsed = questionSchema.partial().safeParse(rest);
-  if (!parsed.success)
+  if (!parsed.success) {
     return Response.json({ message: "Invalid data" }, { status: 400 });
+  }
 
   const [updated] = await db
     .update(eventQuestions)
@@ -96,18 +108,23 @@ export async function PUT(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: Promise<{ eventId: string }> },
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user)
+  if (!session?.user) {
     return Response.json({ message: "Unauthorized" }, { status: 401 });
+  }
 
   const { eventId } = await params;
   const event = await getHostOrCohost(eventId, session.user.id);
-  if (!event) return Response.json({ message: "Forbidden" }, { status: 403 });
+  if (!event) {
+    return Response.json({ message: "Forbidden" }, { status: 403 });
+  }
 
   const { id } = await req.json();
-  if (!id) return Response.json({ message: "Missing id" }, { status: 400 });
+  if (!id) {
+    return Response.json({ message: "Missing id" }, { status: 400 });
+  }
 
   await db.delete(eventQuestions).where(eq(eventQuestions.id, id));
   return Response.json({ message: "Deleted" });

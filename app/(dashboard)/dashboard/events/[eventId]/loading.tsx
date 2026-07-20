@@ -7,12 +7,12 @@ export default function EventDetailLoading() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <div className="flex items-center gap-2 mb-2">
+          <div className="mb-2 flex items-center gap-2">
             <Skeleton className="h-5 w-16 rounded-full" />
             <Skeleton className="h-5 w-20 rounded-full" />
           </div>
           <Skeleton className="h-9 w-72" />
-          <Skeleton className="h-5 w-40 mt-2" />
+          <Skeleton className="mt-2 h-5 w-40" />
         </div>
         <div className="flex gap-2">
           <Skeleton className="h-9 w-20 rounded-md" />
@@ -22,7 +22,7 @@ export default function EventDetailLoading() {
 
       <div className="grid gap-6 md:grid-cols-3">
         {/* Main content */}
-        <div className="md:col-span-2 space-y-6">
+        <div className="space-y-6 md:col-span-2">
           {/* Cover image */}
           <Skeleton className="aspect-video w-full rounded-lg" />
 
@@ -33,7 +33,7 @@ export default function EventDetailLoading() {
             </CardHeader>
             <CardContent className="space-y-4">
               {Array.from({ length: 3 }, (_, i) => `sk-${i}`).map((k) => (
-                <div key={k} className="flex items-center gap-3">
+                <div className="flex items-center gap-3" key={k}>
                   <Skeleton className="h-5 w-5 rounded" />
                   <div className="space-y-1">
                     <Skeleton className="h-4 w-48" />
@@ -50,11 +50,11 @@ export default function EventDetailLoading() {
           <Card>
             <CardHeader>
               <Skeleton className="h-5 w-24" />
-              <Skeleton className="h-4 w-36 mt-1" />
+              <Skeleton className="mt-1 h-4 w-36" />
             </CardHeader>
             <CardContent className="space-y-3">
               {Array.from({ length: 5 }, (_, i) => `sk-${i}`).map((k) => (
-                <div key={k} className="flex items-center gap-2">
+                <div className="flex items-center gap-2" key={k}>
                   <Skeleton className="h-8 w-8 rounded-full" />
                   <div className="space-y-1">
                     <Skeleton className="h-4 w-28" />

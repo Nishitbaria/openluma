@@ -15,7 +15,16 @@ import {
   Minus,
   Quote,
 } from "lucide-react";
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 import { extractPlainText } from "@/lib/utils/tiptap";
 
 interface RichTextEditorProps {
@@ -30,53 +39,72 @@ export function RichTextEditor({
   placeholder = "Tell people about your event...",
 }: RichTextEditorProps) {
   const editor = useEditor({
-    extensions: [
-      StarterKit,
-      Link.configure({ openOnClick: false, autolink: true }),
-      Placeholder.configure({ placeholder }),
-    ],
     content: content ? JSON.parse(content) : "",
-    onUpdate({ editor }) {
-      const json = JSON.stringify(editor.getJSON());
-      const plain = extractPlainText(json);
-      onChange(json, plain);
-    },
     editorProps: {
       attributes: {
         class: "min-h-[140px] px-3 py-2 text-sm focus:outline-none",
       },
     },
+    extensions: [
+      StarterKit,
+      Link.configure({ autolink: true, openOnClick: false }),
+      Placeholder.configure({ placeholder }),
+    ],
     immediatelyRender: false,
+    onUpdate({ editor: updatedEditor }) {
+      const json = JSON.stringify(updatedEditor.getJSON());
+      const plain = extractPlainText(json);
+      onChange(json, plain);
+    },
   });
 
-  const setLink = useCallback(() => {
-    if (!editor) return;
-    const prev = editor.getAttributes("link").href as string | undefined;
-    const url = window.prompt("URL", prev ?? "https://");
-    if (url === null) return;
-    if (url === "") {
-      editor.chain().focus().extendMarkRange("link").unsetLink().run();
+  const [linkDialogOpen, setLinkDialogOpen] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
+
+  const openLinkDialog = useCallback(() => {
+    if (!editor) {
       return;
     }
-    editor.chain().focus().extendMarkRange("link").setLink({ href: url }).run();
+    const prev = editor.getAttributes("link").href as string | undefined;
+    setLinkUrl(prev ?? "https://");
+    setLinkDialogOpen(true);
   }, [editor]);
 
-  if (!editor) return null;
+  const applyLink = useCallback(() => {
+    if (!editor) {
+      return;
+    }
+    if (linkUrl.trim() === "") {
+      editor.chain().focus().extendMarkRange("link").unsetLink().run();
+    } else {
+      editor
+        .chain()
+        .focus()
+        .extendMarkRange("link")
+        .setLink({ href: linkUrl })
+        .run();
+    }
+    setLinkDialogOpen(false);
+  }, [editor, linkUrl]);
+
+  if (!editor) {
+    return null;
+  }
 
   return (
     <div className="rounded-md border border-input bg-background">
       {/* Toolbar */}
-      <div className="flex flex-wrap items-center gap-0.5 border-b border-input px-2 py-1.5">
+      <div className="flex flex-wrap items-center gap-0.5 border-input border-b px-2 py-1.5">
         <ToolbarButton
-          onClick={() => editor.chain().focus().toggleBold().run()}
           active={editor.isActive("bold")}
+          onClick={() => editor.chain().focus().toggleBold().run()}
           title="Bold"
         >
           <Bold className="h-3.5 w-3.5" />
         </ToolbarButton>
         <ToolbarButton
-          onClick={() => editor.chain().focus().toggleItalic().run()}
           active={editor.isActive("italic")}
+          onClick={() => editor.chain().focus().toggleItalic().run()}
           title="Italic"
         >
           <Italic className="h-3.5 w-3.5" />
@@ -85,19 +113,19 @@ export function RichTextEditor({
         <Divider />
 
         <ToolbarButton
+          active={editor.isActive("heading", { level: 1 })}
           onClick={() =>
             editor.chain().focus().toggleHeading({ level: 1 }).run()
           }
-          active={editor.isActive("heading", { level: 1 })}
           title="Heading 1"
         >
           <Heading1 className="h-3.5 w-3.5" />
         </ToolbarButton>
         <ToolbarButton
+          active={editor.isActive("heading", { level: 2 })}
           onClick={() =>
             editor.chain().focus().toggleHeading({ level: 2 }).run()
           }
-          active={editor.isActive("heading", { level: 2 })}
           title="Heading 2"
         >
           <Heading2 className="h-3.5 w-3.5" />
@@ -106,22 +134,22 @@ export function RichTextEditor({
         <Divider />
 
         <ToolbarButton
-          onClick={() => editor.chain().focus().toggleBulletList().run()}
           active={editor.isActive("bulletList")}
+          onClick={() => editor.chain().focus().toggleBulletList().run()}
           title="Bullet list"
         >
           <List className="h-3.5 w-3.5" />
         </ToolbarButton>
         <ToolbarButton
-          onClick={() => editor.chain().focus().toggleOrderedList().run()}
           active={editor.isActive("orderedList")}
+          onClick={() => editor.chain().focus().toggleOrderedList().run()}
           title="Ordered list"
         >
           <ListOrdered className="h-3.5 w-3.5" />
         </ToolbarButton>
         <ToolbarButton
-          onClick={() => editor.chain().focus().toggleBlockquote().run()}
           active={editor.isActive("blockquote")}
+          onClick={() => editor.chain().focus().toggleBlockquote().run()}
           title="Blockquote"
         >
           <Quote className="h-3.5 w-3.5" />
@@ -130,15 +158,15 @@ export function RichTextEditor({
         <Divider />
 
         <ToolbarButton
-          onClick={() => editor.chain().focus().setHorizontalRule().run()}
           active={false}
+          onClick={() => editor.chain().focus().setHorizontalRule().run()}
           title="Divider"
         >
           <Minus className="h-3.5 w-3.5" />
         </ToolbarButton>
         <ToolbarButton
-          onClick={setLink}
           active={editor.isActive("link")}
+          onClick={openLinkDialog}
           title="Link"
         >
           <Link2 className="h-3.5 w-3.5" />
@@ -147,6 +175,32 @@ export function RichTextEditor({
 
       {/* Editor area */}
       <EditorContent editor={editor} />
+
+      <Dialog onOpenChange={setLinkDialogOpen} open={linkDialogOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Add link</DialogTitle>
+          </DialogHeader>
+          <Input
+            autoFocus
+            onChange={(e) => setLinkUrl(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                applyLink();
+              }
+            }}
+            placeholder="https://"
+            value={linkUrl}
+          />
+          <DialogFooter>
+            <Button onClick={() => setLinkDialogOpen(false)} variant="outline">
+              Cancel
+            </Button>
+            <Button onClick={applyLink}>Save</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -164,14 +218,14 @@ function ToolbarButton({
 }) {
   return (
     <button
-      type="button"
-      onClick={onClick}
-      title={title}
       className={`rounded p-1.5 transition-colors hover:bg-accent ${
         active
           ? "bg-accent text-accent-foreground"
           : "text-muted-foreground hover:text-foreground"
       }`}
+      onClick={onClick}
+      title={title}
+      type="button"
     >
       {children}
     </button>

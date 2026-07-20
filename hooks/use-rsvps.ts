@@ -2,13 +2,15 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
 export function useRsvps(eventId: string) {
   return useQuery({
-    queryKey: ["rsvps", eventId],
+    enabled: !!eventId,
     queryFn: async () => {
       const res = await fetch(`/api/events/${eventId}/rsvp`);
-      if (!res.ok) throw new Error("Failed to fetch RSVPs");
+      if (!res.ok) {
+        throw new Error("Failed to fetch RSVPs");
+      }
       return res.json();
     },
-    enabled: !!eventId,
+    queryKey: ["rsvps", eventId],
   });
 }
 
@@ -24,11 +26,13 @@ export function useSubmitRsvp() {
       message?: string;
     }) => {
       const res = await fetch(`/api/events/${eventId}/rsvp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
       });
-      if (!res.ok) throw new Error("Failed to RSVP");
+      if (!res.ok) {
+        throw new Error("Failed to RSVP");
+      }
       return res.json();
     },
     onSuccess: (_, { eventId }) => {
@@ -52,11 +56,13 @@ export function useUpdateRsvpStatus() {
       status: string;
     }) => {
       const res = await fetch(`/api/events/${eventId}/rsvp`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ rsvpId, status }),
+        headers: { "Content-Type": "application/json" },
+        method: "PATCH",
       });
-      if (!res.ok) throw new Error("Failed to update RSVP");
+      if (!res.ok) {
+        throw new Error("Failed to update RSVP");
+      }
       return res.json();
     },
     onSuccess: (_, { eventId }) => {

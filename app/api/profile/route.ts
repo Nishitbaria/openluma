@@ -14,9 +14,15 @@ export async function PATCH(request: NextRequest) {
   const body = await request.json();
   const updates: Record<string, unknown> = { updatedAt: new Date() };
 
-  if (body.name) updates.name = body.name;
-  if (body.bio !== undefined) updates.bio = body.bio;
-  if (body.image) updates.image = body.image;
+  if (body.name) {
+    updates.name = body.name;
+  }
+  if (body.bio !== undefined) {
+    updates.bio = body.bio;
+  }
+  if (body.image) {
+    updates.image = body.image;
+  }
 
   const [updated] = await db
     .update(user)

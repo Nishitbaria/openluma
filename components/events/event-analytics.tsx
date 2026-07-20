@@ -24,6 +24,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
 interface EventAnalyticsProps {
+  dateFrom: string;
+  dateTo: string;
+  eventId: string;
   funnel: {
     totalViews: number;
     uniqueViews: number;
@@ -31,17 +34,14 @@ interface EventAnalyticsProps {
     approved: number;
     checkedIn: number;
   };
-  viewsByDay: { date: string; views: number }[];
   referrers: { name: string; count: number }[];
-  dateFrom: string;
-  dateTo: string;
-  eventId: string;
+  viewsByDay: { date: string; views: number }[];
 }
 
 const chartConfig = {
   views: {
-    label: "Views",
     color: "hsl(var(--primary))",
+    label: "Views",
   },
 };
 
@@ -63,51 +63,51 @@ export function EventAnalytics({
 
   function applyDateRange() {
     router.push(
-      `/dashboard/events/${eventId}?tab=insights&dateFrom=${from}&dateTo=${to}`,
+      `/dashboard/events/${eventId}?tab=insights&dateFrom=${from}&dateTo=${to}`
     );
   }
 
   const statCards = [
     {
+      description: "All page visits",
+      icon: Eye,
       label: "Total Views",
       value: funnel.totalViews,
-      icon: Eye,
-      description: "All page visits",
     },
     {
+      description: "Distinct visitors",
+      icon: Users,
       label: "Unique Views",
       value: funnel.uniqueViews,
-      icon: Users,
-      description: "Distinct visitors",
     },
     {
+      description: "All registrations",
+      icon: MousePointerClick,
       label: "Total RSVPs",
       value: funnel.totalRsvps,
-      icon: MousePointerClick,
-      description: "All registrations",
     },
     {
+      description: "Confirmed attendees",
+      icon: UserCheck,
       label: "Approved",
       value: funnel.approved,
-      icon: UserCheck,
-      description: "Confirmed attendees",
     },
     {
+      description: "Views → RSVPs",
+      icon: TrendingUp,
       label: "Conversion",
       value:
         funnel.totalViews > 0
           ? `${((funnel.totalRsvps / funnel.totalViews) * 100).toFixed(1)}%`
           : "0%",
-      icon: TrendingUp,
-      description: "Views → RSVPs",
     },
   ];
 
   const funnelSteps = [
-    { label: "Page Views", value: funnel.totalViews, color: "bg-primary" },
-    { label: "RSVPs", value: funnel.totalRsvps, color: "bg-primary/80" },
-    { label: "Approved", value: funnel.approved, color: "bg-primary/60" },
-    { label: "Checked In", value: funnel.checkedIn, color: "bg-primary/40" },
+    { color: "bg-primary", label: "Page Views", value: funnel.totalViews },
+    { color: "bg-primary/80", label: "RSVPs", value: funnel.totalRsvps },
+    { color: "bg-primary/60", label: "Approved", value: funnel.approved },
+    { color: "bg-primary/40", label: "Checked In", value: funnel.checkedIn },
   ];
   const funnelMax = Math.max(funnel.totalViews, 1);
 
@@ -116,16 +116,16 @@ export function EventAnalytics({
       <div className="space-y-4">
         <DateRangePicker
           from={from}
-          to={to}
+          onApply={applyDateRange}
           setFrom={setFrom}
           setTo={setTo}
-          onApply={applyDateRange}
+          to={to}
         />
         <Card>
           <CardContent className="flex flex-col items-center gap-3 py-16 text-center">
             <Eye className="h-10 w-10 text-muted-foreground/40" />
             <p className="font-medium">No data yet</p>
-            <p className="text-sm text-muted-foreground max-w-xs">
+            <p className="max-w-xs text-muted-foreground text-sm">
               Share your event link to start tracking page views and
               registrations.
             </p>
@@ -140,25 +140,25 @@ export function EventAnalytics({
       {/* Date range picker */}
       <DateRangePicker
         from={from}
-        to={to}
+        onApply={applyDateRange}
         setFrom={setFrom}
         setTo={setTo}
-        onApply={applyDateRange}
+        to={to}
       />
 
       {/* Stat cards */}
-      <div className="grid gap-4 grid-cols-2 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
         {statCards.map((s) => (
           <Card key={s.label}>
-            <CardHeader className="flex flex-row items-center justify-between pb-1 pt-4 px-4">
-              <CardTitle className="text-xs font-medium text-muted-foreground">
+            <CardHeader className="flex flex-row items-center justify-between px-4 pt-4 pb-1">
+              <CardTitle className="font-medium text-muted-foreground text-xs">
                 {s.label}
               </CardTitle>
               <s.icon className="h-3.5 w-3.5 text-muted-foreground" />
             </CardHeader>
             <CardContent className="px-4 pb-4">
-              <p className="text-2xl font-bold">{s.value}</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
+              <p className="font-bold text-2xl">{s.value}</p>
+              <p className="mt-0.5 text-muted-foreground text-xs">
                 {s.description}
               </p>
             </CardContent>
@@ -169,16 +169,16 @@ export function EventAnalytics({
       {/* Area chart */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-sm font-medium">Views Over Time</CardTitle>
+          <CardTitle className="font-medium text-sm">Views Over Time</CardTitle>
         </CardHeader>
         <CardContent>
-          <ChartContainer config={chartConfig} className="h-[220px] w-full">
+          <ChartContainer className="h-[220px] w-full" config={chartConfig}>
             <AreaChart
               data={viewsByDay}
-              margin={{ top: 4, right: 8, left: -20, bottom: 0 }}
+              margin={{ bottom: 0, left: -20, right: 8, top: 4 }}
             >
               <defs>
-                <linearGradient id="viewsGrad" x1="0" y1="0" x2="0" y2="1">
+                <linearGradient id="viewsGrad" x1="0" x2="0" y1="0" y2="1">
                   <stop
                     offset="5%"
                     stopColor="hsl(var(--primary))"
@@ -191,29 +191,29 @@ export function EventAnalytics({
                   />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+              <CartesianGrid className="stroke-border" strokeDasharray="3 3" />
               <XAxis
+                axisLine={false}
                 dataKey="date"
+                interval="preserveStartEnd"
                 tick={{ fontSize: 11 }}
                 tickLine={false}
-                axisLine={false}
-                interval="preserveStartEnd"
               />
               <YAxis
+                allowDecimals={false}
+                axisLine={false}
                 tick={{ fontSize: 11 }}
                 tickLine={false}
-                axisLine={false}
-                allowDecimals={false}
               />
               <Tooltip content={<ChartTooltipContent />} />
               <Area
-                type="monotone"
+                activeDot={{ r: 4 }}
                 dataKey="views"
+                dot={false}
+                fill="url(#viewsGrad)"
                 stroke="hsl(var(--primary))"
                 strokeWidth={2}
-                fill="url(#viewsGrad)"
-                dot={false}
-                activeDot={{ r: 4 }}
+                type="monotone"
               />
             </AreaChart>
           </ChartContainer>
@@ -225,27 +225,27 @@ export function EventAnalytics({
         {/* RSVP Funnel */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">RSVP Funnel</CardTitle>
+            <CardTitle className="font-medium text-sm">RSVP Funnel</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {funnelSteps.map((step, i) => (
-              <div key={step.label} className="space-y-1">
+              <div className="space-y-1" key={step.label}>
                 <div className="flex justify-between text-sm">
                   <span className="text-muted-foreground">{step.label}</span>
                   <span className="font-medium tabular-nums">
                     {step.value}
                     {i > 0 && funnelSteps[i - 1].value > 0 && (
-                      <span className="ml-1.5 text-xs text-muted-foreground font-normal">
+                      <span className="ml-1.5 font-normal text-muted-foreground text-xs">
                         (
                         {Math.round(
-                          (step.value / funnelSteps[i - 1].value) * 100,
+                          (step.value / funnelSteps[i - 1].value) * 100
                         )}
                         %)
                       </span>
                     )}
                   </span>
                 </div>
-                <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                   <div
                     className={`h-full rounded-full ${step.color} transition-all`}
                     style={{
@@ -261,23 +261,23 @@ export function EventAnalytics({
         {/* Top Referrers */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Top Referrers</CardTitle>
+            <CardTitle className="font-medium text-sm">Top Referrers</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
             {referrers.length === 0 ? (
-              <p className="text-sm text-muted-foreground py-4 text-center">
+              <p className="py-4 text-center text-muted-foreground text-sm">
                 No referrer data yet.
               </p>
             ) : (
               referrers.map((ref) => (
-                <div key={ref.name} className="space-y-1">
+                <div className="space-y-1" key={ref.name}>
                   <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground truncate max-w-[160px]">
+                    <span className="max-w-[160px] truncate text-muted-foreground">
                       {ref.name}
                     </span>
                     <span className="font-medium tabular-nums">
                       {ref.count}
-                      <span className="ml-1.5 text-xs text-muted-foreground font-normal">
+                      <span className="ml-1.5 font-normal text-muted-foreground text-xs">
                         (
                         {funnel.totalViews > 0
                           ? Math.round((ref.count / funnel.totalViews) * 100)
@@ -286,7 +286,7 @@ export function EventAnalytics({
                       </span>
                     </span>
                   </div>
-                  <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
                     <div
                       className="h-full rounded-full bg-primary/70 transition-all"
                       style={{
@@ -320,24 +320,24 @@ function DateRangePicker({
   return (
     <div className="flex flex-wrap items-end gap-3">
       <div className="space-y-1">
-        <Label className="text-xs text-muted-foreground">From</Label>
+        <Label className="text-muted-foreground text-xs">From</Label>
         <Input
-          type="date"
           className="h-8 w-36 text-sm"
-          value={from}
           onChange={(e) => setFrom(e.target.value)}
+          type="date"
+          value={from}
         />
       </div>
       <div className="space-y-1">
-        <Label className="text-xs text-muted-foreground">To</Label>
+        <Label className="text-muted-foreground text-xs">To</Label>
         <Input
-          type="date"
           className="h-8 w-36 text-sm"
-          value={to}
           onChange={(e) => setTo(e.target.value)}
+          type="date"
+          value={to}
         />
       </div>
-      <Button size="sm" className="h-8" onClick={onApply}>
+      <Button className="h-8" onClick={onApply} size="sm">
         Apply
       </Button>
     </div>

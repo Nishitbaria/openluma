@@ -13,7 +13,9 @@ export default async function EditEventPage({
 }) {
   const { eventId } = await params;
   const session = await getSession(await headers());
-  if (!session?.user) redirect("/sign-in");
+  if (!session?.user) {
+    redirect("/sign-in");
+  }
 
   const event = await db.query.events.findFirst({
     where: eq(events.id, eventId),
@@ -27,37 +29,39 @@ export default async function EditEventPage({
   const isHost = event.hostId === session.user.id;
   const isCohost = event.cohosts.some((c) => c.userId === session.user.id);
 
-  if (!isHost && !isCohost) notFound();
+  if (!(isHost || isCohost)) {
+    notFound();
+  }
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Edit Event</h1>
+        <h1 className="font-bold text-3xl tracking-tight">Edit Event</h1>
         <p className="text-muted-foreground">Update your event details.</p>
       </div>
       <EventForm
         event={{
-          id: event.id,
-          title: event.title,
-          description: event.description,
+          capacity: event.capacity,
+          categoryId: event.categoryId,
           coverImage: event.coverImage,
-          startTime: Number.isFinite(event.startTime.getTime())
-            ? event.startTime.toISOString()
-            : new Date().toISOString(),
+          description: event.description,
           endTime:
             event.endTime && Number.isFinite(event.endTime.getTime())
               ? event.endTime.toISOString()
               : null,
-          timezone: event.timezone,
+          id: event.id,
           location: event.location,
           locationDetails: event.locationDetails,
+          requiresApproval: event.requiresApproval,
+          richDescription: event.richDescription,
+          slug: event.slug,
+          startTime: Number.isFinite(event.startTime.getTime())
+            ? event.startTime.toISOString()
+            : new Date().toISOString(),
+          timezone: event.timezone,
+          title: event.title,
           type: event.type,
           visibility: event.visibility,
-          capacity: event.capacity,
-          requiresApproval: event.requiresApproval,
-          categoryId: event.categoryId,
-          slug: event.slug,
-          richDescription: event.richDescription,
         }}
       />
     </div>

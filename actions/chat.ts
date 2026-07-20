@@ -9,18 +9,22 @@ import { chatConversations } from "@/lib/db/schema";
 
 export async function listConversationsAction() {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) throw new Error("Unauthorized");
+  if (!session?.user) {
+    throw new Error("Unauthorized");
+  }
 
   return db.query.chatConversations.findMany({
-    where: eq(chatConversations.userId, session.user.id),
-    orderBy: desc(chatConversations.updatedAt),
     columns: { id: true, title: true, updatedAt: true },
+    orderBy: desc(chatConversations.updatedAt),
+    where: eq(chatConversations.userId, session.user.id),
   });
 }
 
 export async function deleteConversationAction(conversationId: string) {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) throw new Error("Unauthorized");
+  if (!session?.user) {
+    throw new Error("Unauthorized");
+  }
 
   const conversation = await db.query.chatConversations.findFirst({
     where: eq(chatConversations.id, conversationId),

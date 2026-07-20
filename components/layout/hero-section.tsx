@@ -17,7 +17,7 @@ export function HeroSection() {
     resolvedTheme === "dark" ? "rgb(255,255,255)" : "rgb(0,0,0)";
 
   return (
-    <section className="relative mx-auto w-full max-w-7xl overflow-hidden px-4 sm:px-6 lg:px-8 py-24 md:py-36 text-center">
+    <section className="relative mx-auto w-full max-w-7xl overflow-hidden px-4 py-24 text-center sm:px-6 md:py-36 lg:px-8">
       {/* Flickering grid background — fades out toward bottom */}
       <div
         className="pointer-events-none absolute inset-0 -z-10"
@@ -26,18 +26,18 @@ export function HeroSection() {
         }}
       >
         <FlickeringGrid
-          squareSize={4}
-          gridGap={6}
-          flickerChance={0.1}
-          color={gridColor}
-          maxOpacity={0.06}
           className="size-full"
+          color={gridColor}
+          flickerChance={0.1}
+          gridGap={6}
+          maxOpacity={0.06}
+          squareSize={4}
         />
       </div>
 
-      <div className="mx-auto max-w-4xl flex flex-col items-center">
+      <div className="mx-auto flex max-w-4xl flex-col items-center">
         {/* Badge with AnimatedShinyText */}
-        <div className="mb-8 inline-flex items-center gap-2 rounded-full border bg-muted/50 px-4 py-1.5 text-sm text-muted-foreground">
+        <div className="mb-8 inline-flex items-center gap-2 rounded-full border bg-muted/50 px-4 py-1.5 text-muted-foreground text-sm">
           <Sparkles className="size-3.5 shrink-0" />
           <AnimatedShinyText>
             Open source · Self-hostable · AI-powered
@@ -47,22 +47,22 @@ export function HeroSection() {
         {/* Pixel headings */}
         <div className="mb-3 flex flex-col items-center gap-1">
           <PixelHeading
-            mode="wave"
             autoPlay
+            className="font-bold text-5xl leading-none tracking-tight sm:text-7xl lg:text-8xl"
             cycleInterval={300}
-            staggerDelay={120}
+            mode="wave"
             showLabel={false}
-            className="text-5xl font-bold tracking-tight sm:text-7xl lg:text-8xl leading-none"
+            staggerDelay={120}
           >
             Events,
           </PixelHeading>
           <PixelHeading
-            mode="random"
             autoPlay
+            className="font-bold text-5xl text-primary leading-none tracking-tight sm:text-7xl lg:text-8xl"
             cycleInterval={400}
-            staggerDelay={80}
+            mode="random"
             showLabel={false}
-            className="text-5xl font-bold tracking-tight sm:text-7xl lg:text-8xl leading-none text-primary"
+            staggerDelay={80}
           >
             simplified.
           </PixelHeading>
@@ -70,11 +70,11 @@ export function HeroSection() {
 
         {/* Description */}
         <PixelParagraph
-          text="OpenLuma is a free, open-source event management platform. Create events with AI, manage attendees, send invitations, and check in guests all without vendor lock-in."
-          pixelWords={["open-source", "AI", "vendor lock-in"]}
+          className="mx-auto mt-8 max-w-2xl text-lg text-muted-foreground leading-relaxed"
           font="circle"
           pixelWordClassName="text-foreground"
-          className="mx-auto mt-8 max-w-2xl text-lg text-muted-foreground leading-relaxed"
+          pixelWords={["open-source", "AI", "vendor lock-in"]}
+          text="OpenLuma is a free, open-source event management platform. Create events with AI, manage attendees, send invitations, and check in guests all without vendor lock-in."
         />
 
         {/* CTAs */}
@@ -85,7 +85,7 @@ export function HeroSection() {
               <ArrowRight className="ml-2 size-4" />
             </Link>
           </MetalButton>
-          <Button asChild variant="outline" size="lg">
+          <Button asChild size="lg" variant="outline">
             <Link href="/events">Browse Events</Link>
           </Button>
         </div>

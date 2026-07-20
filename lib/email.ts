@@ -25,13 +25,17 @@ const RETRYABLE_NETWORK_CODES = new Set([
   "ECONNREFUSED",
   "EAI_AGAIN",
 ]);
+const ICS_DATE_SEPARATORS_RE = /[-:]/g;
+const ICS_DATE_MILLIS_RE = /\.\d{3}/;
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function isRetryableStatus(statusCode: number | null | undefined) {
-  return statusCode != null && (statusCode >= 500 || statusCode === 429);
+  return (
+    typeof statusCode === "number" && (statusCode >= 500 || statusCode === 429)
+  );
 }
 
 function isRetryableNetworkError(err: unknown) {
@@ -49,7 +53,7 @@ function isRetryableNetworkError(err: unknown) {
  */
 async function sendWithReliability(
   payload: EmailPayload,
-  idempotencyKey: string,
+  idempotencyKey: string
 ): Promise<EmailSendResult> {
   if (!resend) {
     throw new Error("Resend is not configured");
@@ -57,8 +61,9 @@ async function sendWithReliability(
 
   let lastResult: EmailSendResult | undefined;
 
-  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt += 1) {
     try {
+      // biome-ignore lint/performance/noAwaitInLoops: retry loop is inherently sequential — each attempt must observe the previous attempt's result/timeout before deciding whether (and how long) to back off before the next try.
       const result = await Promise.race([
         resend.emails.send(payload, { idempotencyKey }),
         new Promise<never>((_, reject) =>
@@ -67,43 +72,43 @@ async function sendWithReliability(
               reject(
                 Object.assign(new Error("Email send timed out"), {
                   code: "ETIMEDOUT",
-                }),
+                })
               ),
-            SEND_TIMEOUT_MS,
-          ),
+            SEND_TIMEOUT_MS
+          )
         ),
       ]);
 
       lastResult = result;
 
-      if (!result.error || !isRetryableStatus(result.error.statusCode)) {
+      if (!(result.error && isRetryableStatus(result.error.statusCode))) {
         return result;
       }
 
       if (attempt === MAX_RETRIES - 1) {
         console.error(
           `Email send failed permanently after ${MAX_RETRIES} attempts (key: ${idempotencyKey}):`,
-          result.error,
+          result.error
         );
         return result;
       }
 
       console.warn(
         `Email send attempt ${attempt + 1} failed (key: ${idempotencyKey}), retrying:`,
-        result.error,
+        result.error
       );
     } catch (err) {
       if (!isRetryableNetworkError(err) || attempt === MAX_RETRIES - 1) {
         console.error(
           `Email send failed permanently after ${attempt + 1} attempt(s) (key: ${idempotencyKey}):`,
-          err,
+          err
         );
         throw err;
       }
 
       console.warn(
         `Email send attempt ${attempt + 1} threw a retryable error (key: ${idempotencyKey}), retrying:`,
-        err,
+        err
       );
     }
 
@@ -132,8 +137,8 @@ function generateICS(event: {
   const formatDate = (d: Date) =>
     d
       .toISOString()
-      .replace(/[-:]/g, "")
-      .replace(/\.\d{3}/, "");
+      .replace(ICS_DATE_SEPARATORS_RE, "")
+      .replace(ICS_DATE_MILLIS_RE, "");
 
   const end =
     event.endTime ?? new Date(event.startTime.getTime() + 60 * 60 * 1000);
@@ -159,7 +164,7 @@ export async function sendInvitationEmail(
   to: string,
   eventTitle: string,
   inviteToken: string,
-  role: "attendee" | "cohost" = "attendee",
+  role: "attendee" | "cohost" = "attendee"
 ) {
   if (!resend) {
     console.warn("Resend not configured, skipping invitation email");
@@ -171,23 +176,23 @@ export async function sendInvitationEmail(
 
   const html = await render(
     InvitationEmail({
-      eventTitle,
       acceptUrl: `${inviteUrl}?action=accept`,
       declineUrl: `${inviteUrl}?action=decline`,
+      eventTitle,
       role,
-    }),
+    })
   );
 
   const { data, error } = await sendWithReliability(
     {
       from: fromEmail,
-      to,
+      html,
       subject: isCohost
         ? `You're invited to co-host ${eventTitle}`
         : `You're invited to ${eventTitle}`,
-      html,
+      to,
     },
-    `invite-${inviteToken}-${role}`,
+    `invite-${inviteToken}-${role}`
   );
 
   if (error) {
@@ -209,9 +214,11 @@ export async function sendRsvpConfirmationEmail(
     location: string | null;
     timezone?: string;
   },
-  customMessage?: string,
+  customMessage?: string
 ) {
-  if (!resend) return;
+  if (!resend) {
+    return;
+  }
 
   const eventUrl = event ? eventLink(event) : appUrl;
   const ticketUrl = event ? `${appUrl}/ticket/${event.id}` : undefined;
@@ -219,36 +226,36 @@ export async function sendRsvpConfirmationEmail(
 
   const subjectMap: Record<string, string> = {
     approved: `You're in! 🎉 ${eventTitle}`,
-    waitlisted: `You're on the waitlist — ${eventTitle}`,
     pending: `RSVP received — ${eventTitle}`,
     rejected: `RSVP update — ${eventTitle}`,
+    waitlisted: `You're on the waitlist — ${eventTitle}`,
   };
 
   const html = await render(
     RsvpStatusEmail({
-      eventTitle,
-      status,
-      eventUrl,
-      ticketUrl,
+      customMessage,
       event: event
         ? {
-            startTime: event.startTime,
             endTime: event.endTime,
             location: event.location,
+            startTime: event.startTime,
             timezone: event.timezone,
           }
         : undefined,
-      customMessage,
-    }),
+      eventTitle,
+      eventUrl,
+      status,
+      ticketUrl,
+    })
   );
 
   const attachments =
     isApproved && event
       ? [
           {
-            filename: `${eventTitle.replace(/\s+/g, "-").toLowerCase()}.ics`,
             content: Buffer.from(generateICS(event)),
             contentType: "text/calendar",
+            filename: `${eventTitle.replace(/\s+/g, "-").toLowerCase()}.ics`,
           },
         ]
       : undefined;
@@ -256,15 +263,18 @@ export async function sendRsvpConfirmationEmail(
   const { data, error } = await sendWithReliability(
     {
       from: fromEmail,
-      to,
-      subject: subjectMap[status] ?? `RSVP update — ${eventTitle}`,
       html,
+      subject: subjectMap[status] ?? `RSVP update — ${eventTitle}`,
+      to,
       ...(attachments ? { attachments } : {}),
     },
-    `rsvp-${event?.id ?? "noevent"}-${to}-${status}`,
+    // biome-ignore lint/suspicious/noUnnecessaryConditions: `event` is an optional parameter and can be undefined at runtime; Biome's inference mistakes the non-optional `id` field on the object type for a guarantee that `event` itself is present.
+    `rsvp-${event?.id ?? "noevent"}-${to}-${status}`
   );
 
-  if (error) console.error("Failed to send RSVP email:", error);
+  if (error) {
+    console.error("Failed to send RSVP email:", error);
+  }
   return { data, error };
 }
 
@@ -278,33 +288,36 @@ export async function sendEventReminderEmail(
     slug?: string;
     endTime?: Date | null;
     location?: string | null;
-  },
+  }
 ) {
-  if (!resend) return;
+  if (!resend) {
+    return;
+  }
 
   const eventUrl = event ? eventLink(event) : appUrl;
   const ticketUrl = event ? `${appUrl}/ticket/${event.id}` : undefined;
 
   const html = await render(
     EventReminderEmail({
-      eventTitle,
-      startTime,
       endTime: event?.endTime,
-      location: event?.location,
-      timezone,
+      eventTitle,
       eventUrl,
+      location: event?.location,
+      startTime,
       ticketUrl,
-    }),
+      timezone,
+    })
   );
 
   const { data, error } = await sendWithReliability(
     {
       from: fromEmail,
-      to,
-      subject: `Reminder: ${eventTitle} is coming up!`,
       html,
+      subject: `Reminder: ${eventTitle} is coming up!`,
+      to,
     },
-    `reminder-${event?.id ?? eventTitle}-${to}-${startTime.toISOString()}`,
+    // biome-ignore lint/suspicious/noUnnecessaryConditions: `event` is an optional parameter and can be undefined at runtime; Biome's inference mistakes the non-optional `id` field on the object type for a guarantee that `event` itself is present.
+    `reminder-${event?.id ?? eventTitle}-${to}-${startTime.toISOString()}`
   );
 
   if (error) {

@@ -3,11 +3,15 @@
 import { Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+const DASH_COLON_RE = /[-:]/g;
+const MILLISECONDS_RE = /\.\d{3}/;
+const WHITESPACE_RE = /\s+/g;
+
 function formatICSDate(date: Date): string {
   return date
     .toISOString()
-    .replace(/[-:]/g, "")
-    .replace(/\.\d{3}/, "");
+    .replace(DASH_COLON_RE, "")
+    .replace(MILLISECONDS_RE, "");
 }
 
 export function CalendarExportButton({
@@ -48,13 +52,13 @@ export function CalendarExportButton({
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${event.title.replace(/\s+/g, "-").toLowerCase()}.ics`;
+    a.download = `${event.title.replace(WHITESPACE_RE, "-").toLowerCase()}.ics`;
     a.click();
     URL.revokeObjectURL(url);
   }
 
   return (
-    <Button variant="outline" className="w-full" onClick={handleExport}>
+    <Button className="w-full" onClick={handleExport} variant="outline">
       <Calendar className="mr-2 h-4 w-4" />
       Add to Calendar
     </Button>

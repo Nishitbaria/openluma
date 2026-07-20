@@ -5,19 +5,19 @@ function createRedis() {
   const url = process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
 
-  if (!url || !token) {
+  if (!(url && token)) {
     return null;
   }
 
-  return new Redis({ url, token });
+  return new Redis({ token, url });
 }
 
 export const redis = createRedis();
 
 export const ratelimit = redis
   ? new Ratelimit({
-      redis,
-      limiter: Ratelimit.slidingWindow(10, "10 s"),
       analytics: true,
+      limiter: Ratelimit.slidingWindow(10, "10 s"),
+      redis,
     })
   : null;

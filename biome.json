@@ -8,7 +8,6 @@
   "files": {
     "ignoreUnknown": true,
     "includes": [
-      "**",
       "!node_modules",
       "!.next",
       "!dist",
@@ -30,7 +29,8 @@
         "noArrayIndexKey": "off"
       },
       "performance": {
-        "noImgElement": "off"
+        "noImgElement": "off",
+        "noJsxPropsBind": "off"
       },
       "a11y": {
         "noSvgWithoutTitle": "off",
@@ -46,9 +46,7 @@
   },
   "overrides": [
     {
-      "includes": [
-        "components/ui/**"
-      ],
+      "includes": ["components/ui/**"],
       "linter": {
         "rules": {
           "security": {

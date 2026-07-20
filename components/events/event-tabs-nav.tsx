@@ -2,9 +2,9 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 
 interface EventTabsNavProps {
-  eventId: string;
-  canManage: boolean;
   activeTab: string;
+  canManage: boolean;
+  eventId: string;
 }
 
 const tabs = [
@@ -27,18 +27,18 @@ export function EventTabsNav({
       <nav className="-mb-px flex gap-6">
         {visibleTabs.map((tab) => (
           <Link
-            key={tab.key}
+            className={cn(
+              "relative pb-3 font-medium text-sm transition-colors hover:text-foreground",
+              activeTab === tab.key
+                ? "text-foreground"
+                : "text-muted-foreground"
+            )}
             href={
               tab.key === "overview"
                 ? `/dashboard/events/${eventId}`
                 : `/dashboard/events/${eventId}?tab=${tab.key}`
             }
-            className={cn(
-              "relative pb-3 text-sm font-medium transition-colors hover:text-foreground",
-              activeTab === tab.key
-                ? "text-foreground"
-                : "text-muted-foreground",
-            )}
+            key={tab.key}
           >
             {tab.label}
             {activeTab === tab.key && (

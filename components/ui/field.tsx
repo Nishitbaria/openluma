@@ -5,8 +5,8 @@ import { cn } from "@/lib/utils";
 function FieldGroup({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
-      data-slot="field-group"
       className={cn("grid gap-6", className)}
+      data-slot="field-group"
       {...props}
     />
   );
@@ -14,7 +14,7 @@ function FieldGroup({ className, ...props }: React.ComponentProps<"div">) {
 
 function Field({ className, ...props }: React.ComponentProps<"div">) {
   return (
-    <div data-slot="field" className={cn("grid gap-2", className)} {...props} />
+    <div className={cn("grid gap-2", className)} data-slot="field" {...props} />
   );
 }
 
@@ -28,11 +28,11 @@ function FieldLabel({
 function FieldDescription({ className, ...props }: React.ComponentProps<"p">) {
   return (
     <p
+      className={cn("text-muted-foreground text-sm", className)}
       data-slot="field-description"
-      className={cn("text-sm text-muted-foreground", className)}
       {...props}
     />
   );
 }
 
-export { FieldGroup, Field, FieldLabel, FieldDescription };
+export { Field, FieldDescription, FieldGroup, FieldLabel };

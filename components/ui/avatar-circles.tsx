@@ -10,33 +10,29 @@ interface AvatarData {
   profileUrl: string;
 }
 interface AvatarCirclesProps {
+  avatarUrls: AvatarData[];
   className?: string;
   numPeople?: number;
-  avatarUrls: AvatarData[];
 }
 
 export const AvatarCircles = ({
   numPeople,
   className,
   avatarUrls,
-}: AvatarCirclesProps) => {
-  return (
-    <AvatarGroup className={className}>
-      {avatarUrls.map((url, index) => (
-        <a
-          key={url.profileUrl}
-          href={url.profileUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Avatar size="lg">
-            <AvatarImage src={url.imageUrl} alt={`Avatar ${index + 1}`} />
-          </Avatar>
-        </a>
-      ))}
-      {(numPeople ?? 0) > 0 && (
-        <AvatarGroupCount>+{numPeople}</AvatarGroupCount>
-      )}
-    </AvatarGroup>
-  );
-};
+}: AvatarCirclesProps) => (
+  <AvatarGroup className={className}>
+    {avatarUrls.map((url, index) => (
+      <a
+        href={url.profileUrl}
+        key={url.profileUrl}
+        rel="noopener noreferrer"
+        target="_blank"
+      >
+        <Avatar size="lg">
+          <AvatarImage alt={`Avatar ${index + 1}`} src={url.imageUrl} />
+        </Avatar>
+      </a>
+    ))}
+    {(numPeople ?? 0) > 0 && <AvatarGroupCount>+{numPeople}</AvatarGroupCount>}
+  </AvatarGroup>
+);

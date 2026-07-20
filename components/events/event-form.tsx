@@ -26,6 +26,21 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 
+function getInitialEndTime(
+  endTime: string | null | undefined,
+  isEditing: boolean,
+  timezone: string,
+  defaultEnd: Date
+) {
+  if (endTime) {
+    return formatInTimeZone(new Date(endTime), timezone, "yyyy-MM-dd'T'HH:mm");
+  }
+  if (isEditing) {
+    return "";
+  }
+  return format(defaultEnd, "yyyy-MM-dd'T'HH:mm");
+}
+
 interface EventFormProps {
   event?: {
     id: string;
@@ -51,14 +66,14 @@ export function EventForm({ event }: EventFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [coverImage, setCoverImage] = useState<string | null>(
-    event?.coverImage ?? null,
+    event?.coverImage ?? null
   );
   const [slug, setSlug] = useState(event?.slug ?? "");
   const [richDescription, setRichDescription] = useState(
-    event?.richDescription ?? "",
+    event?.richDescription ?? ""
   );
   const [plainDescription, setPlainDescription] = useState(
-    event?.description ?? "",
+    event?.description ?? ""
   );
   const isEditing = !!event;
 
@@ -79,6 +94,7 @@ export function EventForm({ event }: EventFormProps) {
   // Preserve the event's stored timezone while editing; fall back to the
   // browser zone for new events. Wall-time inputs are interpreted in this zone.
   const browserTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+  // biome-ignore lint/suspicious/noUnnecessaryConditions: event is optional (new-event mode has none), so this fallback is real
   const timezone = event?.timezone ?? browserTimezone;
 
   // Datetime-local inputs hold wall-time strings ("yyyy-MM-ddTHH:mm") in the
@@ -88,62 +104,56 @@ export function EventForm({ event }: EventFormProps) {
       ? formatInTimeZone(
           new Date(event.startTime),
           timezone,
-          "yyyy-MM-dd'T'HH:mm",
+          "yyyy-MM-dd'T'HH:mm"
         )
-      : format(defaultStart, "yyyy-MM-dd'T'HH:mm"),
+      : format(defaultStart, "yyyy-MM-dd'T'HH:mm")
   );
   const [endTime, setEndTime] = useState<string>(
-    event?.endTime
-      ? formatInTimeZone(
-          new Date(event.endTime),
-          timezone,
-          "yyyy-MM-dd'T'HH:mm",
-        )
-      : isEditing
-        ? ""
-        : format(defaultEnd, "yyyy-MM-dd'T'HH:mm"),
+    getInitialEndTime(event?.endTime, isEditing, timezone, defaultEnd)
   );
 
   // Secondary/collapsed fields are held in controlled state so the submitted
   // payload is identical whether "More options" is open or closed.
   const [locationDetails, setLocationDetails] = useState(
-    event?.locationDetails ?? "",
+    event?.locationDetails ?? ""
   );
   const [type, setType] = useState<"in_person" | "virtual" | "hybrid">(
-    event?.type ?? "in_person",
+    // biome-ignore lint/suspicious/noUnnecessaryConditions: event is optional (new-event mode has none), so this fallback is real
+    event?.type ?? "in_person"
   );
   const [visibility, setVisibility] = useState<"public" | "private">(
-    event?.visibility ?? "public",
+    // biome-ignore lint/suspicious/noUnnecessaryConditions: event is optional (new-event mode has none), so this fallback is real
+    event?.visibility ?? "public"
   );
-  const [capacity, setCapacity] = useState(
-    event?.capacity != null ? String(event.capacity) : "",
-  );
+  const [capacity, setCapacity] = useState(`${event?.capacity ?? ""}`);
   const [requiresApproval, setRequiresApproval] = useState(
-    event?.requiresApproval ?? false,
+    // biome-ignore lint/suspicious/noUnnecessaryConditions: event is optional (new-event mode has none), so this fallback is real
+    event?.requiresApproval ?? false
   );
   const [moreOptionsOpen, setMoreOptionsOpen] = useState(isEditing);
 
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: submit handler validates and assembles the full event payload across many optional fields; extracting pieces would obscure the linear create/edit flow
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
     const data = {
-      title: formData.get("title") as string,
-      description: plainDescription || undefined,
-      richDescription: richDescription || undefined,
+      capacity: capacity ? Number(capacity) : undefined,
       coverImage: coverImage || undefined,
-      startTime: fromZonedTime(startTime, timezone).toISOString(),
+      description: plainDescription || undefined,
       endTime: endTime
         ? fromZonedTime(endTime, timezone).toISOString()
         : undefined,
-      timezone,
       location: (formData.get("location") as string) || undefined,
       locationDetails: locationDetails || undefined,
+      requiresApproval,
+      richDescription: richDescription || undefined,
+      startTime: fromZonedTime(startTime, timezone).toISOString(),
+      timezone,
+      title: formData.get("title") as string,
       type,
       visibility,
-      capacity: capacity ? Number(capacity) : undefined,
-      requiresApproval,
       ...(isEditing && slug ? { slug } : {}),
     };
 
@@ -152,9 +162,9 @@ export function EventForm({ event }: EventFormProps) {
       const method = isEditing ? "PUT" : "POST";
 
       const res = await fetch(url, {
-        method,
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
+        headers: { "Content-Type": "application/json" },
+        method,
       });
 
       if (!res.ok) {
@@ -167,43 +177,50 @@ export function EventForm({ event }: EventFormProps) {
       if (!isEditing) {
         import("canvas-confetti").then((mod) =>
           mod.default({
+            origin: { y: 0.6 },
             particleCount: 150,
             spread: 80,
-            origin: { y: 0.6 },
-          }),
+          })
         );
       }
       router.push(`/dashboard/events/${result.id ?? event?.id}`);
       router.refresh();
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Something went wrong",
+        error instanceof Error ? error.message : "Something went wrong"
       );
     } finally {
       setLoading(false);
     }
   }
 
+  const submitButtonLabel = (() => {
+    if (loading) {
+      return "Saving...";
+    }
+    return isEditing ? "Update Event" : "Create Event";
+  })();
+
   return (
     <Card>
       <CardContent className="pt-6">
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form className="space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-2">
             <Label htmlFor="title">Event Title</Label>
             <Input
+              defaultValue={event?.title}
               id="title"
               name="title"
               placeholder="My awesome event"
               required
-              defaultValue={event?.title}
             />
           </div>
 
           <div className="space-y-2">
             <Label>Cover Image</Label>
             <EventCoverImagePicker
-              value={coverImage}
               onChange={setCoverImage}
+              value={coverImage}
             />
           </div>
 
@@ -212,16 +229,16 @@ export function EventForm({ event }: EventFormProps) {
               <Label htmlFor="slug">Event URL</Label>
               <Input
                 id="slug"
-                placeholder="custom-url"
-                value={slug}
                 onChange={(e) =>
                   setSlug(
                     e.target.value
                       .toLowerCase()
                       .replace(/[^a-z0-9-]/g, "")
-                      .replace(/-+/g, "-"),
+                      .replace(/-+/g, "-")
                   )
                 }
+                placeholder="custom-url"
+                value={slug}
               />
             </div>
           )}
@@ -242,24 +259,24 @@ export function EventForm({ event }: EventFormProps) {
               <Label htmlFor="startTime">Start Date & Time</Label>
               <Input
                 id="startTime"
-                type="datetime-local"
-                required
-                value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
+                required
+                type="datetime-local"
+                value={startTime}
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="endTime">End Date & Time</Label>
               <Input
                 id="endTime"
+                onChange={(e) => setEndTime(e.target.value)}
                 type="datetime-local"
                 value={endTime}
-                onChange={(e) => setEndTime(e.target.value)}
               />
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+          <div className="flex items-center gap-1.5 text-muted-foreground text-sm">
             <Globe className="size-3.5" />
             {timezone}
           </div>
@@ -267,19 +284,19 @@ export function EventForm({ event }: EventFormProps) {
           <div className="space-y-2">
             <Label htmlFor="location">Location</Label>
             <Input
+              defaultValue={event?.location ?? ""}
               id="location"
               name="location"
               placeholder="123 Main St, City or https://zoom.us/..."
-              defaultValue={event?.location ?? ""}
             />
           </div>
 
-          <Collapsible open={moreOptionsOpen} onOpenChange={setMoreOptionsOpen}>
+          <Collapsible onOpenChange={setMoreOptionsOpen} open={moreOptionsOpen}>
             <CollapsibleTrigger asChild>
               <Button
+                className="h-auto gap-1.5 px-0 text-muted-foreground text-sm hover:bg-transparent hover:text-foreground"
                 type="button"
                 variant="ghost"
-                className="h-auto gap-1.5 px-0 text-sm text-muted-foreground hover:bg-transparent hover:text-foreground"
               >
                 <ChevronsUpDown className="size-4" />
                 More options
@@ -290,9 +307,9 @@ export function EventForm({ event }: EventFormProps) {
                 <Label htmlFor="locationDetails">Location Details</Label>
                 <Input
                   id="locationDetails"
+                  onChange={(e) => setLocationDetails(e.target.value)}
                   placeholder="Room 101, 2nd floor"
                   value={locationDetails}
-                  onChange={(e) => setLocationDetails(e.target.value)}
                 />
               </div>
 
@@ -300,10 +317,10 @@ export function EventForm({ event }: EventFormProps) {
                 <div className="space-y-2">
                   <Label htmlFor="type">Event Type</Label>
                   <Select
-                    value={type}
                     onValueChange={(v) =>
                       setType(v as "in_person" | "virtual" | "hybrid")
                     }
+                    value={type}
                   >
                     <SelectTrigger id="type">
                       <SelectValue />
@@ -319,10 +336,10 @@ export function EventForm({ event }: EventFormProps) {
                 <div className="space-y-2">
                   <Label htmlFor="visibility">Visibility</Label>
                   <Select
-                    value={visibility}
                     onValueChange={(v) =>
                       setVisibility(v as "public" | "private")
                     }
+                    value={visibility}
                   >
                     <SelectTrigger id="visibility">
                       <SelectValue />
@@ -338,19 +355,19 @@ export function EventForm({ event }: EventFormProps) {
                   <Label htmlFor="capacity">Capacity</Label>
                   <Input
                     id="capacity"
-                    type="number"
                     min={1}
-                    placeholder="Unlimited"
-                    value={capacity}
                     onChange={(e) => setCapacity(e.target.value)}
+                    placeholder="Unlimited"
+                    type="number"
+                    value={capacity}
                   />
                 </div>
               </div>
 
               <div className="flex items-center space-x-2">
                 <Switch
-                  id="requiresApproval"
                   checked={requiresApproval}
+                  id="requiresApproval"
                   onCheckedChange={setRequiresApproval}
                 />
                 <Label htmlFor="requiresApproval">
@@ -361,17 +378,13 @@ export function EventForm({ event }: EventFormProps) {
           </Collapsible>
 
           <div className="flex gap-3">
-            <Button type="submit" disabled={loading}>
-              {loading
-                ? "Saving..."
-                : isEditing
-                  ? "Update Event"
-                  : "Create Event"}
+            <Button disabled={loading} type="submit">
+              {submitButtonLabel}
             </Button>
             <Button
+              onClick={() => router.back()}
               type="button"
               variant="outline"
-              onClick={() => router.back()}
             >
               Cancel
             </Button>

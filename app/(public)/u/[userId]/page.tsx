@@ -12,10 +12,12 @@ export async function generateMetadata({
 }) {
   const { userId } = await params;
   const profile = await db.query.user.findFirst({
-    where: eq(user.id, userId),
     columns: { name: true },
+    where: eq(user.id, userId),
   });
-  if (!profile) return { title: "User Not Found" };
+  if (!profile) {
+    return { title: "User Not Found" };
+  }
   return { title: `${profile.name} - OpenLuma` };
 }
 
@@ -28,27 +30,29 @@ export default async function PublicProfilePage({
 
   const [profile, hostedEvents] = await Promise.all([
     db.query.user.findFirst({
-      where: eq(user.id, userId),
       columns: {
-        id: true,
-        name: true,
-        image: true,
         bio: true,
         createdAt: true,
+        id: true,
+        image: true,
+        name: true,
       },
+      where: eq(user.id, userId),
     }),
     db.query.events.findMany({
+      limit: 12,
+      orderBy: [desc(events.startTime)],
       where: and(eq(events.hostId, userId), eq(events.visibility, "public")),
       with: {
-        host: { columns: { id: true, name: true, image: true } },
+        host: { columns: { id: true, image: true, name: true } },
         rsvps: { columns: { id: true } },
       },
-      orderBy: [desc(events.startTime)],
-      limit: 12,
     }),
   ]);
 
-  if (!profile) notFound();
+  if (!profile) {
+    notFound();
+  }
 
   const initials = profile.name
     .split(" ")
@@ -58,17 +62,17 @@ export default async function PublicProfilePage({
     .slice(0, 2);
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 sm:px-6 lg:px-8 py-12">
-      <div className="flex flex-col items-center text-center mb-12">
-        <Avatar className="h-24 w-24 mb-4">
-          <AvatarImage src={profile.image ?? undefined} alt={profile.name} />
+    <div className="mx-auto w-full max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
+      <div className="mb-12 flex flex-col items-center text-center">
+        <Avatar className="mb-4 h-24 w-24">
+          <AvatarImage alt={profile.name} src={profile.image ?? undefined} />
           <AvatarFallback className="text-2xl">{initials}</AvatarFallback>
         </Avatar>
-        <h1 className="text-3xl font-bold">{profile.name}</h1>
-        {profile.bio && (
+        <h1 className="font-bold text-3xl">{profile.name}</h1>
+        {profile.bio ? (
           <p className="mt-2 max-w-md text-muted-foreground">{profile.bio}</p>
-        )}
-        <p className="mt-1 text-sm text-muted-foreground">
+        ) : null}
+        <p className="mt-1 text-muted-foreground text-sm">
           Member since{" "}
           {new Date(profile.createdAt).toLocaleDateString("en-US", {
             month: "long",
@@ -78,22 +82,22 @@ export default async function PublicProfilePage({
       </div>
 
       <div>
-        <h2 className="text-xl font-semibold mb-6">
+        <h2 className="mb-6 font-semibold text-xl">
           Events ({hostedEvents.length})
         </h2>
         {hostedEvents.length === 0 ? (
-          <p className="text-center text-muted-foreground py-8">
+          <p className="py-8 text-center text-muted-foreground">
             No public events yet.
           </p>
         ) : (
           <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {hostedEvents.map((event) => (
               <EventCard
-                key={event.id}
                 event={{
                   ...event,
                   _count: { rsvps: event.rsvps.length },
                 }}
+                key={event.id}
               />
             ))}
           </div>

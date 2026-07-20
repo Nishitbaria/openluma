@@ -2,10 +2,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function EventLoading() {
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 sm:px-6 lg:px-8 py-12">
-      <Skeleton className="aspect-video w-full rounded-xl mb-8" />
+    <div className="mx-auto w-full max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
+      <Skeleton className="mb-8 aspect-video w-full rounded-xl" />
 
-      <div className="flex items-center gap-2 mb-4">
+      <div className="mb-4 flex items-center gap-2">
         <Skeleton className="h-5 w-16 rounded-full" />
         <Skeleton className="h-5 w-20 rounded-full" />
       </div>
@@ -16,9 +16,9 @@ export default function EventLoading() {
         <Skeleton className="h-4 w-40" />
       </div>
 
-      <div className="grid gap-8 md:grid-cols-3 mt-8 items-start">
-        <div className="md:col-span-2 space-y-6">
-          <div className="rounded-lg border p-6 space-y-4">
+      <div className="mt-8 grid items-start gap-8 md:grid-cols-3">
+        <div className="space-y-6 md:col-span-2">
+          <div className="space-y-4 rounded-lg border p-6">
             <div className="flex items-center gap-3">
               <Skeleton className="h-5 w-5 rounded-full" />
               <div className="space-y-2">
@@ -39,7 +39,7 @@ export default function EventLoading() {
             </div>
           </div>
 
-          <div className="rounded-lg border p-6 space-y-3">
+          <div className="space-y-3 rounded-lg border p-6">
             <Skeleton className="h-5 w-40" />
             <Skeleton className="h-4 w-full" />
             <Skeleton className="h-4 w-full" />
@@ -48,7 +48,7 @@ export default function EventLoading() {
         </div>
 
         <div className="space-y-4">
-          <div className="rounded-lg border p-6 space-y-4">
+          <div className="space-y-4 rounded-lg border p-6">
             <Skeleton className="h-9 w-full rounded-md" />
             <Skeleton className="h-9 w-full rounded-md" />
           </div>

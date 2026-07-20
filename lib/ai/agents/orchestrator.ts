@@ -13,7 +13,6 @@ export function createOrchestrator(userId: string) {
 
   return new ToolLoopAgent({
     id: "orchestrator",
-    model,
     instructions: `You are the OpenLuma AI Assistant — an intelligent orchestrator that delegates tasks to specialized sub-agents.
 
 ## Your Role
@@ -42,39 +41,39 @@ For these, first get the event details from the user (eventId and title), then c
 - For other responses (errors, questions, confirmations): respond conversationally.
 - If a risky action is denied by the user, acknowledge it and do NOT retry the same tool.
 - Keep responses SHORT (1-2 sentences max when artifacts are present).`,
+    model,
+    stopWhen: isStepCount(5),
+    toolApproval: {
+      deleteEvent: "user-approval",
+      sendInvitation: "user-approval",
+    },
     tools: {
       delegateToEventAgent: tool({
-        description: `Delegate an event-related task to the Event Agent. Use this for ANY request about creating, editing, deleting, searching events, managing RSVPs, viewing attendees, or sending invitations.`,
-        inputSchema: z.object({
-          prompt: z
-            .string()
-            .describe(
-              "A clear, specific prompt describing what the Event Agent should do. Include all relevant details from the user's message.",
-            ),
-        }),
+        description:
+          "Delegate an event-related task to the Event Agent. Use this for ANY request about creating, editing, deleting, searching events, managing RSVPs, viewing attendees, or sending invitations.",
         execute: async ({ prompt }, { abortSignal }) => {
           try {
             const result = await eventAgent.generate({
-              messages: [{ role: "user", content: prompt }],
               abortSignal,
+              messages: [{ content: prompt, role: "user" }],
             });
             const artifacts: Array<{ type: string; data: unknown }> = [];
             for (const step of result.steps) {
               for (const tr of step.toolResults) {
                 const res = tr.output as Record<string, unknown> | undefined;
                 if (res?.success && res.event) {
-                  artifacts.push({ type: "event-created", data: res.event });
+                  artifacts.push({ data: res.event, type: "event-created" });
                 }
                 if (
                   res?.events &&
                   Array.isArray(res.events) &&
                   res.events.length > 0
                 ) {
-                  artifacts.push({ type: "event-list", data: res.events });
+                  artifacts.push({ data: res.events, type: "event-list" });
                 }
               }
             }
-            return { agentId: "event-agent", response: result.text, artifacts };
+            return { agentId: "event-agent", artifacts, response: result.text };
           } catch (error) {
             return {
               agentId: "event-agent",
@@ -82,6 +81,13 @@ For these, first get the event details from the user (eventId and title), then c
             };
           }
         },
+        inputSchema: z.object({
+          prompt: z
+            .string()
+            .describe(
+              "A clear, specific prompt describing what the Event Agent should do. Include all relevant details from the user's message."
+            ),
+        }),
         toModelOutput: ({ output }) => ({
           type: "text" as const,
           value: output?.response ?? output?.error ?? "Task completed.",
@@ -91,64 +97,67 @@ For these, first get the event details from the user (eventId and title), then c
       deleteEvent: tool({
         description:
           "Delete an event permanently. Requires explicit user approval before executing.",
+        execute: async ({ eventId }) => {
+          const event = await db.query.events.findFirst({
+            where: eq(events.id, eventId),
+          });
+          if (!event) {
+            return { error: "Event not found" };
+          }
+          if (event.hostId !== userId) {
+            return { error: "Not authorized" };
+          }
+          await db.delete(events).where(eq(events.id, eventId));
+          return {
+            message: `Event "${event.title}" deleted successfully`,
+            success: true,
+          };
+        },
         inputSchema: z.object({
           eventId: z.string().describe("The event ID to delete"),
           eventTitle: z
             .string()
             .describe("The event title shown in the confirmation prompt"),
         }),
-        execute: async ({ eventId }) => {
-          const event = await db.query.events.findFirst({
-            where: eq(events.id, eventId),
-          });
-          if (!event) return { error: "Event not found" };
-          if (event.hostId !== userId) return { error: "Not authorized" };
-          await db.delete(events).where(eq(events.id, eventId));
-          return {
-            success: true,
-            message: `Event "${event.title}" deleted successfully`,
-          };
-        },
       }),
 
       sendInvitation: tool({
         description:
           "Send an email invitation to someone for an event. Requires explicit user approval before sending.",
+        execute: async ({ eventId, email }) => {
+          const event = await db.query.events.findFirst({
+            where: eq(events.id, eventId),
+          });
+          if (!event) {
+            return { error: "Event not found" };
+          }
+          if (event.hostId !== userId) {
+            return { error: "Not authorized" };
+          }
+          const token = nanoid(32);
+          const [invitation] = await db
+            .insert(invitations)
+            .values({
+              email,
+              eventId,
+              expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+              invitedBy: userId,
+              token,
+            })
+            .returning();
+          await sendInvitationEmail(email, event.title, token);
+          return { email, invitationId: invitation.id, success: true };
+        },
         inputSchema: z.object({
-          eventId: z.string().describe("The event ID"),
           email: z.string().describe("Email address to invite"),
+          eventId: z.string().describe("The event ID"),
           eventTitle: z
             .string()
             .optional()
             .describe("The event title shown in the confirmation prompt"),
         }),
-        execute: async ({ eventId, email }) => {
-          const event = await db.query.events.findFirst({
-            where: eq(events.id, eventId),
-          });
-          if (!event) return { error: "Event not found" };
-          if (event.hostId !== userId) return { error: "Not authorized" };
-          const token = nanoid(32);
-          const [invitation] = await db
-            .insert(invitations)
-            .values({
-              eventId,
-              email,
-              token,
-              invitedBy: userId,
-              expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-            })
-            .returning();
-          await sendInvitationEmail(email, event.title, token);
-          return { success: true, email, invitationId: invitation.id };
-        },
       }),
     },
-    toolApproval: {
-      deleteEvent: "user-approval",
-      sendInvitation: "user-approval",
-    },
-    stopWhen: isStepCount(5),
   });
 }
 

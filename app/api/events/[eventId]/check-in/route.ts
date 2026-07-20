@@ -7,7 +7,7 @@ import { attendeeCheckins, events, rsvps } from "@/lib/db/schema";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ eventId: string }> },
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   const { eventId } = await params;
   const session = await auth.api.getSession({ headers: await headers() });
@@ -16,16 +16,16 @@ export async function POST(
   }
 
   const event = await db.query.events.findFirst({
+    columns: { hostId: true },
     where: eq(events.id, eventId),
     with: { cohosts: { columns: { userId: true } } },
-    columns: { hostId: true },
   });
   if (!event) {
     return Response.json({ message: "Event not found" }, { status: 404 });
   }
   const isHost = event.hostId === session.user.id;
   const isCohost = event.cohosts.some((c) => c.userId === session.user.id);
-  if (!isHost && !isCohost) {
+  if (!(isHost || isCohost)) {
     return Response.json({ message: "Not authorized" }, { status: 403 });
   }
 
@@ -43,28 +43,28 @@ export async function POST(
     db.query.attendeeCheckins.findFirst({
       where: and(
         eq(attendeeCheckins.eventId, eventId),
-        eq(attendeeCheckins.userId, userId),
+        eq(attendeeCheckins.userId, userId)
       ),
     }),
   ]);
 
-  if (!rsvp || rsvp.status !== "approved") {
+  if (rsvp?.status !== "approved") {
     return Response.json(
       { message: "User does not have an approved RSVP" },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
   if (existing) {
-    return Response.json({ message: "Already checked in", checkin: existing });
+    return Response.json({ checkin: existing, message: "Already checked in" });
   }
 
   const [checkin] = await db
     .insert(attendeeCheckins)
     .values({
+      checkedInBy: session.user.id,
       eventId,
       userId,
-      checkedInBy: session.user.id,
     })
     .returning();
 
@@ -73,7 +73,7 @@ export async function POST(
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ eventId: string }> },
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   const { eventId } = await params;
   const session = await auth.api.getSession({ headers: await headers() });
@@ -82,9 +82,9 @@ export async function GET(
   }
 
   const event = await db.query.events.findFirst({
+    columns: { hostId: true, id: true },
     where: eq(events.id, eventId),
     with: { cohosts: { columns: { userId: true } } },
-    columns: { id: true, hostId: true },
   });
 
   if (!event) {
@@ -94,14 +94,14 @@ export async function GET(
   const isHost = event.hostId === session.user.id;
   const isCohost = event.cohosts.some((c) => c.userId === session.user.id);
 
-  if (!isHost && !isCohost) {
+  if (!(isHost || isCohost)) {
     return Response.json({ message: "Not authorized" }, { status: 403 });
   }
 
   const checkins = await db.query.attendeeCheckins.findMany({
     where: eq(attendeeCheckins.eventId, eventId),
     with: {
-      user: { columns: { id: true, name: true, email: true } },
+      user: { columns: { email: true, id: true, name: true } },
     },
   });
 

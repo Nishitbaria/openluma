@@ -8,24 +8,24 @@ import { updateEventSchema } from "@/lib/validators/event";
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ eventId: string }> },
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   const { eventId } = await params;
 
   const event = await db.query.events.findFirst({
     where: eq(events.id, eventId),
     with: {
-      host: { columns: { id: true, name: true, image: true, bio: true } },
       category: true,
-      tags: true,
+      cohosts: {
+        with: {
+          user: { columns: { id: true, image: true, name: true } },
+        },
+      },
+      host: { columns: { bio: true, id: true, image: true, name: true } },
       rsvps: {
         columns: { id: true, status: true },
       },
-      cohosts: {
-        with: {
-          user: { columns: { id: true, name: true, image: true } },
-        },
-      },
+      tags: true,
     },
   });
 
@@ -43,29 +43,29 @@ export async function GET(
     let hasApprovedRsvp = false;
     if (userId) {
       const userRsvp = await db.query.rsvps.findFirst({
-        where: and(eq(rsvps.eventId, eventId), eq(rsvps.userId, userId)),
         columns: { status: true },
+        where: and(eq(rsvps.eventId, eventId), eq(rsvps.userId, userId)),
       });
       hasApprovedRsvp = userRsvp?.status === "approved";
     }
 
-    if (!isHost && !isCohost && !hasApprovedRsvp) {
+    if (!(isHost || isCohost || hasApprovedRsvp)) {
       return Response.json({ message: "Not authorized" }, { status: 403 });
     }
   }
 
   const rsvpCounts = {
-    total: event.rsvps.length,
     approved: event.rsvps.filter((r) => r.status === "approved").length,
     pending: event.rsvps.filter((r) => r.status === "pending").length,
+    total: event.rsvps.length,
   };
 
-  return Response.json({ ...event, rsvps: undefined, _count: rsvpCounts });
+  return Response.json({ ...event, _count: rsvpCounts, rsvps: undefined });
 }
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: Promise<{ eventId: string }> },
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   const { eventId } = await params;
   const session = await auth.api.getSession({ headers: await headers() });
@@ -85,7 +85,7 @@ export async function PUT(
   const isHost = event.hostId === session.user.id;
   const isCohost = event.cohosts.some((c) => c.userId === session.user.id);
 
-  if (!isHost && !isCohost) {
+  if (!(isHost || isCohost)) {
     return Response.json({ message: "Not authorized" }, { status: 403 });
   }
 
@@ -94,8 +94,8 @@ export async function PUT(
 
   if (!parsed.success) {
     return Response.json(
-      { message: "Invalid data", errors: parsed.error.issues },
-      { status: 400 },
+      { errors: parsed.error.issues, message: "Invalid data" },
+      { status: 400 }
     );
   }
 
@@ -103,13 +103,13 @@ export async function PUT(
 
   if (slug) {
     const existing = await db.query.events.findFirst({
-      where: and(eq(events.slug, slug), ne(events.id, eventId)),
       columns: { id: true },
+      where: and(eq(events.slug, slug), ne(events.id, eventId)),
     });
     if (existing) {
       return Response.json(
         { message: "This slug is already taken" },
-        { status: 409 },
+        { status: 409 }
       );
     }
   }
@@ -119,8 +119,12 @@ export async function PUT(
     ...(slug ? { slug } : {}),
     updatedAt: new Date(),
   };
-  if (updateData.startTime) updates.startTime = new Date(updateData.startTime);
-  if (updateData.endTime) updates.endTime = new Date(updateData.endTime);
+  if (updateData.startTime) {
+    updates.startTime = new Date(updateData.startTime);
+  }
+  if (updateData.endTime) {
+    updates.endTime = new Date(updateData.endTime);
+  }
 
   const [updated] = await db
     .update(events)
@@ -133,7 +137,7 @@ export async function PUT(
 
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: Promise<{ eventId: string }> },
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   const { eventId } = await params;
   const session = await auth.api.getSession({ headers: await headers() });
@@ -152,7 +156,7 @@ export async function DELETE(
   if (event.hostId !== session.user.id) {
     return Response.json(
       { message: "Only the host can delete an event" },
-      { status: 403 },
+      { status: 403 }
     );
   }
 

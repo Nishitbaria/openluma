@@ -10,7 +10,9 @@ import { events } from "@/lib/db/schema";
 
 export async function deleteEventAction(eventId: string) {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) throw new Error("Unauthorized");
+  if (!session?.user) {
+    throw new Error("Unauthorized");
+  }
 
   const event = await db.query.events.findFirst({
     where: eq(events.id, eventId),

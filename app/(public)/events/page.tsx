@@ -20,10 +20,14 @@ function dayLabel(date: Date, timezone: string) {
   const tomorrowKey = formatInTimeZone(
     new Date(now.getTime() + 24 * 60 * 60 * 1000),
     timezone,
-    "yyyy-MM-dd",
+    "yyyy-MM-dd"
   );
-  if (dateKey === todayKey) return "Today";
-  if (dateKey === tomorrowKey) return "Tomorrow";
+  if (dateKey === todayKey) {
+    return "Today";
+  }
+  if (dateKey === tomorrowKey) {
+    return "Tomorrow";
+  }
   return formatInTimeZone(date, timezone, "EEEE, MMMM d");
 }
 
@@ -45,18 +49,18 @@ export default async function PublicEventsPage({
 
   if (params.type && params.type !== "all") {
     conditions.push(
-      eq(events.type, params.type as "in_person" | "virtual" | "hybrid"),
+      eq(events.type, params.type as "in_person" | "virtual" | "hybrid")
     );
   }
 
   const publicEvents = await db.query.events.findMany({
+    limit: 30,
+    orderBy: [asc(events.startTime)],
     where: and(...conditions),
     with: {
-      host: { columns: { id: true, name: true, image: true } },
+      host: { columns: { id: true, image: true, name: true } },
       rsvps: { columns: { id: true } },
     },
-    orderBy: [asc(events.startTime)],
-    limit: 30,
   });
 
   const groupsByKey = new Map<
@@ -76,9 +80,9 @@ export default async function PublicEventsPage({
       existing.items.push(event);
     } else {
       groupsByKey.set(key, {
+        items: [event],
         key,
         label: dayLabel(startTime, event.timezone),
-        items: [event],
       });
     }
   }
@@ -86,9 +90,9 @@ export default async function PublicEventsPage({
   const groups = [...groupsByKey.values()];
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-12">
+    <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">Discover Events</h1>
+        <h1 className="font-bold text-3xl tracking-tight">Discover Events</h1>
         <p className="text-muted-foreground">
           Browse upcoming public events in the community.
         </p>
@@ -116,17 +120,17 @@ export default async function PublicEventsPage({
         <div className="space-y-10">
           {groups.map((group) => (
             <div key={group.key}>
-              <h2 className="mb-4 text-xl font-semibold tracking-tight">
+              <h2 className="mb-4 font-semibold text-xl tracking-tight">
                 {group.label}
               </h2>
               <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {group.items.map((event) => (
                   <EventCard
-                    key={event.id}
                     event={{
                       ...event,
                       _count: { rsvps: event.rsvps.length },
                     }}
+                    key={event.id}
                   />
                 ))}
               </div>
