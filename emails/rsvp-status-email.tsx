@@ -15,19 +15,19 @@ type RsvpStatus =
   | (string & {});
 
 interface EventInfo {
-  startTime: Date;
   endTime?: Date | null;
   location?: string | null;
+  startTime: Date;
   timezone?: string;
 }
 
 interface RsvpStatusEmailProps {
-  eventTitle: string;
-  status: RsvpStatus;
-  eventUrl: string;
-  ticketUrl?: string;
-  event?: EventInfo;
   customMessage?: string;
+  event?: EventInfo;
+  eventTitle: string;
+  eventUrl: string;
+  status: RsvpStatus;
+  ticketUrl?: string;
 }
 
 const config: Record<
@@ -40,28 +40,28 @@ const config: Record<
   }
 > = {
   approved: {
+    body: "Your RSVP has been approved — you're all set to attend this event.",
     header: "You're attending!",
     pill: "Confirmed",
     tone: { bg: "#dcfce7", text: "#166534" },
-    body: "Your RSVP has been approved — you're all set to attend this event.",
-  },
-  waitlisted: {
-    header: "You're on the waitlist",
-    pill: "Waitlisted",
-    tone: { bg: "#fef3c7", text: "#92400e" },
-    body: "This event is currently at capacity. You've been placed on the waitlist and will be promoted automatically if a spot opens up. We'll email you the moment your spot is confirmed.",
   },
   pending: {
+    body: "Your RSVP has been received and is waiting for the host to review it. You'll get a confirmation email once your registration is approved.",
     header: "RSVP received",
     pill: "Pending",
     tone: { bg: "#f4f4f5", text: "#3f3f46" },
-    body: "Your RSVP has been received and is waiting for the host to review it. You'll get a confirmation email once your registration is approved.",
   },
   rejected: {
+    body: "Unfortunately the host was unable to approve your registration for this event. If you believe this was a mistake, please reach out to the event organizer directly.",
     header: "RSVP update",
     pill: "Not approved",
     tone: { bg: "#fee2e2", text: "#991b1b" },
-    body: "Unfortunately the host was unable to approve your registration for this event. If you believe this was a mistake, please reach out to the event organizer directly.",
+  },
+  waitlisted: {
+    body: "This event is currently at capacity. You've been placed on the waitlist and will be promoted automatically if a spot opens up. We'll email you the moment your spot is confirmed.",
+    header: "You're on the waitlist",
+    pill: "Waitlisted",
+    tone: { bg: "#fef3c7", text: "#92400e" },
   },
 };
 
@@ -74,10 +74,10 @@ export default function RsvpStatusEmail({
   customMessage,
 }: RsvpStatusEmailProps) {
   const c = config[status] ?? {
+    body: `Your RSVP status for this event has been updated to ${status}.`,
     header: "RSVP update",
     pill: status,
     tone: { bg: "#f4f4f5", text: "#3f3f46" },
-    body: `Your RSVP status for this event has been updated to ${status}.`,
   };
 
   const isApproved = status === "approved";
@@ -87,20 +87,20 @@ export default function RsvpStatusEmail({
 
   return (
     <EmailLayout preview={preview}>
-      <CardHeader title={c.header} subtitle={eventTitle} />
+      <CardHeader subtitle={eventTitle} title={c.header} />
 
       <Section className="px-[32px] py-[28px]">
         <Section className="mb-[16px]">
           <StatusPill label={c.pill} tone={c.tone} />
         </Section>
 
-        <Text className="m-0 text-[15px] leading-[24px] text-[#3f3f46]">
+        <Text className="m-0 text-[#3f3f46] text-[15px] leading-[24px]">
           {c.body}
         </Text>
 
         {customMessage ? (
-          <Section className="mt-[16px] rounded-[10px] border-none border-l-[3px] border-solid border-[#a1a1aa] bg-[#f4f4f5] px-[16px] py-[12px]">
-            <Text className="m-0 whitespace-pre-wrap text-[14px] leading-[22px] text-[#3f3f46]">
+          <Section className="mt-[16px] rounded-[10px] border-[#a1a1aa] border-l-[3px] border-solid border-none bg-[#f4f4f5] px-[16px] py-[12px]">
+            <Text className="m-0 whitespace-pre-wrap text-[#3f3f46] text-[14px] leading-[22px]">
               {customMessage}
             </Text>
           </Section>
@@ -109,9 +109,9 @@ export default function RsvpStatusEmail({
         {event ? (
           <Section className="mt-[20px]">
             <EventDetails
-              startTime={event.startTime}
               endTime={event.endTime}
               location={event.location}
+              startTime={event.startTime}
               timezone={event.timezone}
             />
           </Section>
@@ -121,21 +121,21 @@ export default function RsvpStatusEmail({
           <>
             <Section className="mt-[24px]">
               <Button
+                className="box-border block w-full rounded-[10px] bg-[#18181b] px-[24px] py-[14px] text-center font-semibold text-[15px] text-white no-underline"
                 href={ticketUrl}
-                className="box-border block w-full rounded-[10px] bg-[#18181b] px-[24px] py-[14px] text-center text-[15px] font-semibold text-white no-underline"
               >
                 View your ticket
               </Button>
             </Section>
-            <Text className="m-0 mt-[12px] text-center text-[13px] leading-[20px] text-[#71717a]">
+            <Text className="m-0 mt-[12px] text-center text-[#71717a] text-[13px] leading-[20px]">
               Your ticket includes a QR code — show it at the door for check-in.
             </Text>
           </>
         ) : (
           <Section className="mt-[24px]">
             <Button
+              className="box-border block w-full rounded-[10px] bg-[#18181b] px-[24px] py-[14px] text-center font-semibold text-[15px] text-white no-underline"
               href={eventUrl}
-              className="box-border block w-full rounded-[10px] bg-[#18181b] px-[24px] py-[14px] text-center text-[15px] font-semibold text-white no-underline"
             >
               View event
             </Button>
@@ -146,8 +146,8 @@ export default function RsvpStatusEmail({
 
         <Section className="text-center">
           <Link
+            className="text-[#71717a] text-[13px] underline"
             href={eventUrl}
-            className="text-[13px] text-[#71717a] underline"
           >
             View event details
           </Link>
@@ -155,8 +155,8 @@ export default function RsvpStatusEmail({
             <>
               <span className="mx-[8px] text-[#d4d4d8]">·</span>
               <Link
+                className="text-[#71717a] text-[13px] underline"
                 href={ticketUrl}
-                className="text-[13px] text-[#71717a] underline"
               >
                 Download ticket
               </Link>
@@ -165,7 +165,7 @@ export default function RsvpStatusEmail({
         </Section>
 
         {isApproved ? (
-          <Text className="m-0 mt-[16px] text-center text-[12px] leading-[18px] text-[#a1a1aa]">
+          <Text className="m-0 mt-[16px] text-center text-[#a1a1aa] text-[12px] leading-[18px]">
             A calendar invite (.ics) is attached to this email.
           </Text>
         ) : null}
@@ -175,17 +175,17 @@ export default function RsvpStatusEmail({
 }
 
 RsvpStatusEmail.PreviewProps = {
-  eventTitle: "Summer Product Launch",
-  status: "approved",
-  eventUrl: "https://openluma.vercel.app/e/summer-launch",
-  ticketUrl: "https://openluma.vercel.app/ticket/evt_123",
+  customMessage: "Can't wait to see you there! Doors open at 5:30pm.",
   event: {
-    startTime: new Date("2026-08-14T18:00:00Z"),
     endTime: new Date("2026-08-14T21:00:00Z"),
     location: "The Grand Hall, San Francisco",
+    startTime: new Date("2026-08-14T18:00:00Z"),
     timezone: "America/Los_Angeles",
   },
-  customMessage: "Can't wait to see you there! Doors open at 5:30pm.",
+  eventTitle: "Summer Product Launch",
+  eventUrl: "https://openluma.vercel.app/e/summer-launch",
+  status: "approved",
+  ticketUrl: "https://openluma.vercel.app/ticket/evt_123",
 } satisfies RsvpStatusEmailProps;
 
 export { RsvpStatusEmail };

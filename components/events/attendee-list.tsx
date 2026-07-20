@@ -38,12 +38,12 @@ import {
 } from "@/components/ui/table";
 
 interface TimelineEntry {
-  id: string;
-  type: string;
-  fromStatus: string | null;
-  toStatus: string | null;
   changedByName: string | null;
   createdAt: string;
+  fromStatus: string | null;
+  id: string;
+  toStatus: string | null;
+  type: string;
 }
 
 interface Question {
@@ -53,11 +53,11 @@ interface Question {
 }
 
 interface Attendee {
-  id: string;
-  status: "pending" | "approved" | "rejected" | "waitlisted";
-  message: string | null;
-  customAnswers: Record<string, string | boolean> | null;
   createdAt: string;
+  customAnswers: Record<string, string | boolean> | null;
+  id: string;
+  message: string | null;
+  status: "pending" | "approved" | "rejected" | "waitlisted";
   timeline: TimelineEntry[];
   user: {
     id: string;
@@ -69,36 +69,38 @@ interface Attendee {
 
 interface Cohost {
   id: string;
-  userId: string;
   user: {
     id: string;
     name: string;
     image: string | null;
     email?: string;
   };
+  userId: string;
 }
 
 interface Invitation {
-  id: string;
-  email: string;
-  status: "pending" | "accepted" | "declined" | "expired";
-  role: "attendee" | "cohost";
   createdAt: string;
+  email: string;
   expiresAt: string | null;
+  id: string;
+  role: "attendee" | "cohost";
+  status: "pending" | "accepted" | "declined" | "expired";
 }
 
 const STATUS_LABELS: Record<string, string> = {
   approved: "Going",
   pending: "Pending",
-  waitlisted: "Waitlist",
   rejected: "Declined",
+  waitlisted: "Waitlist",
 };
 
 function statusBadgeClass(status: string) {
-  if (status === "approved")
+  if (status === "approved") {
     return "bg-primary/10 text-primary border-primary/20";
-  if (status === "rejected")
+  }
+  if (status === "rejected") {
     return "bg-destructive/10 text-destructive border-destructive/20";
+  }
   return "bg-muted text-muted-foreground";
 }
 
@@ -129,11 +131,13 @@ export function AttendeeList({
     setLoading(invitationId);
     try {
       const res = await fetch(`/api/events/${eventId}/invitations`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ invitationId }),
+        headers: { "Content-Type": "application/json" },
+        method: "DELETE",
       });
-      if (!res.ok) throw new Error("Failed");
+      if (!res.ok) {
+        throw new Error("Failed");
+      }
       toast.success("Invitation revoked");
       router.refresh();
     } catch {
@@ -147,11 +151,13 @@ export function AttendeeList({
     setLoading(userId);
     try {
       const res = await fetch(`/api/events/${eventId}/cohosts`, {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId }),
+        headers: { "Content-Type": "application/json" },
+        method: "DELETE",
       });
-      if (!res.ok) throw new Error("Failed");
+      if (!res.ok) {
+        throw new Error("Failed");
+      }
       toast.success("Co-host removed");
       router.refresh();
     } catch {
@@ -168,11 +174,13 @@ export function AttendeeList({
       .join(",");
     const header = `Name,Email,Status,Role,Date${questions.length > 0 ? `,${questionHeaders}` : ""}`;
 
-    const attendeeAnswers = (a: Attendee) =>
+    const attendeeAnswers = (entry: Attendee) =>
       questions
         .map((q) => {
-          const ans = a.customAnswers?.[q.id];
-          if (ans === undefined || ans === null) return `""`;
+          const ans = entry.customAnswers?.[q.id];
+          if (ans === undefined || ans === null) {
+            return `""`;
+          }
           return `"${String(ans).replace(/"/g, '""')}"`;
         })
         .join(",");
@@ -181,11 +189,11 @@ export function AttendeeList({
       header,
       ...cohosts.map(
         (c) =>
-          `"${c.user.name}","${c.user.email ?? ""}","active","Co-host","—"${questions.length > 0 ? `,${questions.map(() => `""`).join(",")}` : ""}`,
+          `"${c.user.name}","${c.user.email ?? ""}","active","Co-host","—"${questions.length > 0 ? `,${questions.map(() => `""`).join(",")}` : ""}`
       ),
       ...attendees.map(
-        (a) =>
-          `"${a.user.name}","${a.user.email}","${a.status}","Attendee","${new Date(a.createdAt).toLocaleDateString()}"${questions.length > 0 ? `,${attendeeAnswers(a)}` : ""}`,
+        (entry) =>
+          `"${entry.user.name}","${entry.user.email}","${entry.status}","Attendee","${new Date(entry.createdAt).toLocaleDateString()}"${questions.length > 0 ? `,${attendeeAnswers(entry)}` : ""}`
       ),
     ].join("\n");
 
@@ -202,20 +210,24 @@ export function AttendeeList({
   const filtered = useMemo(() => {
     const searchLower = search.toLowerCase();
     const list = attendees.filter((a) => {
-      if (filter !== "all" && a.status !== filter) return false;
+      if (filter !== "all" && a.status !== filter) {
+        return false;
+      }
       if (
         search &&
         !a.user.name.toLowerCase().includes(searchLower) &&
         !a.user.email.toLowerCase().includes(searchLower)
-      )
+      ) {
         return false;
+      }
       return true;
     });
 
-    if (sort === "name")
+    if (sort === "name") {
       list.sort((a, b) => a.user.name.localeCompare(b.user.name));
-    else if (sort === "status")
+    } else if (sort === "status") {
       list.sort((a, b) => a.status.localeCompare(b.status));
+    }
     // default: time — already sorted by createdAt desc from server
 
     return list;
@@ -225,31 +237,36 @@ export function AttendeeList({
     const pending: Invitation[] = [];
     const other: Invitation[] = [];
     for (const i of invitations) {
-      if (i.status === "accepted") continue;
-      if (i.status === "pending") pending.push(i);
-      else other.push(i);
+      if (i.status === "accepted") {
+        continue;
+      }
+      if (i.status === "pending") {
+        pending.push(i);
+      } else {
+        other.push(i);
+      }
     }
-    return { pendingInvitations: pending, otherInvitations: other };
+    return { otherInvitations: other, pendingInvitations: pending };
   }, [invitations]);
 
   const visibleInvitations = [...pendingInvitations, ...otherInvitations];
 
-  const selectedAttendee = selectedIdx !== null ? filtered[selectedIdx] : null;
+  const selectedAttendee = selectedIdx === null ? null : filtered[selectedIdx];
 
   return (
     <div className="space-y-6">
       {/* Co-hosts Section */}
       {cohosts.length > 0 && (
         <div className="space-y-2">
-          <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-            <Crown className="inline h-4 w-4 mr-1 -mt-0.5" />
+          <h3 className="font-medium text-muted-foreground text-sm uppercase tracking-wide">
+            <Crown className="-mt-0.5 mr-1 inline h-4 w-4" />
             Co-hosts ({cohosts.length})
           </h3>
           <div className="divide-y rounded-lg border">
             {cohosts.map((cohost) => (
               <div
-                key={cohost.id}
                 className="flex items-center justify-between px-4 py-3"
+                key={cohost.id}
               >
                 <div className="flex items-center gap-3">
                   <Avatar className="h-8 w-8">
@@ -259,33 +276,33 @@ export function AttendeeList({
                     </AvatarFallback>
                   </Avatar>
                   <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">
+                    <p className="truncate font-medium text-sm">
                       {cohost.user.name}
                     </p>
-                    {cohost.user.email && (
-                      <p className="text-xs text-muted-foreground truncate">
+                    {cohost.user.email ? (
+                      <p className="truncate text-muted-foreground text-xs">
                         {cohost.user.email}
                       </p>
-                    )}
+                    ) : null}
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Badge variant="default" className="text-xs">
+                  <Badge className="text-xs" variant="default">
                     <ShieldCheck className="mr-1 h-3 w-3" />
                     Co-host
                   </Badge>
-                  {isHost && (
+                  {isHost ? (
                     <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 text-xs text-muted-foreground hover:text-destructive"
+                      className="h-7 text-muted-foreground text-xs hover:text-destructive"
                       disabled={loading === cohost.userId}
                       onClick={() => removeCohost(cohost.userId)}
+                      size="sm"
+                      variant="ghost"
                     >
-                      <UserMinus className="h-3.5 w-3.5 mr-1" />
+                      <UserMinus className="mr-1 h-3.5 w-3.5" />
                       Remove
                     </Button>
-                  )}
+                  ) : null}
                 </div>
               </div>
             ))}
@@ -298,12 +315,12 @@ export function AttendeeList({
       {/* Guest List Header */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-base font-semibold">Guest List</h3>
+          <h3 className="font-semibold text-base">Guest List</h3>
           <Button
-            variant="ghost"
-            size="icon"
             className="h-8 w-8"
             onClick={exportCsv}
+            size="icon"
+            variant="ghost"
           >
             <Download className="h-4 w-4" />
           </Button>
@@ -311,19 +328,19 @@ export function AttendeeList({
 
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
+            className="pl-9"
+            onChange={(e) => setSearch(e.target.value)}
             placeholder="Search guests..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
           />
         </div>
 
         {/* Filter + Sort */}
         <div className="flex items-center justify-between gap-2">
-          <Select value={filter} onValueChange={setFilter}>
-            <SelectTrigger className="w-[140px] h-8 text-xs">
+          <Select onValueChange={setFilter} value={filter}>
+            <SelectTrigger className="h-8 w-[140px] text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -335,8 +352,8 @@ export function AttendeeList({
             </SelectContent>
           </Select>
 
-          <Select value={sort} onValueChange={setSort}>
-            <SelectTrigger className="w-[150px] h-8 text-xs">
+          <Select onValueChange={setSort} value={sort}>
+            <SelectTrigger className="h-8 w-[150px] text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -350,12 +367,12 @@ export function AttendeeList({
 
       {/* Guest rows */}
       {filtered.length === 0 ? (
-        <div className="flex flex-col items-center gap-2 py-10 text-center border rounded-lg border-dashed">
+        <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed py-10 text-center">
           <Users className="h-8 w-8 text-muted-foreground/50" />
-          <p className="text-sm font-medium">
+          <p className="font-medium text-sm">
             {attendees.length === 0 ? "No RSVPs yet" : "No matching guests"}
           </p>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             {attendees.length === 0
               ? "Share your event link to start collecting RSVPs."
               : "Try adjusting your search or filter."}
@@ -367,10 +384,10 @@ export function AttendeeList({
           <div className="divide-y rounded-lg border sm:hidden">
             {filtered.map((attendee, idx) => (
               <button
-                key={attendee.id}
-                type="button"
-                onClick={() => setSelectedIdx(idx)}
                 className="flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-muted/50"
+                key={attendee.id}
+                onClick={() => setSelectedIdx(idx)}
+                type="button"
               >
                 <Avatar className="h-8 w-8 flex-shrink-0">
                   <AvatarImage src={attendee.user.image ?? undefined} />
@@ -379,12 +396,12 @@ export function AttendeeList({
                   </AvatarFallback>
                 </Avatar>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium truncate">
+                  <p className="truncate font-medium text-sm">
                     {attendee.user.name}
                   </p>
                 </div>
                 <span
-                  className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium flex-shrink-0 ${statusBadgeClass(attendee.status)}`}
+                  className={`inline-flex flex-shrink-0 items-center rounded-full border px-2 py-0.5 font-medium text-[10px] ${statusBadgeClass(attendee.status)}`}
                 >
                   {STATUS_LABELS[attendee.status] ?? attendee.status}
                 </span>
@@ -406,9 +423,9 @@ export function AttendeeList({
               <TableBody>
                 {filtered.map((attendee, idx) => (
                   <TableRow
+                    className="cursor-pointer"
                     key={attendee.id}
                     onClick={() => setSelectedIdx(idx)}
-                    className="cursor-pointer"
                   >
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -428,7 +445,7 @@ export function AttendeeList({
                     </TableCell>
                     <TableCell>
                       <span
-                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${statusBadgeClass(attendee.status)}`}
+                        className={`inline-flex items-center rounded-full border px-2 py-0.5 font-medium text-[10px] ${statusBadgeClass(attendee.status)}`}
                       >
                         {STATUS_LABELS[attendee.status] ?? attendee.status}
                       </span>
@@ -451,32 +468,34 @@ export function AttendeeList({
 
       {/* Guest detail drawer */}
       <Sheet
-        open={selectedAttendee !== null}
         onOpenChange={(open) => {
-          if (!open) setSelectedIdx(null);
+          if (!open) {
+            setSelectedIdx(null);
+          }
         }}
+        open={selectedAttendee !== null}
       >
         <SheetContent
+          className="w-full overflow-y-auto p-6 sm:max-w-md"
           side="right"
-          className="w-full sm:max-w-md p-6 overflow-y-auto"
         >
-          {selectedAttendee && (
+          {selectedAttendee ? (
             <GuestDrawer
               attendee={selectedAttendee}
-              questions={questions}
               eventId={eventId}
+              hasNext={(selectedIdx ?? 0) < filtered.length - 1}
+              hasPrev={(selectedIdx ?? 0) > 0}
               isHost={isHost}
-              onPrev={() => setSelectedIdx((i) => Math.max(0, (i ?? 0) - 1))}
               onNext={() =>
                 setSelectedIdx((i) =>
-                  Math.min(filtered.length - 1, (i ?? 0) + 1),
+                  Math.min(filtered.length - 1, (i ?? 0) + 1)
                 )
               }
-              hasPrev={(selectedIdx ?? 0) > 0}
-              hasNext={(selectedIdx ?? 0) < filtered.length - 1}
+              onPrev={() => setSelectedIdx((i) => Math.max(0, (i ?? 0) - 1))}
               onStatusChange={() => router.refresh()}
+              questions={questions}
             />
-          )}
+          ) : null}
         </SheetContent>
       </Sheet>
 
@@ -485,85 +504,85 @@ export function AttendeeList({
         <>
           <Separator />
           <div className="space-y-2">
-            <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-              <Mail className="inline h-4 w-4 mr-1 -mt-0.5" />
+            <h3 className="font-medium text-muted-foreground text-sm uppercase tracking-wide">
+              <Mail className="-mt-0.5 mr-1 inline h-4 w-4" />
               Email Invitations ({visibleInvitations.length})
             </h3>
             <div className="divide-y rounded-lg border">
               {pendingInvitations.map((inv) => (
                 <div
-                  key={inv.id}
                   className="flex items-center justify-between px-4 py-3"
+                  key={inv.id}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
                       <Mail className="h-3.5 w-3.5 text-muted-foreground" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">
+                      <p className="truncate font-medium text-sm">
                         {inv.email}
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-muted-foreground text-xs">
                         Invited {format(new Date(inv.createdAt), "MMM d, yyyy")}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <Badge variant="secondary" className="text-xs">
+                    <Badge className="text-xs" variant="secondary">
                       invited
                     </Badge>
                     {inv.role === "cohost" && (
-                      <Badge variant="outline" className="text-xs">
+                      <Badge className="text-xs" variant="outline">
                         <ShieldCheck className="mr-1 h-3 w-3" />
                         Co-host
                       </Badge>
                     )}
-                    {isHost && (
+                    {isHost ? (
                       <Button
-                        size="sm"
-                        variant="ghost"
-                        className="h-7 text-xs text-muted-foreground hover:text-destructive"
+                        className="h-7 text-muted-foreground text-xs hover:text-destructive"
                         disabled={loading === inv.id}
                         onClick={() => revokeInvitation(inv.id)}
+                        size="sm"
+                        variant="ghost"
                       >
-                        <XCircle className="h-3.5 w-3.5 mr-1" />
+                        <XCircle className="mr-1 h-3.5 w-3.5" />
                         Revoke
                       </Button>
-                    )}
+                    ) : null}
                   </div>
                 </div>
               ))}
               {otherInvitations.map((inv) => (
                 <div
-                  key={inv.id}
                   className="flex items-center justify-between px-4 py-3 opacity-60"
+                  key={inv.id}
                 >
                   <div className="flex items-center gap-3">
-                    <div className="h-8 w-8 rounded-full bg-muted flex items-center justify-center">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-muted">
                       <Mail className="h-3.5 w-3.5 text-muted-foreground" />
                     </div>
                     <div className="min-w-0">
-                      <p className="text-sm font-medium truncate">
+                      <p className="truncate font-medium text-sm">
                         {inv.email}
                       </p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-muted-foreground text-xs">
                         Invited {format(new Date(inv.createdAt), "MMM d, yyyy")}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge
+                      className="text-xs"
                       variant={
                         inv.status === "declined" || inv.status === "expired"
                           ? "destructive"
                           : "secondary"
                       }
-                      className="text-xs"
                     >
                       {inv.status}
                     </Badge>
                     {inv.role === "cohost" && (
-                      <Badge variant="outline" className="text-xs">
+                      <Badge className="text-xs" variant="outline">
                         <ShieldCheck className="mr-1 h-3 w-3" />
                         Co-host
                       </Badge>

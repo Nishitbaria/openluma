@@ -17,7 +17,9 @@ function deriveTitle(messages: UIMessage[]): string {
     firstUserText && "text" in firstUserText
       ? firstUserText.text.trim()
       : undefined;
-  if (!text) return "New conversation";
+  if (!text) {
+    return "New conversation";
+  }
   return text.length > 60 ? `${text.slice(0, 60)}…` : text;
 }
 
@@ -45,8 +47,8 @@ export async function POST(req: Request) {
   if (!existing) {
     await db.insert(chatConversations).values({
       id,
-      userId,
       title: deriveTitle(messages),
+      userId,
     });
   }
 
@@ -54,9 +56,6 @@ export async function POST(req: Request) {
 
   return createAgentUIStreamResponse({
     agent: orchestrator,
-    uiMessages: messages,
-    sendReasoning: true,
-    originalMessages: messages,
     generateMessageId: generateId,
     onEnd: async ({ messages: finalMessages }) => {
       // Full resync each turn: tool-approval continuations extend an
@@ -67,13 +66,13 @@ export async function POST(req: Request) {
         // timestamp to "now" on every turn.
         const existingRows = await tx
           .select({
-            id: chatMessages.id,
             createdAt: chatMessages.createdAt,
+            id: chatMessages.id,
           })
           .from(chatMessages)
           .where(eq(chatMessages.conversationId, id));
         const existingCreatedAt = new Map(
-          existingRows.map((row) => [row.id, row.createdAt]),
+          existingRows.map((row) => [row.id, row.createdAt])
         );
 
         await tx
@@ -82,13 +81,13 @@ export async function POST(req: Request) {
         if (finalMessages.length > 0) {
           await tx.insert(chatMessages).values(
             finalMessages.map((message, index) => ({
-              id: message.id,
               conversationId: id,
-              role: message.role,
-              parts: message.parts as Record<string, unknown>[],
-              order: index,
               createdAt: existingCreatedAt.get(message.id) ?? new Date(),
-            })),
+              id: message.id,
+              order: index,
+              parts: message.parts as Record<string, unknown>[],
+              role: message.role,
+            }))
           );
         }
         await tx
@@ -97,5 +96,8 @@ export async function POST(req: Request) {
           .where(eq(chatConversations.id, id));
       });
     },
+    originalMessages: messages,
+    sendReasoning: true,
+    uiMessages: messages,
   });
 }

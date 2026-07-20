@@ -23,14 +23,16 @@ export function InviteForm({ eventId }: { eventId: string }) {
 
   async function handleInvite(e: React.FormEvent) {
     e.preventDefault();
-    if (!email.trim()) return;
+    if (!email.trim()) {
+      return;
+    }
 
     setLoading(true);
     try {
       const res = await fetch(`/api/events/${eventId}/invitations`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, role }),
+        headers: { "Content-Type": "application/json" },
+        method: "POST",
       });
       const data = await res.json();
       if (!res.ok) {
@@ -40,7 +42,7 @@ export function InviteForm({ eventId }: { eventId: string }) {
       toast.success(
         role === "cohost"
           ? `Co-host invitation sent to ${email}`
-          : `Invitation sent to ${email}`,
+          : `Invitation sent to ${email}`
       );
       setEmail("");
       setRole("attendee");
@@ -58,18 +60,18 @@ export function InviteForm({ eventId }: { eventId: string }) {
         <CardTitle className="text-lg">Send Invitation</CardTitle>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleInvite} className="flex gap-2">
+        <form className="flex gap-2" onSubmit={handleInvite}>
           <Input
-            type="email"
-            placeholder="email@example.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
             className="flex-1"
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="email@example.com"
+            required
+            type="email"
+            value={email}
           />
           <Select
-            value={role}
             onValueChange={(v) => setRole(v as "attendee" | "cohost")}
+            value={role}
           >
             <SelectTrigger className="w-[130px]">
               <SelectValue />
@@ -79,7 +81,7 @@ export function InviteForm({ eventId }: { eventId: string }) {
               <SelectItem value="cohost">Co-host</SelectItem>
             </SelectContent>
           </Select>
-          <Button type="submit" disabled={loading}>
+          <Button disabled={loading} type="submit">
             <Mail className="mr-2 h-4 w-4" />
             {loading ? "Sending..." : "Invite"}
           </Button>

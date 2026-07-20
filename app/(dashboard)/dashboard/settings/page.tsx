@@ -31,7 +31,7 @@ export default function SettingsPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+        <h1 className="font-bold text-3xl tracking-tight">Settings</h1>
         <p className="text-muted-foreground">
           Manage your application preferences.
         </p>
@@ -48,9 +48,9 @@ function ThemeSection() {
   const { theme, setTheme } = useTheme();
 
   const themes = [
-    { value: "light", label: "Light", icon: Sun },
-    { value: "dark", label: "Dark", icon: Moon },
-    { value: "system", label: "System", icon: Monitor },
+    { icon: Sun, label: "Light", value: "light" },
+    { icon: Moon, label: "Dark", value: "dark" },
+    { icon: Monitor, label: "System", value: "system" },
   ];
 
   return (
@@ -63,18 +63,18 @@ function ThemeSection() {
         <div className="grid grid-cols-3 gap-3">
           {themes.map((t) => (
             <button
-              key={t.value}
-              type="button"
-              onClick={() => setTheme(t.value)}
               className={cn(
                 "flex flex-col items-center gap-2 rounded-lg border-2 p-4 transition-colors hover:bg-accent",
                 theme === t.value
                   ? "border-primary bg-primary/5"
-                  : "border-transparent",
+                  : "border-transparent"
               )}
+              key={t.value}
+              onClick={() => setTheme(t.value)}
+              type="button"
             >
               <t.icon className="h-6 w-6" />
-              <span className="text-sm font-medium">{t.label}</span>
+              <span className="font-medium text-sm">{t.label}</span>
             </button>
           ))}
         </div>
@@ -135,37 +135,37 @@ function PasswordSection() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
             <Label htmlFor="currentPassword">Current Password</Label>
             <Input
               id="currentPassword"
               name="currentPassword"
-              type="password"
               required
+              type="password"
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="newPassword">New Password</Label>
             <Input
               id="newPassword"
-              name="newPassword"
-              type="password"
-              required
               minLength={8}
+              name="newPassword"
+              required
+              type="password"
             />
           </div>
           <div className="space-y-2">
             <Label htmlFor="confirmPassword">Confirm New Password</Label>
             <Input
               id="confirmPassword"
-              name="confirmPassword"
-              type="password"
-              required
               minLength={8}
+              name="confirmPassword"
+              required
+              type="password"
             />
           </div>
-          <Button type="submit" disabled={loading}>
+          <Button disabled={loading} type="submit">
             {loading ? "Changing..." : "Change Password"}
           </Button>
         </form>
@@ -216,7 +216,7 @@ function DangerZone() {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Dialog open={open} onOpenChange={setOpen}>
+        <Dialog onOpenChange={setOpen} open={open}>
           <DialogTrigger asChild>
             <Button variant="destructive">Delete Account</Button>
           </DialogTrigger>
@@ -233,19 +233,19 @@ function DangerZone() {
                 Type <strong>{userEmail}</strong> to confirm
               </Label>
               <Input
-                value={confirmEmail}
                 onChange={(e) => setConfirmEmail(e.target.value)}
                 placeholder="Enter your email"
+                value={confirmEmail}
               />
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setOpen(false)}>
+              <Button onClick={() => setOpen(false)} variant="outline">
                 Cancel
               </Button>
               <Button
-                variant="destructive"
-                onClick={handleDelete}
                 disabled={loading || confirmEmail !== userEmail}
+                onClick={handleDelete}
+                variant="destructive"
               >
                 {loading ? "Deleting..." : "Delete My Account"}
               </Button>

@@ -10,17 +10,17 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
 interface TicketData {
+  endTime: string | null;
   eventId: string;
   eventSlug: string;
   eventTitle: string;
-  startTime: string;
-  endTime: string | null;
   location: string | null;
-  timezone: string;
-  userName: string;
-  userEmail: string;
-  rsvpId: string;
   qrCode: string;
+  rsvpId: string;
+  startTime: string;
+  timezone: string;
+  userEmail: string;
+  userName: string;
 }
 
 export default function TicketPage() {
@@ -77,7 +77,9 @@ export default function TicketPage() {
   const endTime = ticket.endTime ? new Date(ticket.endTime) : null;
 
   function handleDownload() {
-    if (!ticket) return;
+    if (!ticket) {
+      return;
+    }
     const link = document.createElement("a");
     link.href = ticket.qrCode;
     link.download = `ticket-${ticket.eventTitle.replace(/\s+/g, "-").toLowerCase()}.png`;
@@ -88,7 +90,7 @@ export default function TicketPage() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-muted/30 p-4">
       <div className="w-full max-w-md space-y-4">
         <div className="flex items-center gap-2">
-          <Button asChild variant="ghost" size="sm">
+          <Button asChild size="sm" variant="ghost">
             <Link
               href={
                 ticket?.eventSlug
@@ -104,66 +106,67 @@ export default function TicketPage() {
 
         <Card className="overflow-hidden shadow-xl">
           <div className="bg-primary px-6 py-5 text-center">
-            <p className="text-primary-foreground/70 text-xs font-medium uppercase tracking-wider">
+            <p className="font-medium text-primary-foreground/70 text-xs uppercase tracking-wider">
               OpenLuma Event Ticket
             </p>
-            <h1 className="text-primary-foreground text-2xl font-bold mt-2">
+            <h1 className="mt-2 font-bold text-2xl text-primary-foreground">
               {ticket.eventTitle}
             </h1>
           </div>
 
-          <CardContent className="pt-6 space-y-4">
+          <CardContent className="space-y-4 pt-6">
             <div className="flex items-center gap-3">
-              <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+              <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" />
               <div>
-                <p className="text-sm font-medium">
+                <p className="font-medium text-sm">
                   {formatInTimeZone(
                     startTime,
                     ticket.timezone,
-                    "EEEE, MMMM d, yyyy",
+                    "EEEE, MMMM d, yyyy"
                   )}
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   {formatInTimeZone(startTime, ticket.timezone, "h:mm a")}
-                  {endTime &&
-                    ` - ${formatInTimeZone(endTime, ticket.timezone, "h:mm a")}`}
+                  {endTime
+                    ? ` - ${formatInTimeZone(endTime, ticket.timezone, "h:mm a")}`
+                    : ""}
                 </p>
               </div>
             </div>
 
-            {ticket.location && (
+            {ticket.location ? (
               <div className="flex items-center gap-3">
-                <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
-                <p className="text-sm font-medium">{ticket.location}</p>
+                <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <p className="font-medium text-sm">{ticket.location}</p>
               </div>
-            )}
+            ) : null}
 
             <Separator />
 
-            <div className="text-center space-y-1">
+            <div className="space-y-1 text-center">
               <p className="font-semibold text-lg">{ticket.userName}</p>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 {ticket.userEmail}
               </p>
             </div>
 
             <div className="flex justify-center py-4">
               <img
-                src={ticket.qrCode}
                 alt="Ticket QR Code"
-                className="rounded-lg border p-3 bg-white"
-                width={260}
+                className="rounded-lg border bg-white p-3"
                 height={260}
+                src={ticket.qrCode}
+                width={260}
               />
             </div>
 
-            <p className="text-xs text-muted-foreground text-center">
+            <p className="text-center text-muted-foreground text-xs">
               Present this QR code at the event for check-in
             </p>
           </CardContent>
         </Card>
 
-        <Button variant="outline" className="w-full" onClick={handleDownload}>
+        <Button className="w-full" onClick={handleDownload} variant="outline">
           <Download className="mr-2 h-4 w-4" />
           Download QR Code
         </Button>

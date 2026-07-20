@@ -10,10 +10,12 @@ export async function generateMetadata({
 }) {
   const { eventId } = await params;
   const event = await db.query.events.findFirst({
+    columns: { slug: true, title: true },
     where: eq(events.id, eventId),
-    columns: { title: true, slug: true },
   });
-  if (!event) return { title: "Event Not Found" };
+  if (!event) {
+    return { title: "Event Not Found" };
+  }
   return { title: `${event.title} - OpenLuma` };
 }
 
@@ -24,9 +26,11 @@ export default async function LegacyEventPage({
 }) {
   const { eventId } = await params;
   const event = await db.query.events.findFirst({
-    where: eq(events.id, eventId),
     columns: { slug: true },
+    where: eq(events.id, eventId),
   });
-  if (!event) notFound();
+  if (!event) {
+    notFound();
+  }
   permanentRedirect(`/e/${event.slug}`);
 }

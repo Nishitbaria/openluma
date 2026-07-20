@@ -12,26 +12,30 @@ import { eventCohosts, events, rsvps } from "@/lib/db/schema";
 
 export default async function DashboardPage() {
   const session = await getSession(await headers());
-  if (!session?.user) redirect("/sign-in");
+  if (!session?.user) {
+    redirect("/sign-in");
+  }
 
   const now = new Date();
 
   const [allEvents, upcomingEvents, pendingRsvps, cohostingRows] =
     await Promise.all([
       db.query.events.findMany({
-        where: eq(events.hostId, session.user.id),
         columns: { id: true },
+        where: eq(events.hostId, session.user.id),
       }),
       db.query.events.findMany({
+        limit: 5,
+        orderBy: [desc(events.startTime)],
         where: and(
           eq(events.hostId, session.user.id),
-          gte(events.startTime, now),
+          gte(events.startTime, now)
         ),
-        orderBy: [desc(events.startTime)],
-        limit: 5,
       }),
       db.query.rsvps
         .findMany({
+          limit: 20,
+          orderBy: [desc(rsvps.createdAt)],
           where: eq(rsvps.status, "pending"),
           with: {
             event: {
@@ -40,15 +44,13 @@ export default async function DashboardPage() {
             },
             user: { columns: { name: true } },
           },
-          orderBy: [desc(rsvps.createdAt)],
-          limit: 20,
         })
         .then((r) =>
           r.filter(
             (rsvp) =>
               rsvp.event.hostId === session.user.id ||
-              rsvp.event.cohosts.some((c) => c.userId === session.user.id),
-          ),
+              rsvp.event.cohosts.some((c) => c.userId === session.user.id)
+          )
         ),
       db.query.eventCohosts.findMany({
         where: eq(eventCohosts.userId, session.user.id),
@@ -58,7 +60,7 @@ export default async function DashboardPage() {
 
   const cohostingEvents = cohostingRows.map((r) => r.event);
   const upcomingCohosted = cohostingEvents.filter(
-    (e) => new Date(e.startTime) >= now,
+    (e) => new Date(e.startTime) >= now
   );
 
   // Merge hosted + cohosted upcoming, sort by start time, take 5
@@ -68,35 +70,35 @@ export default async function DashboardPage() {
   ]
     .sort(
       (a, b) =>
-        new Date(a.startTime).getTime() - new Date(b.startTime).getTime(),
+        new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
     )
     .slice(0, 5);
 
   const stats = [
     {
+      description: "Events you host or co-host",
+      icon: Calendar,
       title: "Total Events",
       value: (allEvents.length + cohostingEvents.length).toString(),
-      icon: Calendar,
-      description: "Events you host or co-host",
     },
     {
+      description: "Events happening soon",
+      icon: Clock,
       title: "Upcoming",
       value: (upcomingEvents.length + upcomingCohosted.length).toString(),
-      icon: Clock,
-      description: "Events happening soon",
     },
     {
+      description: "Awaiting your approval",
+      icon: CalendarCheck,
       title: "Pending RSVPs",
       value: pendingRsvps.length.toString(),
-      icon: CalendarCheck,
-      description: "Awaiting your approval",
     },
   ];
 
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+        <h1 className="font-bold text-3xl tracking-tight">Dashboard</h1>
         <p className="text-muted-foreground">
           Welcome back, {session.user.name}!
         </p>
@@ -106,14 +108,14 @@ export default async function DashboardPage() {
         {stats.map((stat) => (
           <Card key={stat.title}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+              <CardTitle className="font-medium text-sm">
                 {stat.title}
               </CardTitle>
               <stat.icon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
-              <p className="text-xs text-muted-foreground">
+              <div className="font-bold text-2xl">{stat.value}</div>
+              <p className="text-muted-foreground text-xs">
                 {stat.description}
               </p>
             </CardContent>
@@ -128,11 +130,11 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             {allUpcoming.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 No upcoming events.{" "}
                 <Link
-                  href="/dashboard/events/new"
                   className="text-primary hover:underline"
+                  href="/dashboard/events/new"
                 >
                   Create one
                 </Link>
@@ -141,27 +143,27 @@ export default async function DashboardPage() {
               <div className="space-y-3">
                 {allUpcoming.map((event) => (
                   <Link
-                    key={event.id}
+                    className="flex items-center justify-between rounded-lg border p-3 transition-colors hover:bg-accent"
                     href={`/dashboard/events/${event.id}`}
-                    className="flex items-center justify-between rounded-lg border p-3 hover:bg-accent transition-colors"
+                    key={event.id}
                   >
                     <div className="flex items-center gap-2">
                       <div>
                         <p className="font-medium text-sm">{event.title}</p>
-                        <p className="text-xs text-muted-foreground">
+                        <p className="text-muted-foreground text-xs">
                           {format(
                             new Date(event.startTime),
-                            "MMM d 'at' h:mm a",
+                            "MMM d 'at' h:mm a"
                           )}
                         </p>
                       </div>
                     </div>
-                    {event.isCohost && (
-                      <Badge variant="outline" className="shrink-0">
+                    {event.isCohost ? (
+                      <Badge className="shrink-0" variant="outline">
                         <ShieldCheck className="mr-1 h-3 w-3" />
                         Co-host
                       </Badge>
-                    )}
+                    ) : null}
                   </Link>
                 ))}
               </div>
@@ -175,19 +177,19 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             {pendingRsvps.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-muted-foreground text-sm">
                 No pending RSVPs to approve.
               </p>
             ) : (
               <div className="space-y-3">
                 {pendingRsvps.slice(0, 5).map((rsvp) => (
                   <div
-                    key={rsvp.id}
                     className="flex items-center justify-between text-sm"
+                    key={rsvp.id}
                   >
                     <div>
                       <p className="font-medium">{rsvp.user.name}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-muted-foreground text-xs">
                         {rsvp.event.title}
                       </p>
                     </div>

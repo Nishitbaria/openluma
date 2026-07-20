@@ -6,7 +6,7 @@ export default function DashboardLoading() {
     <div className="space-y-8">
       <div>
         <Skeleton className="h-9 w-48" />
-        <Skeleton className="h-5 w-64 mt-2" />
+        <Skeleton className="mt-2 h-5 w-64" />
       </div>
 
       {/* Stats cards */}
@@ -19,7 +19,7 @@ export default function DashboardLoading() {
             </CardHeader>
             <CardContent>
               <Skeleton className="h-8 w-16" />
-              <Skeleton className="h-3 w-32 mt-2" />
+              <Skeleton className="mt-2 h-3 w-32" />
             </CardContent>
           </Card>
         ))}
@@ -35,8 +35,8 @@ export default function DashboardLoading() {
             <CardContent className="space-y-3">
               {["r1", "r2", "r3"].map((rk) => (
                 <div
-                  key={rk}
                   className="flex items-center justify-between rounded-lg border p-3"
+                  key={rk}
                 >
                   <div className="space-y-1.5">
                     <Skeleton className="h-4 w-40" />

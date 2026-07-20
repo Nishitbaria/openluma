@@ -13,12 +13,20 @@ export async function updateProfileAction(data: {
   image?: string;
 }) {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) throw new Error("Unauthorized");
+  if (!session?.user) {
+    throw new Error("Unauthorized");
+  }
 
   const updates: Record<string, unknown> = { updatedAt: new Date() };
-  if (data.name) updates.name = data.name;
-  if (data.bio !== undefined) updates.bio = data.bio;
-  if (data.image) updates.image = data.image;
+  if (data.name) {
+    updates.name = data.name;
+  }
+  if (data.bio !== undefined) {
+    updates.bio = data.bio;
+  }
+  if (data.image) {
+    updates.image = data.image;
+  }
 
   await db.update(user).set(updates).where(eq(user.id, session.user.id));
 

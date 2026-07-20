@@ -28,37 +28,37 @@ import {
 import { NavUser } from "./nav-user";
 
 const overviewItems = [
-  { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-  { title: "AI Chat", url: "/dashboard/chat", icon: Bot },
+  { icon: LayoutDashboard, title: "Dashboard", url: "/dashboard" },
+  { icon: Bot, title: "AI Chat", url: "/dashboard/chat" },
 ];
 
 const eventItems = [
-  { title: "My Events", url: "/dashboard/events", icon: Calendar },
-  { title: "Create Event", url: "/dashboard/events/new", icon: Plus },
-  { title: "Discover", url: "/events", icon: Search },
+  { icon: Calendar, title: "My Events", url: "/dashboard/events" },
+  { icon: Plus, title: "Create Event", url: "/dashboard/events/new" },
+  { icon: Search, title: "Discover", url: "/events" },
 ];
 
 const settingsItems = [
-  { title: "Profile", url: "/dashboard/profile", icon: User },
-  { title: "Settings", url: "/dashboard/settings", icon: Settings },
+  { icon: User, title: "Profile", url: "/dashboard/profile" },
+  { icon: Settings, title: "Settings", url: "/dashboard/settings" },
 ];
 
 export function AppSidebar() {
   const pathname = usePathname();
 
   return (
-    <Sidebar variant="inset" collapsible="icon">
+    <Sidebar collapsible="icon" variant="inset">
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
+            <SidebarMenuButton asChild size="lg">
               <Link href="/dashboard">
-                <div className="bg-primary text-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg font-bold">
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary font-bold text-primary-foreground">
                   OL
                 </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-semibold">OpenLuma</span>
-                  <span className="truncate text-xs text-muted-foreground">
+                  <span className="truncate text-muted-foreground text-xs">
                     Event Platform
                   </span>
                 </div>
@@ -105,7 +105,7 @@ export function AppSidebar() {
                         (other) =>
                           other.url !== item.url &&
                           other.url.startsWith(item.url) &&
-                          pathname.startsWith(other.url),
+                          pathname.startsWith(other.url)
                       )
                     }
                     tooltip={item.title}

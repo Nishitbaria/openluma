@@ -4,24 +4,24 @@ import Link from "next/link";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export interface TimelineEvent {
+  coverImage: string | null;
+  host?: { name: string | null; image: string | null } | null;
   id: string;
+  location: string | null;
+  rsvpStatus?: string | null;
   slug?: string | null;
-  title: string;
   startTime: Date | string;
   timezone?: string;
-  coverImage: string | null;
-  location: string | null;
+  title: string;
   type: "in_person" | "virtual" | "hybrid";
-  host?: { name: string | null; image: string | null } | null;
-  rsvpStatus?: string | null;
 }
 
 interface EventTimelineProps {
+  emptyAction?: React.ReactNode;
+  emptyDescription: string;
+  emptyTitle: string;
   events: TimelineEvent[];
   href?: (event: TimelineEvent) => string;
-  emptyTitle: string;
-  emptyDescription: string;
-  emptyAction?: React.ReactNode;
 }
 
 function groupByDate(events: TimelineEvent[]) {
@@ -41,24 +41,38 @@ function groupByDate(events: TimelineEvent[]) {
     // time printed on each card (rather than the server's local day).
     const key = formatInTimeZone(d, timezone, "yyyy-MM-dd");
     const existing = groups.find((g) => g.dateKey === key);
-    if (existing) existing.events.push(event);
-    else groups.push({ dateKey: key, date: d, timezone, events: [event] });
+    if (existing) {
+      existing.events.push(event);
+    } else {
+      groups.push({ date: d, dateKey: key, events: [event], timezone });
+    }
   }
   return groups;
 }
 
 function rsvpBadgeStyle(status: string) {
-  if (status === "approved")
+  if (status === "approved") {
     return "bg-primary/10 text-primary border-primary/20";
-  if (status === "waitlisted") return "bg-muted text-muted-foreground";
+  }
+  if (status === "waitlisted") {
+    return "bg-muted text-muted-foreground";
+  }
   return "bg-muted text-muted-foreground"; // pending, rejected
 }
 
 function rsvpLabel(status: string) {
-  if (status === "approved") return "Approved";
-  if (status === "waitlisted") return "Waitlisted";
-  if (status === "pending") return "Pending";
-  if (status === "rejected") return "Declined";
+  if (status === "approved") {
+    return "Approved";
+  }
+  if (status === "waitlisted") {
+    return "Waitlisted";
+  }
+  if (status === "pending") {
+    return "Pending";
+  }
+  if (status === "rejected") {
+    return "Declined";
+  }
   return status;
 }
 
@@ -73,8 +87,8 @@ export function EventTimeline({
     return (
       <div className="flex flex-col items-center justify-center rounded-xl border border-dashed py-16 text-center">
         <Calendar className="h-8 w-8 text-muted-foreground" />
-        <h3 className="mt-4 text-base font-semibold">{emptyTitle}</h3>
-        <p className="mt-1 text-sm text-muted-foreground">{emptyDescription}</p>
+        <h3 className="mt-4 font-semibold text-base">{emptyTitle}</h3>
+        <p className="mt-1 text-muted-foreground text-sm">{emptyDescription}</p>
         {emptyAction}
       </div>
     );
@@ -85,13 +99,13 @@ export function EventTimeline({
   return (
     <div className="space-y-0">
       {groups.map((group) => (
-        <div key={group.dateKey} className="flex gap-6">
+        <div className="flex gap-6" key={group.dateKey}>
           {/* Date label */}
           <div className="w-20 flex-shrink-0 pt-4 text-right">
-            <p className="text-sm font-semibold leading-tight">
+            <p className="font-semibold text-sm leading-tight">
               {formatInTimeZone(group.date, group.timezone, "d MMM")}
             </p>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               {formatInTimeZone(group.date, group.timezone, "EEEE")}
             </p>
           </div>
@@ -99,11 +113,12 @@ export function EventTimeline({
           {/* Timeline line + dot */}
           <div className="flex flex-shrink-0 flex-col items-center">
             <div className="mt-5 h-2 w-2 rounded-full bg-muted-foreground/50" />
-            <div className="mt-1 flex-1 w-px bg-border" />
+            <div className="mt-1 w-px flex-1 bg-border" />
           </div>
 
           {/* Events for this date */}
-          <div className="flex-1 space-y-2 pb-6 pt-3">
+          <div className="flex-1 space-y-2 pt-3 pb-6">
+            {/* biome-ignore lint/complexity/noExcessiveCognitiveComplexity: per-event render callback conditionally formats time, location, and status badges; the branches are flat presentational guards */}
             {group.events.map((event) => {
               const startTime =
                 typeof event.startTime === "string"
@@ -118,36 +133,36 @@ export function EventTimeline({
                 event.host?.name?.charAt(0).toUpperCase() ?? "?";
 
               return (
-                <Link key={event.id} href={eventHref} className="block">
+                <Link className="block" href={eventHref} key={event.id}>
                   <div className="flex items-start gap-3 rounded-xl border bg-card px-4 py-3 transition-colors hover:bg-muted/50">
                     {/* Content */}
                     <div className="min-w-0 flex-1 space-y-1">
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-muted-foreground text-xs">
                         {formatInTimeZone(startTime, eventTimezone, "h:mm a")}
                       </p>
-                      <p className="truncate text-sm font-semibold leading-snug">
+                      <p className="truncate font-semibold text-sm leading-snug">
                         {event.title}
                       </p>
 
-                      {event.host?.name && (
+                      {event.host?.name ? (
                         <div className="flex items-center gap-1.5">
                           <Avatar className="h-4 w-4">
                             <AvatarImage
-                              src={event.host.image ?? undefined}
                               alt={event.host.name}
+                              src={event.host.image ?? undefined}
                             />
                             <AvatarFallback className="text-[8px]">
                               {hostInitial}
                             </AvatarFallback>
                           </Avatar>
-                          <span className="text-xs text-muted-foreground">
+                          <span className="text-muted-foreground text-xs">
                             By {event.host.name}
                           </span>
                         </div>
-                      )}
+                      ) : null}
 
-                      {(event.location ?? isVirtual) && (
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      {event.location || isVirtual ? (
+                        <div className="flex items-center gap-1 text-muted-foreground text-xs">
                           {isVirtual ? (
                             <Video className="h-3 w-3 flex-shrink-0" />
                           ) : (
@@ -159,31 +174,33 @@ export function EventTimeline({
                               : event.location}
                           </span>
                         </div>
-                      )}
+                      ) : null}
 
-                      {event.rsvpStatus && (
+                      {event.rsvpStatus ? (
                         <span
-                          className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${rsvpBadgeStyle(event.rsvpStatus)}`}
+                          className={`inline-flex items-center rounded-full border px-2 py-0.5 font-medium text-[10px] ${rsvpBadgeStyle(event.rsvpStatus)}`}
                         >
                           {rsvpLabel(event.rsvpStatus)}
                         </span>
-                      )}
+                      ) : null}
                     </div>
 
                     {/* Cover image / placeholder */}
                     <div className="flex-shrink-0">
                       {event.coverImage ? (
                         <img
-                          src={event.coverImage}
                           alt={event.title}
                           className="h-14 w-14 rounded-lg object-cover"
+                          height={56}
+                          src={event.coverImage}
+                          width={56}
                         />
                       ) : (
                         <div className="flex h-14 w-14 flex-col items-center justify-center rounded-lg bg-muted">
-                          <span className="text-lg font-bold leading-none text-muted-foreground">
+                          <span className="font-bold text-lg text-muted-foreground leading-none">
                             {formatInTimeZone(startTime, eventTimezone, "d")}
                           </span>
-                          <span className="text-[10px] uppercase text-muted-foreground">
+                          <span className="text-[10px] text-muted-foreground uppercase">
                             {formatInTimeZone(startTime, eventTimezone, "MMM")}
                           </span>
                         </div>

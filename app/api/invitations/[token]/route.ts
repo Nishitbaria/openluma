@@ -13,7 +13,7 @@ import {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ token: string }> },
+  { params }: { params: Promise<{ token: string }> }
 ) {
   const { token } = await params;
   const action = request.nextUrl.searchParams.get("action");
@@ -29,7 +29,7 @@ export async function GET(
 
   if (invitation.status !== "pending") {
     return redirect(
-      `/invitation-error?reason=already-${invitation.status}&event=${invitation.eventId}`,
+      `/invitation-error?reason=already-${invitation.status}&event=${invitation.eventId}`
     );
   }
 
@@ -49,7 +49,7 @@ export async function GET(
     return redirect(
       invitation.event.slug
         ? `/e/${invitation.event.slug}?declined=true`
-        : `/events/${invitation.eventId}?declined=true`,
+        : `/events/${invitation.eventId}?declined=true`
     );
   }
 
@@ -57,14 +57,14 @@ export async function GET(
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) {
     return redirect(
-      `/sign-in?callbackUrl=/api/invitations/${token}?action=accept`,
+      `/sign-in?callbackUrl=/api/invitations/${token}?action=accept`
     );
   }
 
   // Verify the accepting user's email matches the invitation
   if (session.user.email !== invitation.email) {
     return redirect(
-      `/invitation-error?reason=wrong-email&expected=${encodeURIComponent(invitation.email)}`,
+      `/invitation-error?reason=wrong-email&expected=${encodeURIComponent(invitation.email)}`
     );
   }
 
@@ -75,8 +75,8 @@ export async function GET(
   // organizers, not registrants.
   if (invitation.role !== "cohost") {
     const hasQuestions = !!(await db.query.eventQuestions.findFirst({
-      where: eq(eventQuestions.eventId, invitation.eventId),
       columns: { id: true },
+      where: eq(eventQuestions.eventId, invitation.eventId),
     }));
 
     if (hasQuestions) {
@@ -88,7 +88,7 @@ export async function GET(
       return redirect(
         invitation.event.slug
           ? `/e/${invitation.event.slug}?register=1`
-          : `/events/${invitation.eventId}?register=1`,
+          : `/events/${invitation.eventId}?register=1`
       );
     }
   }
@@ -104,7 +104,7 @@ export async function GET(
     const existingRsvp = await tx.query.rsvps.findFirst({
       where: and(
         eq(rsvps.eventId, invitation.eventId),
-        eq(rsvps.userId, session.user.id),
+        eq(rsvps.userId, session.user.id)
       ),
     });
 
@@ -118,8 +118,8 @@ export async function GET(
     } else {
       await tx.insert(rsvps).values({
         eventId: invitation.eventId,
-        userId: session.user.id,
         status: "approved",
+        userId: session.user.id,
       });
     }
 
@@ -128,7 +128,7 @@ export async function GET(
       const existingCohost = await tx.query.eventCohosts.findFirst({
         where: and(
           eq(eventCohosts.eventId, invitation.eventId),
-          eq(eventCohosts.userId, session.user.id),
+          eq(eventCohosts.userId, session.user.id)
         ),
       });
       if (!existingCohost) {
@@ -146,6 +146,6 @@ export async function GET(
   return redirect(
     invitation.event.slug
       ? `/e/${invitation.event.slug}?accepted=true`
-      : `/events/${invitation.eventId}?accepted=true`,
+      : `/events/${invitation.eventId}?accepted=true`
   );
 }

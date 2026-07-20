@@ -8,7 +8,7 @@ import { generateEventSlug } from "@/lib/utils/slugify";
 
 export async function POST(
   _req: NextRequest,
-  { params }: { params: Promise<{ eventId: string }> },
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) {
@@ -35,22 +35,22 @@ export async function POST(
   const [cloned] = await db
     .insert(events)
     .values({
-      title: `${source.title} (Copy)`,
-      slug: newSlug,
-      description: source.description,
-      richDescription: source.richDescription,
+      capacity: source.capacity,
+      categoryId: source.categoryId,
       coverImage: source.coverImage,
-      timezone: source.timezone,
+      description: source.description,
+      hostId: session.user.id,
       location: source.location,
       locationDetails: source.locationDetails,
-      type: source.type,
-      visibility: source.visibility,
-      capacity: source.capacity,
       requiresApproval: source.requiresApproval,
-      categoryId: source.categoryId,
-      hostId: session.user.id,
+      richDescription: source.richDescription,
+      slug: newSlug,
       // startTime / endTime intentionally omitted — host must set new dates
       startTime: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // placeholder: 1 week from now
+      timezone: source.timezone,
+      title: `${source.title} (Copy)`,
+      type: source.type,
+      visibility: source.visibility,
     })
     .returning();
 

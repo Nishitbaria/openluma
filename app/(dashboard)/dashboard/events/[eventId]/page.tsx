@@ -50,6 +50,7 @@ import {
   rsvps,
 } from "@/lib/db/schema";
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: top-level page component orchestrating auth/host/cohost access checks and many conditional sections; complexity is inherent to server-rendering the full page
 export default async function EventDetailPage({
   params,
   searchParams,
@@ -63,21 +64,21 @@ export default async function EventDetailPage({
   const event = await db.query.events.findFirst({
     where: eq(events.id, eventId),
     with: {
-      host: { columns: { id: true, name: true, image: true } },
       category: true,
-      tags: true,
+      cohosts: {
+        with: {
+          user: { columns: { email: true, id: true, image: true, name: true } },
+        },
+      },
+      host: { columns: { id: true, image: true, name: true } },
       rsvps: {
         with: {
           user: {
-            columns: { id: true, name: true, email: true, image: true },
+            columns: { email: true, id: true, image: true, name: true },
           },
         },
       },
-      cohosts: {
-        with: {
-          user: { columns: { id: true, name: true, image: true, email: true } },
-        },
-      },
+      tags: true,
     },
   });
 
@@ -107,27 +108,27 @@ export default async function EventDetailPage({
 
   // Serialized event for client components
   const serializedEvent = {
-    id: event.id,
-    title: event.title,
-    description: event.description,
+    capacity: event.capacity,
+    categoryId: event.categoryId,
     coverImage: event.coverImage,
-    startTime: Number.isFinite(event.startTime.getTime())
-      ? event.startTime.toISOString()
-      : new Date().toISOString(),
+    description: event.description,
     endTime:
       event.endTime && Number.isFinite(event.endTime.getTime())
         ? event.endTime.toISOString()
         : null,
-    timezone: event.timezone,
+    id: event.id,
     location: event.location,
     locationDetails: event.locationDetails,
+    requiresApproval: event.requiresApproval,
+    richDescription: event.richDescription,
+    slug: event.slug,
+    startTime: Number.isFinite(event.startTime.getTime())
+      ? event.startTime.toISOString()
+      : new Date().toISOString(),
+    timezone: event.timezone,
+    title: event.title,
     type: event.type,
     visibility: event.visibility,
-    capacity: event.capacity,
-    requiresApproval: event.requiresApproval,
-    categoryId: event.categoryId,
-    slug: event.slug,
-    richDescription: event.richDescription,
   };
 
   // --- Tab-specific data fetching ---
@@ -184,58 +185,60 @@ export default async function EventDetailPage({
     const [attendees, eventInvitations, cohostsList, questionsList] =
       await Promise.all([
         db.query.rsvps.findMany({
+          orderBy: (rsvpRows, { desc }) => [desc(rsvpRows.createdAt)],
           where: eq(rsvps.eventId, eventId),
           with: {
-            user: {
-              columns: { id: true, name: true, email: true, image: true },
-            },
             timeline: { orderBy: (t, { desc }) => [desc(t.createdAt)] },
+            user: {
+              columns: { email: true, id: true, image: true, name: true },
+            },
           },
-          orderBy: (rsvps, { desc }) => [desc(rsvps.createdAt)],
         }),
         db.query.invitations.findMany({
+          orderBy: (invitationRows, { desc }) => [
+            desc(invitationRows.createdAt),
+          ],
           where: eq(invitations.eventId, eventId),
-          orderBy: (invitations, { desc }) => [desc(invitations.createdAt)],
         }),
         db.query.eventCohosts.findMany({
           where: eq(eventCohosts.eventId, eventId),
           with: {
             user: {
-              columns: { id: true, name: true, email: true, image: true },
+              columns: { email: true, id: true, image: true, name: true },
             },
           },
         }),
         db.query.eventQuestions.findMany({
-          where: eq(eventQuestions.eventId, eventId),
-          orderBy: (q, { asc }) => [asc(q.order)],
           columns: { id: true, label: true, type: true },
+          orderBy: (q, { asc }) => [asc(q.order)],
+          where: eq(eventQuestions.eventId, eventId),
         }),
       ]);
 
     attendeesData = {
       attendees: attendees.map((a) => ({
         ...a,
+        createdAt: a.createdAt.toISOString(),
         customAnswers:
           (a.customAnswers as Record<string, string | boolean> | null) ?? null,
-        createdAt: a.createdAt.toISOString(),
         timeline: a.timeline.map((t) => ({
           ...t,
           createdAt: t.createdAt.toISOString(),
         })),
         user: { ...a.user, name: a.user.name ?? "Unknown" },
       })),
-      eventInvitations: eventInvitations.map((inv) => ({
-        id: inv.id,
-        email: inv.email,
-        role: inv.role,
-        status: inv.status,
-        createdAt: inv.createdAt.toISOString(),
-        expiresAt: inv.expiresAt?.toISOString() ?? null,
-      })),
       cohostsList: cohostsList.map((c) => ({
         id: c.id,
-        userId: c.userId,
         user: { ...c.user, name: c.user.name ?? "Unknown" },
+        userId: c.userId,
+      })),
+      eventInvitations: eventInvitations.map((inv) => ({
+        createdAt: inv.createdAt.toISOString(),
+        email: inv.email,
+        expiresAt: inv.expiresAt?.toISOString() ?? null,
+        id: inv.id,
+        role: inv.role,
+        status: inv.status,
       })),
       questions: questionsList,
     };
@@ -249,20 +252,20 @@ export default async function EventDetailPage({
 
     const [eventRsvps, checkins, views] = await Promise.all([
       db.query.rsvps.findMany({
+        columns: { createdAt: true, status: true },
         where: eq(rsvps.eventId, eventId),
-        columns: { status: true, createdAt: true },
       }),
       db.query.attendeeCheckins.findMany({
-        where: eq(attendeeCheckins.eventId, eventId),
         columns: { checkedInAt: true },
+        where: eq(attendeeCheckins.eventId, eventId),
       }),
       db.query.eventPageviews.findMany({
+        columns: { createdAt: true, ipHash: true, referrer: true },
         where: and(
           eq(eventPageviews.eventId, eventId),
           gte(eventPageviews.createdAt, resolvedFrom),
-          lte(eventPageviews.createdAt, resolvedTo),
+          lte(eventPageviews.createdAt, resolvedTo)
         ),
-        columns: { createdAt: true, referrer: true, ipHash: true },
       }),
     ]);
 
@@ -289,8 +292,8 @@ export default async function EventDetailPage({
     }
     const viewsByDay = Array.from(dayMap.entries()).map(([date, count]) => ({
       date: new Date(date).toLocaleDateString("en-US", {
-        month: "short",
         day: "numeric",
+        month: "short",
       }),
       views: count,
     }));
@@ -304,14 +307,14 @@ export default async function EventDetailPage({
     const referrers = Array.from(refMap.entries())
       .sort((a, b) => b[1] - a[1])
       .slice(0, 5)
-      .map(([name, count]) => ({ name, count }));
+      .map(([name, count]) => ({ count, name }));
 
     analyticsData = {
-      funnel: { totalViews, uniqueViews, totalRsvps, approved, checkedIn },
-      viewsByDay,
-      referrers,
       dateFrom: resolvedFrom.toISOString(),
       dateTo: resolvedTo.toISOString(),
+      funnel: { approved, checkedIn, totalRsvps, totalViews, uniqueViews },
+      referrers,
+      viewsByDay,
     };
   }
 
@@ -324,48 +327,48 @@ export default async function EventDetailPage({
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <div className="flex items-center gap-1.5 text-sm text-muted-foreground mb-2">
+          <div className="mb-2 flex items-center gap-1.5 text-muted-foreground text-sm">
             <Link
+              className="transition-colors hover:text-foreground"
               href="/dashboard/events"
-              className="hover:text-foreground transition-colors"
             >
               Events
             </Link>
             <span>/</span>
             <span className="text-foreground">{event.title}</span>
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">{event.title}</h1>
+          <h1 className="font-bold text-2xl tracking-tight">{event.title}</h1>
         </div>
         <div className="flex items-center gap-2">
-          {canManage && (
-            <Button asChild variant="outline" size="sm">
+          {canManage ? (
+            <Button asChild size="sm" variant="outline">
               <Link href={publicEventUrl}>
                 <ExternalLink className="mr-1.5 h-3.5 w-3.5" />
                 Event Page
               </Link>
             </Button>
-          )}
+          ) : null}
         </div>
       </div>
 
       {/* Tabs */}
-      <EventTabsNav eventId={eventId} canManage={canManage} activeTab={tab} />
+      <EventTabsNav activeTab={tab} canManage={canManage} eventId={eventId} />
 
       {/* Tab Content */}
       {tab === "overview" && (
         <OverviewTab
-          event={event}
-          serializedEvent={serializedEvent}
-          startTime={startTime}
-          endTime={endTime}
-          approvedRsvps={approvedRsvps}
           approvedCount={approvedCount}
-          pendingCount={pendingCount}
+          approvedRsvps={approvedRsvps}
           canManage={canManage}
-          isHost={isHost}
-          hasTicket={hasTicket}
+          endTime={endTime}
+          event={event}
           eventId={eventId}
+          hasTicket={hasTicket}
+          isHost={isHost}
+          pendingCount={pendingCount}
+          serializedEvent={serializedEvent}
           shareUrl={shareUrl}
+          startTime={startTime}
         />
       )}
 
@@ -375,10 +378,10 @@ export default async function EventDetailPage({
           <AttendeeList
             attendees={attendeesData.attendees}
             cohosts={attendeesData.cohostsList}
-            invitations={attendeesData.eventInvitations}
-            questions={attendeesData.questions}
             eventId={eventId}
+            invitations={attendeesData.eventInvitations}
             isHost={isHost}
+            questions={attendeesData.questions}
           />
         </div>
       )}
@@ -386,8 +389,8 @@ export default async function EventDetailPage({
       {tab === "questions" && canManage && (
         <div className="max-w-xl space-y-4">
           <div>
-            <h2 className="text-lg font-semibold">Registration Questions</h2>
-            <p className="text-sm text-muted-foreground">
+            <h2 className="font-semibold text-lg">Registration Questions</h2>
+            <p className="text-muted-foreground text-sm">
               Attendees will answer these when they RSVP. Answers appear in the
               Guests tab and CSV export.
             </p>
@@ -409,8 +412,8 @@ export default async function EventDetailPage({
             <CardContent className="space-y-2">
               <Button
                 asChild
-                variant="outline"
                 className="w-full justify-start"
+                variant="outline"
               >
                 <Link href={`/dashboard/events/${eventId}/check-in`}>
                   <ScanLine className="mr-2 h-4 w-4" />
@@ -419,20 +422,20 @@ export default async function EventDetailPage({
               </Button>
               <CalendarExportButton
                 event={{
-                  id: event.id,
-                  slug: event.slug,
-                  title: event.title,
                   description: event.description,
-                  startTime: event.startTime.toISOString(),
                   endTime: event.endTime?.toISOString() ?? null,
+                  id: event.id,
                   location: event.location,
+                  slug: event.slug,
+                  startTime: event.startTime.toISOString(),
+                  title: event.title,
                 }}
               />
               {hasTicket && (
                 <Button
                   asChild
-                  variant="outline"
                   className="w-full justify-start"
+                  variant="outline"
                 >
                   <Link href={`/ticket/${eventId}`}>
                     <Ticket className="mr-2 h-4 w-4" />
@@ -458,14 +461,14 @@ export default async function EventDetailPage({
               </div>
               <div className="flex items-center gap-2">
                 <Badge variant="outline">{event.type.replace("_", " ")}</Badge>
-                {event.requiresApproval && (
+                {event.requiresApproval ? (
                   <Badge variant="outline">Approval Required</Badge>
-                )}
+                ) : null}
               </div>
             </CardContent>
           </Card>
 
-          {isHost && (
+          {isHost ? (
             <Card>
               <CardHeader>
                 <CardTitle className="text-destructive">Danger Zone</CardTitle>
@@ -474,7 +477,7 @@ export default async function EventDetailPage({
                 <DeleteEventButton eventId={eventId} eventTitle={event.title} />
               </CardContent>
             </Card>
-          )}
+          ) : null}
         </div>
       )}
     </div>
@@ -483,6 +486,7 @@ export default async function EventDetailPage({
 
 // --- Overview Tab (extracted for readability) ---
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: presentational tab rendering many optional event fields as conditional blocks; the branches are flat JSX guards, not deep logic
 function OverviewTab({
   event,
   serializedEvent,
@@ -559,7 +563,7 @@ function OverviewTab({
   return (
     <div className="space-y-6">
       {/* Action buttons row */}
-      {canManage && (
+      {canManage ? (
         <div className="flex flex-wrap gap-3">
           <Button asChild variant="outline">
             <Link href={`/dashboard/events/${eventId}?tab=guests`}>
@@ -568,31 +572,31 @@ function OverviewTab({
             </Link>
           </Button>
           <EventEditDrawer event={serializedEvent} />
-          {isHost && <CloneEventButton eventId={eventId} />}
-          {isHost && (
+          {isHost ? <CloneEventButton eventId={eventId} /> : null}
+          {isHost ? (
             <DeleteEventButton eventId={eventId} eventTitle={event.title} />
-          )}
+          ) : null}
         </div>
-      )}
+      ) : null}
 
       <div className="grid gap-6 lg:grid-cols-5">
         {/* Left column */}
-        <div className="lg:col-span-3 space-y-6">
+        <div className="space-y-6 lg:col-span-3">
           {/* Cover image */}
-          {event.coverImage && (
+          {event.coverImage ? (
             <div className="relative aspect-video overflow-hidden rounded-xl">
               <Image
-                src={event.coverImage}
                 alt={event.title}
-                fill
                 className="object-cover"
+                fill
+                src={event.coverImage}
               />
             </div>
-          )}
+          ) : null}
 
           {/* Event info card */}
           <Card>
-            <CardContent className="p-6 space-y-4">
+            <CardContent className="space-y-4 p-6">
               {/* Badges */}
               <div className="flex flex-wrap gap-2">
                 <Badge
@@ -608,47 +612,47 @@ function OverviewTab({
                   {event.visibility}
                 </Badge>
                 <Badge variant="outline">{event.type.replace("_", " ")}</Badge>
-                {event.requiresApproval && (
+                {event.requiresApproval ? (
                   <Badge variant="outline">Approval Required</Badge>
-                )}
+                ) : null}
               </div>
 
               {/* Host info */}
               <div className="flex items-center gap-3">
                 <Avatar size="sm">
-                  {event.host.image && (
+                  {event.host.image ? (
                     <AvatarImage
-                      src={event.host.image}
                       alt={event.host.name ?? ""}
+                      src={event.host.image}
                     />
-                  )}
+                  ) : null}
                   <AvatarFallback>
                     {event.host.name?.[0]?.toUpperCase() ?? "?"}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="text-xs text-muted-foreground">Hosted by</p>
-                  <p className="text-sm font-medium">{event.host.name}</p>
+                  <p className="text-muted-foreground text-xs">Hosted by</p>
+                  <p className="font-medium text-sm">{event.host.name}</p>
                 </div>
               </div>
 
               {/* Description */}
-              {(event.richDescription || event.description) && (
+              {event.richDescription || event.description ? (
                 <>
                   <Separator />
                   {event.richDescription ? (
                     <RichTextRenderer content={event.richDescription} />
                   ) : (
-                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                    <p className="whitespace-pre-wrap text-muted-foreground text-sm">
                       {event.description}
                     </p>
                   )}
                 </>
-              )}
+              ) : null}
 
               {/* Tags */}
               {event.tags.length > 0 && (
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex flex-wrap gap-2">
                   {event.tags.map((tag) => (
                     <Badge key={tag.id} variant="secondary">
                       {tag.tag}
@@ -666,35 +670,35 @@ function OverviewTab({
                 <span>
                   Attendees ({approvedCount})
                   {canManage && pendingCount > 0 && (
-                    <span className="ml-2 text-sm font-normal text-muted-foreground">
+                    <span className="ml-2 font-normal text-muted-foreground text-sm">
                       {pendingCount} pending
                     </span>
                   )}
                 </span>
-                {canManage && (
-                  <Button asChild variant="outline" size="sm">
+                {canManage ? (
+                  <Button asChild size="sm" variant="outline">
                     <Link href={`/dashboard/events/${eventId}?tab=guests`}>
                       View All
                     </Link>
                   </Button>
-                )}
+                ) : null}
               </CardTitle>
             </CardHeader>
             <CardContent>
               {approvedRsvps.length === 0 ? (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   No one has joined yet.
                 </p>
               ) : (
                 <AvatarGroup>
                   {approvedRsvps.slice(0, 8).map((rsvp) => (
                     <Avatar key={rsvp.id} size="sm">
-                      {rsvp.user.image && (
+                      {rsvp.user.image ? (
                         <AvatarImage
-                          src={rsvp.user.image}
                           alt={rsvp.user.name ?? ""}
+                          src={rsvp.user.image}
                         />
-                      )}
+                      ) : null}
                       <AvatarFallback>
                         {rsvp.user.name?.[0]?.toUpperCase() ?? "?"}
                       </AvatarFallback>
@@ -710,7 +714,7 @@ function OverviewTab({
         </div>
 
         {/* Right column */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="space-y-6 lg:col-span-2">
           {/* When & Where */}
           <Card>
             <CardHeader>
@@ -719,10 +723,10 @@ function OverviewTab({
             <CardContent className="space-y-4">
               <div className="flex gap-3">
                 <div className="flex h-12 w-12 flex-col items-center justify-center rounded-lg bg-muted text-xs">
-                  <span className="font-semibold uppercase text-primary">
+                  <span className="font-semibold text-primary uppercase">
                     {formatInTimeZone(startTime, event.timezone, "MMM")}
                   </span>
-                  <span className="text-lg font-bold leading-none">
+                  <span className="font-bold text-lg leading-none">
                     {formatInTimeZone(startTime, event.timezone, "d")}
                   </span>
                 </div>
@@ -731,13 +735,14 @@ function OverviewTab({
                     {formatInTimeZone(
                       startTime,
                       event.timezone,
-                      "EEEE, MMMM d",
+                      "EEEE, MMMM d"
                     )}
                   </p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     {formatInTimeZone(startTime, event.timezone, "h:mm a")}
-                    {endTime &&
-                      ` - ${formatInTimeZone(endTime, event.timezone, "h:mm a")}`}{" "}
+                    {endTime
+                      ? ` - ${formatInTimeZone(endTime, event.timezone, "h:mm a")}`
+                      : ""}{" "}
                     {event.timezone}
                   </p>
                 </div>
@@ -760,15 +765,15 @@ function OverviewTab({
                         <p className="font-medium">Virtual Event</p>
                         {canManage || hasTicket ? (
                           <a
+                            className="text-primary text-sm hover:underline"
                             href={event.location}
-                            target="_blank"
                             rel="noopener noreferrer"
-                            className="text-sm text-primary hover:underline"
+                            target="_blank"
                           >
                             Join Link
                           </a>
                         ) : (
-                          <p className="text-sm text-muted-foreground">
+                          <p className="text-muted-foreground text-sm">
                             Register to See Link
                           </p>
                         )}
@@ -776,17 +781,17 @@ function OverviewTab({
                     ) : (
                       <>
                         <p className="font-medium">{event.location}</p>
-                        {event.locationDetails && (
-                          <p className="text-sm text-muted-foreground">
+                        {event.locationDetails ? (
+                          <p className="text-muted-foreground text-sm">
                             {event.locationDetails}
                           </p>
-                        )}
+                        ) : null}
                       </>
                     )}
                   </div>
                 </div>
               ) : (
-                <div className="flex gap-3 items-center">
+                <div className="flex items-center gap-3">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/10">
                     <MapPin className="h-5 w-5 text-amber-600" />
                   </div>
@@ -794,17 +799,17 @@ function OverviewTab({
                     <p className="font-medium text-amber-600">
                       Location Missing
                     </p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-muted-foreground text-sm">
                       Please enter the location before it starts.
                     </p>
                   </div>
                 </div>
               )}
 
-              {event.capacity != null && event.capacity > 0 ? (
+              {event.capacity !== null && event.capacity > 0 ? (
                 <>
                   <Separator />
-                  <div className="flex gap-3 items-center">
+                  <div className="flex items-center gap-3">
                     <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted">
                       <Users className="h-5 w-5 text-muted-foreground" />
                     </div>
@@ -812,7 +817,7 @@ function OverviewTab({
                       <p className="font-medium">
                         {approvedCount} / {event.capacity}
                       </p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-muted-foreground text-sm">
                         Spots filled
                       </p>
                     </div>
@@ -825,7 +830,7 @@ function OverviewTab({
           {/* Share */}
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="flex items-center gap-2 text-sm font-medium">
+              <CardTitle className="flex items-center gap-2 font-medium text-sm">
                 <Share2 className="h-4 w-4 text-muted-foreground" />
                 Share Event
               </CardTitle>
@@ -843,19 +848,19 @@ function OverviewTab({
             <CardContent className="space-y-3">
               <div className="flex items-center gap-3">
                 <Avatar>
-                  {event.host.image && (
+                  {event.host.image ? (
                     <AvatarImage
-                      src={event.host.image}
                       alt={event.host.name ?? ""}
+                      src={event.host.image}
                     />
-                  )}
+                  ) : null}
                   <AvatarFallback>
                     {event.host.name?.[0]?.toUpperCase() ?? "?"}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
-                  <p className="text-sm font-medium">{event.host.name}</p>
-                  <p className="text-xs text-muted-foreground">Host</p>
+                  <p className="font-medium text-sm">{event.host.name}</p>
+                  <p className="text-muted-foreground text-xs">Host</p>
                 </div>
                 <Badge variant="outline">
                   <Crown className="mr-1 h-3 w-3" />
@@ -863,20 +868,20 @@ function OverviewTab({
                 </Badge>
               </div>
               {event.cohosts.map((cohost) => (
-                <div key={cohost.user.id} className="flex items-center gap-3">
+                <div className="flex items-center gap-3" key={cohost.user.id}>
                   <Avatar>
-                    {cohost.user.image && (
+                    {cohost.user.image ? (
                       <AvatarImage
-                        src={cohost.user.image}
                         alt={cohost.user.name ?? ""}
+                        src={cohost.user.image}
                       />
-                    )}
+                    ) : null}
                     <AvatarFallback>
                       {cohost.user.name?.[0]?.toUpperCase() ?? "?"}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1">
-                    <p className="text-sm font-medium">{cohost.user.name}</p>
+                    <p className="font-medium text-sm">{cohost.user.name}</p>
                   </div>
                   <Badge variant="outline">
                     <ShieldCheck className="mr-1 h-3 w-3" />
@@ -888,30 +893,30 @@ function OverviewTab({
           </Card>
 
           {/* Quick actions */}
-          {canManage && (
+          {canManage ? (
             <Card>
-              <CardContent className="p-4 space-y-2">
+              <CardContent className="space-y-2 p-4">
                 <Button
                   asChild
-                  variant="outline"
                   className="w-full justify-start"
+                  variant="outline"
                 >
                   <Link href={`/dashboard/events/${eventId}/check-in`}>
                     <ScanLine className="mr-2 h-4 w-4" />
                     Scan Tickets
                   </Link>
                 </Button>
-                {hasTicket && (
+                {hasTicket ? (
                   <Button asChild className="w-full justify-start">
                     <Link href={`/ticket/${eventId}`}>
                       <Ticket className="mr-2 h-4 w-4" />
                       View My Ticket
                     </Link>
                   </Button>
-                )}
+                ) : null}
               </CardContent>
             </Card>
-          )}
+          ) : null}
         </div>
       </div>
     </div>

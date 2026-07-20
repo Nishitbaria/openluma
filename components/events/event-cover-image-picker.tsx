@@ -26,8 +26,8 @@ const PRESET_IMAGES = [
 ];
 
 interface EventCoverImagePickerProps {
-  value: string | null;
   onChange: (url: string | null) => void;
+  value: string | null;
 }
 
 export function EventCoverImagePicker({
@@ -53,8 +53,10 @@ export function EventCoverImagePicker({
 
   const handleFiles = useCallback(
     (files: FileList | File[]) => {
-      const file = files[0];
-      if (!file) return;
+      const [file] = files;
+      if (!file) {
+        return;
+      }
 
       if (!file.type.startsWith("image/")) {
         toast.error("Please select an image file");
@@ -68,16 +70,18 @@ export function EventCoverImagePicker({
 
       startUpload([file]);
     },
-    [startUpload],
+    [startUpload]
   );
 
   const handleDragOver = useCallback(
     (e: React.DragEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      if (!isUploading) setIsDragging(true);
+      if (!isUploading) {
+        setIsDragging(true);
+      }
     },
-    [isUploading],
+    [isUploading]
   );
 
   const handleDragLeave = useCallback((e: React.DragEvent) => {
@@ -91,10 +95,12 @@ export function EventCoverImagePicker({
       e.preventDefault();
       e.stopPropagation();
       setIsDragging(false);
-      if (isUploading) return;
+      if (isUploading) {
+        return;
+      }
       handleFiles(e.dataTransfer.files);
     },
-    [handleFiles, isUploading],
+    [handleFiles, isUploading]
   );
 
   function handlePresetSelect(url: string) {
@@ -104,44 +110,44 @@ export function EventCoverImagePicker({
 
   return (
     <div className="space-y-2">
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <Dialog onOpenChange={setDialogOpen} open={dialogOpen}>
         <DialogTrigger asChild>
           {value ? (
             <button
-              type="button"
               className="group relative block w-full overflow-hidden rounded-xl border-2 border-muted transition-colors hover:border-primary/50"
               style={{ maxWidth: 240 }}
+              type="button"
             >
               <div style={{ paddingBottom: "100%" }} />
               <Image
-                src={value}
                 alt="Cover image"
+                className="object-cover"
                 fill
                 sizes="240px"
-                className="object-cover"
+                src={value}
               />
               <div className="absolute inset-0 grid place-items-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
-                <span className="text-sm font-medium text-white">
+                <span className="font-medium text-sm text-white">
                   Change Image
                 </span>
               </div>
             </button>
           ) : (
             <button
+              className="grid w-full place-items-center rounded-xl border-2 border-muted-foreground/25 border-dashed text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary"
+              style={{ maxWidth: 240, paddingBottom: 40, paddingTop: 40 }}
               type="button"
-              className="grid w-full place-items-center rounded-xl border-2 border-dashed border-muted-foreground/25 text-muted-foreground transition-colors hover:border-primary/50 hover:text-primary"
-              style={{ maxWidth: 240, paddingTop: 40, paddingBottom: 40 }}
             >
               <div className="grid place-items-center" style={{ gap: 8 }}>
-                <ImagePlus style={{ width: 32, height: 32 }} />
-                <span className="text-sm font-medium">Add Cover Image</span>
+                <ImagePlus style={{ height: 32, width: 32 }} />
+                <span className="font-medium text-sm">Add Cover Image</span>
                 <span className="text-xs">1:1 aspect ratio</span>
               </div>
             </button>
           )}
         </DialogTrigger>
 
-        <DialogContent className="sm:max-w-md" aria-describedby={undefined}>
+        <DialogContent aria-describedby={undefined} className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Choose Image</DialogTitle>
             <DialogDescription className="sr-only">
@@ -152,20 +158,20 @@ export function EventCoverImagePicker({
           <div style={{ display: "grid", gap: 16 }}>
             {/* Upload zone */}
             <button
-              type="button"
-              disabled={isUploading}
-              onClick={() => !isUploading && fileInputRef.current?.click()}
-              onDragOver={handleDragOver}
-              onDragLeave={handleDragLeave}
-              onDrop={handleDrop}
               className={cn(
                 "grid w-full place-items-center rounded-lg border-2 border-dashed transition-colors",
                 isDragging
                   ? "border-primary bg-primary/5"
                   : "border-muted-foreground/25 hover:border-primary/50",
-                isUploading && "pointer-events-none opacity-60",
+                isUploading && "pointer-events-none opacity-60"
               )}
+              disabled={isUploading}
+              onClick={() => !isUploading && fileInputRef.current?.click()}
+              onDragLeave={handleDragLeave}
+              onDragOver={handleDragOver}
+              onDrop={handleDrop}
               style={{ padding: "24px 16px" }}
+              type="button"
             >
               <div
                 className="grid place-items-center text-center"
@@ -175,20 +181,20 @@ export function EventCoverImagePicker({
                   <>
                     <Loader2
                       className="animate-spin text-primary"
-                      style={{ width: 24, height: 24 }}
+                      style={{ height: 24, width: 24 }}
                     />
-                    <span className="text-sm font-medium">Uploading...</span>
+                    <span className="font-medium text-sm">Uploading...</span>
                   </>
                 ) : (
                   <>
                     <Upload
                       className="text-muted-foreground"
-                      style={{ width: 24, height: 24 }}
+                      style={{ height: 24, width: 24 }}
                     />
-                    <span className="text-sm font-medium">
+                    <span className="font-medium text-sm">
                       Drag & drop or click to upload
                     </span>
-                    <span className="text-xs text-muted-foreground">
+                    <span className="text-muted-foreground text-xs">
                       1:1 aspect ratio recommended. Max 4MB.
                     </span>
                   </>
@@ -197,58 +203,60 @@ export function EventCoverImagePicker({
             </button>
 
             <input
-              ref={fileInputRef}
-              type="file"
               accept="image/*"
               className="hidden"
               onChange={(e) => {
-                if (e.target.files) handleFiles(e.target.files);
+                if (e.target.files) {
+                  handleFiles(e.target.files);
+                }
                 e.target.value = "";
               }}
+              ref={fileInputRef}
+              type="file"
             />
 
             {/* Divider */}
             <div
               className="grid items-center"
               style={{
-                gridTemplateColumns: "1fr auto 1fr",
                 gap: 12,
+                gridTemplateColumns: "1fr auto 1fr",
               }}
             >
               <div className="h-px bg-border" />
-              <span className="text-xs text-muted-foreground">or</span>
+              <span className="text-muted-foreground text-xs">or</span>
               <div className="h-px bg-border" />
             </div>
 
             {/* Presets */}
             <div style={{ display: "grid", gap: 8 }}>
-              <span className="text-sm font-medium">Choose a preset</span>
+              <span className="font-medium text-sm">Choose a preset</span>
               <div
                 className="grid"
                 style={{
-                  gridTemplateColumns: "repeat(3, 1fr)",
                   gap: 8,
+                  gridTemplateColumns: "repeat(3, 1fr)",
                 }}
               >
                 {PRESET_IMAGES.map((preset) => (
                   <button
-                    key={preset}
-                    type="button"
-                    onClick={() => handlePresetSelect(preset)}
                     className={cn(
                       "relative block overflow-hidden rounded-lg border-2 transition-colors",
                       value === preset
                         ? "border-primary"
-                        : "border-transparent hover:border-muted-foreground/25",
+                        : "border-transparent hover:border-muted-foreground/25"
                     )}
+                    key={preset}
+                    onClick={() => handlePresetSelect(preset)}
+                    type="button"
                   >
                     <div style={{ paddingBottom: "100%" }} />
                     <Image
-                      src={preset}
                       alt="Preset cover"
+                      className="object-cover"
                       fill
                       sizes="120px"
-                      className="object-cover"
+                      src={preset}
                     />
                   </button>
                 ))}
@@ -258,18 +266,18 @@ export function EventCoverImagePicker({
         </DialogContent>
       </Dialog>
 
-      {value && (
+      {value ? (
         <Button
-          type="button"
-          variant="ghost"
-          size="sm"
           className="text-muted-foreground"
           onClick={() => onChange(null)}
+          size="sm"
+          type="button"
+          variant="ghost"
         >
-          <Trash2 className="mr-1.5" style={{ width: 14, height: 14 }} />
+          <Trash2 className="mr-1.5" style={{ height: 14, width: 14 }} />
           Remove image
         </Button>
-      )}
+      ) : null}
     </div>
   );
 }

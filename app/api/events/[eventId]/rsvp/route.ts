@@ -14,7 +14,7 @@ import { sendRsvpConfirmationEmail } from "@/lib/email";
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ eventId: string }> },
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   const { eventId } = await params;
   const session = await auth.api.getSession({ headers: await headers() });
@@ -23,9 +23,9 @@ export async function GET(
   }
 
   const event = await db.query.events.findFirst({
+    columns: { hostId: true, id: true },
     where: eq(events.id, eventId),
     with: { cohosts: true },
-    columns: { id: true, hostId: true },
   });
 
   if (!event) {
@@ -35,16 +35,16 @@ export async function GET(
   const isHost = event.hostId === session.user.id;
   const isCohost = event.cohosts.some((c) => c.userId === session.user.id);
 
-  if (!isHost && !isCohost) {
+  if (!(isHost || isCohost)) {
     return Response.json({ message: "Not authorized" }, { status: 403 });
   }
 
   const eventRsvps = await db.query.rsvps.findMany({
+    orderBy: (rsvpRows, { desc }) => [desc(rsvpRows.createdAt)],
     where: eq(rsvps.eventId, eventId),
     with: {
-      user: { columns: { id: true, name: true, email: true, image: true } },
+      user: { columns: { email: true, id: true, image: true, name: true } },
     },
-    orderBy: (rsvps, { desc }) => [desc(rsvps.createdAt)],
   });
 
   return Response.json(eventRsvps);
@@ -52,7 +52,7 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ eventId: string }> },
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   const { eventId } = await params;
   const session = await auth.api.getSession({ headers: await headers() });
@@ -61,25 +61,25 @@ export async function POST(
   }
 
   const event = await db.query.events.findFirst({
+    columns: {
+      capacity: true,
+      endTime: true,
+      hostId: true,
+      id: true,
+      location: true,
+      requiresApproval: true,
+      slug: true,
+      startTime: true,
+      timezone: true,
+      title: true,
+      visibility: true,
+    },
     where: eq(events.id, eventId),
     with: {
       rsvps: {
-        where: eq(rsvps.status, "approved"),
         columns: { id: true },
+        where: eq(rsvps.status, "approved"),
       },
-    },
-    columns: {
-      id: true,
-      slug: true,
-      title: true,
-      hostId: true,
-      capacity: true,
-      requiresApproval: true,
-      visibility: true,
-      startTime: true,
-      endTime: true,
-      location: true,
-      timezone: true,
     },
   });
 
@@ -91,7 +91,7 @@ export async function POST(
   if (event.hostId === session.user.id) {
     return Response.json(
       { message: "You are the host of this event" },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -99,36 +99,39 @@ export async function POST(
   // access and to auto-approve invited guests once they complete registration.
   const userInvitation = session.user.email
     ? await db.query.invitations.findFirst({
+        columns: { status: true },
         where: and(
           eq(invitations.eventId, eventId),
-          eq(invitations.email, session.user.email),
+          eq(invitations.email, session.user.email)
         ),
-        columns: { status: true },
       })
     : undefined;
   const hasAcceptedInvite = userInvitation?.status === "accepted";
 
   // Private events require an accepted invitation to RSVP
-  if (event.visibility === "private" && event.hostId !== session.user.id) {
-    if (!hasAcceptedInvite) {
-      return Response.json(
-        { message: "This is a private event. You need an invitation to RSVP." },
-        { status: 403 },
-      );
-    }
+  if (
+    event.visibility === "private" &&
+    event.hostId !== session.user.id &&
+    !hasAcceptedInvite
+  ) {
+    return Response.json(
+      { message: "This is a private event. You need an invitation to RSVP." },
+      { status: 403 }
+    );
   }
 
   const isFull = !!(event.capacity && event.rsvps.length >= event.capacity);
   // Invited guests who accepted are approved outright; everyone else follows
   // the event's approval and capacity rules.
-  const resolveStatus = () =>
-    hasAcceptedInvite
-      ? "approved"
-      : isFull
-        ? "waitlisted"
-        : event.requiresApproval
-          ? "pending"
-          : "approved";
+  const resolveStatus = () => {
+    if (hasAcceptedInvite) {
+      return "approved";
+    }
+    if (isFull) {
+      return "waitlisted";
+    }
+    return event.requiresApproval ? "pending" : "approved";
+  };
 
   const existing = await db.query.rsvps.findFirst({
     where: and(eq(rsvps.eventId, eventId), eq(rsvps.userId, session.user.id)),
@@ -154,29 +157,31 @@ export async function POST(
   const [rsvp] = await db
     .insert(rsvps)
     .values({
-      eventId,
-      userId: session.user.id,
-      status,
-      message: body.message,
       customAnswers: body.customAnswers ?? null,
+      eventId,
+      message: body.message,
+      status,
+      userId: session.user.id,
     })
     .returning();
 
   // Log timeline entry
   db.insert(rsvpTimeline)
-    .values({ rsvpId: rsvp.id, eventId, type: "registered", toStatus: status })
-    .catch(() => {});
+    .values({ eventId, rsvpId: rsvp.id, toStatus: status, type: "registered" })
+    .catch(() => {
+      // ignore: best-effort timeline logging, must not block RSVP creation
+    });
 
   // Send confirmation email (ticket if auto-approved, pending notice otherwise)
   if ((status === "approved" || status === "pending") && session.user.email) {
     await sendRsvpConfirmationEmail(session.user.email, event.title, status, {
-      id: event.id,
-      slug: event.slug ?? undefined,
-      title: event.title,
-      startTime: event.startTime,
       endTime: event.endTime,
+      id: event.id,
       location: event.location,
+      slug: event.slug ?? undefined,
+      startTime: event.startTime,
       timezone: event.timezone,
+      title: event.title,
     }).catch((err) => console.error("Failed to send ticket email:", err));
   }
 
@@ -185,7 +190,7 @@ export async function POST(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ eventId: string }> },
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   const { eventId } = await params;
   const session = await auth.api.getSession({ headers: await headers() });
@@ -194,18 +199,18 @@ export async function PATCH(
   }
 
   const event = await db.query.events.findFirst({
+    columns: {
+      endTime: true,
+      hostId: true,
+      id: true,
+      location: true,
+      slug: true,
+      startTime: true,
+      timezone: true,
+      title: true,
+    },
     where: eq(events.id, eventId),
     with: { cohosts: true },
-    columns: {
-      id: true,
-      slug: true,
-      title: true,
-      hostId: true,
-      startTime: true,
-      endTime: true,
-      location: true,
-      timezone: true,
-    },
   });
 
   if (!event) {
@@ -215,7 +220,7 @@ export async function PATCH(
   const isHost = event.hostId === session.user.id;
   const isCohost = event.cohosts.some((c) => c.userId === session.user.id);
 
-  if (!isHost && !isCohost) {
+  if (!(isHost || isCohost)) {
     return Response.json({ message: "Not authorized" }, { status: 403 });
   }
 
@@ -223,16 +228,18 @@ export async function PATCH(
   const { rsvpId, status, notifyGuest = true, customMessage } = body;
 
   if (
-    !rsvpId ||
-    !["approved", "rejected", "waitlisted", "pending"].includes(status)
+    !(
+      rsvpId &&
+      ["approved", "rejected", "waitlisted", "pending"].includes(status)
+    )
   ) {
     return Response.json({ message: "Invalid data" }, { status: 400 });
   }
 
   // Fetch existing status for timeline logging
   const existingRsvp = await db.query.rsvps.findFirst({
-    where: and(eq(rsvps.id, rsvpId), eq(rsvps.eventId, eventId)),
     columns: { status: true },
+    where: and(eq(rsvps.id, rsvpId), eq(rsvps.eventId, eventId)),
   });
 
   const [updated] = await db
@@ -245,39 +252,45 @@ export async function PATCH(
     // Log timeline entry
     db.insert(rsvpTimeline)
       .values({
-        rsvpId,
-        eventId,
-        type: "status_changed",
-        fromStatus: existingRsvp?.status ?? null,
-        toStatus: status,
         changedByName: session.user.name,
+        eventId,
+        fromStatus: existingRsvp?.status ?? null,
+        rsvpId,
+        toStatus: status,
+        type: "status_changed",
       })
-      .catch(() => {});
+      .catch(() => {
+        // ignore: best-effort timeline logging, must not block status update
+      });
 
     // Fire-and-forget: send email if notifyGuest is true
     if (notifyGuest) {
-      db.query.user
-        .findFirst({ where: eq(user.id, updated.userId) })
-        .then((rsvpUser) => {
+      (async () => {
+        try {
+          const rsvpUser = await db.query.user.findFirst({
+            where: eq(user.id, updated.userId),
+          });
           if (rsvpUser?.email) {
-            sendRsvpConfirmationEmail(
+            await sendRsvpConfirmationEmail(
               rsvpUser.email,
               event.title,
               status,
               {
-                id: event.id,
-                slug: event.slug ?? undefined,
-                title: event.title,
-                startTime: event.startTime,
                 endTime: event.endTime,
+                id: event.id,
                 location: event.location,
+                slug: event.slug ?? undefined,
+                startTime: event.startTime,
                 timezone: event.timezone,
+                title: event.title,
               },
-              customMessage?.trim() || undefined,
-            ).catch((err) => console.error("Failed to send RSVP email:", err));
+              customMessage?.trim() || undefined
+            );
           }
-        })
-        .catch((err) => console.error("Failed to fetch user for email:", err));
+        } catch (err) {
+          console.error("Failed to send RSVP notification email:", err);
+        }
+      })();
     }
   }
 
@@ -286,7 +299,7 @@ export async function PATCH(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ eventId: string }> },
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   const { eventId } = await params;
   const session = await auth.api.getSession({ headers: await headers() });
@@ -310,7 +323,7 @@ export async function DELETE(
     const isHost = event.hostId === session.user.id;
     const isCohost = event.cohosts.some((c) => c.userId === session.user.id);
 
-    if (!isHost && !isCohost) {
+    if (!(isHost || isCohost)) {
       return Response.json({ message: "Not authorized" }, { status: 403 });
     }
 
@@ -323,8 +336,8 @@ export async function DELETE(
 
   // User cancelling their own RSVP
   const cancelledRsvp = await db.query.rsvps.findFirst({
-    where: and(eq(rsvps.eventId, eventId), eq(rsvps.userId, session.user.id)),
     columns: { id: true, status: true },
+    where: and(eq(rsvps.eventId, eventId), eq(rsvps.userId, session.user.id)),
   });
 
   await db
@@ -334,22 +347,22 @@ export async function DELETE(
   // Auto-promote oldest waitlisted RSVP when an approved seat opens up
   if (cancelledRsvp?.status === "approved") {
     const event = await db.query.events.findFirst({
-      where: eq(events.id, eventId),
       columns: {
-        id: true,
-        slug: true,
-        title: true,
-        startTime: true,
         endTime: true,
+        id: true,
         location: true,
+        slug: true,
+        startTime: true,
         timezone: true,
+        title: true,
       },
+      where: eq(events.id, eventId),
     });
 
     const nextInLine = await db.query.rsvps.findFirst({
-      where: and(eq(rsvps.eventId, eventId), eq(rsvps.status, "waitlisted")),
       orderBy: [asc(rsvps.createdAt)],
-      with: { user: { columns: { id: true, email: true } } },
+      where: and(eq(rsvps.eventId, eventId), eq(rsvps.status, "waitlisted")),
+      with: { user: { columns: { email: true, id: true } } },
     });
 
     if (nextInLine && event) {
@@ -364,16 +377,16 @@ export async function DELETE(
           event.title,
           "approved",
           {
-            id: event.id,
-            slug: event.slug ?? undefined,
-            title: event.title,
-            startTime: event.startTime,
             endTime: event.endTime,
+            id: event.id,
             location: event.location,
+            slug: event.slug ?? undefined,
+            startTime: event.startTime,
             timezone: event.timezone,
-          },
+            title: event.title,
+          }
         ).catch((err) =>
-          console.error("Failed to send waitlist promotion email:", err),
+          console.error("Failed to send waitlist promotion email:", err)
         );
       }
     }

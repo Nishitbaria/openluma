@@ -11,16 +11,16 @@ import { cn } from "@/lib/utils";
 
 export const navLinks = [
   {
-    label: "Browse Events",
     href: "/events",
+    label: "Browse Events",
   },
   {
-    label: "Features",
     href: "#features",
+    label: "Features",
   },
   {
-    label: "About",
     href: "#about",
+    label: "About",
   },
 ];
 
@@ -36,7 +36,7 @@ export function Header() {
         {
           "border-border bg-background/95 backdrop-blur-sm supports-[backdrop-filter]:bg-background/50 md:top-2 md:max-w-3xl md:shadow":
             scrolled,
-        },
+        }
       )}
     >
       <nav
@@ -44,7 +44,7 @@ export function Header() {
           "flex h-14 w-full items-center justify-between px-4 md:h-12 md:transition-all md:ease-out",
           {
             "md:px-2": scrolled,
-          },
+          }
         )}
       >
         <Link

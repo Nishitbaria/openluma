@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.2.0/schema.json",
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -8,7 +8,6 @@
   "files": {
     "ignoreUnknown": true,
     "includes": [
-      "**",
       "!node_modules",
       "!.next",
       "!dist",
@@ -30,7 +29,8 @@
         "noArrayIndexKey": "off"
       },
       "performance": {
-        "noImgElement": "off"
+        "noImgElement": "off",
+        "noJsxPropsBind": "off"
       },
       "a11y": {
         "noSvgWithoutTitle": "off",
@@ -49,9 +49,15 @@
       "includes": ["components/ui/**"],
       "linter": {
         "rules": {
-          "security": { "noDangerouslySetInnerHtml": "off" },
-          "a11y": { "useKeyWithClickEvents": "off" },
-          "correctness": { "useExhaustiveDependencies": "off" }
+          "security": {
+            "noDangerouslySetInnerHtml": "off"
+          },
+          "a11y": {
+            "useKeyWithClickEvents": "off"
+          },
+          "correctness": {
+            "useExhaustiveDependencies": "off"
+          }
         }
       }
     }
@@ -62,5 +68,10 @@
         "organizeImports": "on"
       }
     }
-  }
+  },
+  "extends": [
+    "ultracite/biome/core",
+    "ultracite/biome/next",
+    "ultracite/biome/react"
+  ]
 }

@@ -69,56 +69,56 @@ type QuestionType =
 interface Question {
   id: string;
   label: string;
-  type: QuestionType;
-  required: boolean;
-  order: number;
   options: string[] | null;
+  order: number;
+  required: boolean;
+  type: QuestionType;
 }
 
 const TYPE_META: Record<
   QuestionType,
   { label: string; description: string; icon: React.ElementType }
 > = {
-  text: {
-    label: "Short Text",
-    description: "Ask for a free-form response",
-    icon: Text,
-  },
-  paragraph: {
-    label: "Paragraph",
-    description: "Ask for a long-form response",
-    icon: AlignLeft,
-  },
   checkbox: {
-    label: "Checkbox",
     description: "Ask guests to check a box",
     icon: CheckSquare,
-  },
-  dropdown: {
-    label: "Options",
-    description: "Let the guest choose from a list",
-    icon: List,
-  },
-  social_profile: {
-    label: "Social Profile",
-    description: "Ask for a social network username",
-    icon: AtSign,
+    label: "Checkbox",
   },
   company: {
-    label: "Company",
     description: "Ask for the company the guest works for",
     icon: Building2,
+    label: "Company",
   },
-  phone: { label: "Phone", description: "Ask for a phone number", icon: Phone },
-  website: {
-    label: "Website",
-    description: "Ask for a website URL",
-    icon: Link,
+  dropdown: {
+    description: "Let the guest choose from a list",
+    icon: List,
+    label: "Options",
+  },
+  paragraph: {
+    description: "Ask for a long-form response",
+    icon: AlignLeft,
+    label: "Paragraph",
+  },
+  phone: { description: "Ask for a phone number", icon: Phone, label: "Phone" },
+  social_profile: {
+    description: "Ask for a social network username",
+    icon: AtSign,
+    label: "Social Profile",
   },
   terms: {
-    label: "Terms",
     description: "Ask guests to agree to terms",
     icon: FileText,
+    label: "Terms",
+  },
+  text: {
+    description: "Ask for a free-form response",
+    icon: Text,
+    label: "Short Text",
+  },
+  website: {
+    description: "Ask for a website URL",
+    icon: Link,
+    label: "Website",
   },
 };
 
@@ -134,41 +134,48 @@ const SOCIAL_PLATFORMS = [
 type ModalStep = "pick-type" | "edit-form";
 
 interface ModalState {
-  open: boolean;
-  step: ModalStep;
-  editingId: string | null;
-  type: QuestionType;
-  label: string;
-  required: boolean;
-  // dropdown
-  options: string[];
-  optionInput: string;
-  // social_profile
-  platform: string;
   // company
   collectJobTitle: boolean;
+  editingId: string | null;
   jobTitleLabel: string;
+  label: string;
+  open: boolean;
+  optionInput: string;
+  // dropdown
+  options: string[];
+  // social_profile
+  platform: string;
+  required: boolean;
+  step: ModalStep;
+  type: QuestionType;
 }
 
 const EMPTY_MODAL: ModalState = {
-  open: false,
-  step: "pick-type",
-  editingId: null,
-  type: "text",
-  label: "",
-  required: false,
-  options: [],
-  optionInput: "",
-  platform: "Instagram",
   collectJobTitle: false,
+  editingId: null,
   jobTitleLabel: "What is your job title?",
+  label: "",
+  open: false,
+  optionInput: "",
+  options: [],
+  platform: "Instagram",
+  required: false,
+  step: "pick-type",
+  type: "text",
 };
 
 const DEFAULT_LABELS: Partial<Record<QuestionType, string>> = {
+  company: "What company do you work for?",
   phone: "What is your phone number?",
   website: "What is your website URL?",
-  company: "What company do you work for?",
 };
+
+function getSaveButtonLabel(saving: boolean, editingId: string | null) {
+  if (saving) {
+    return "Saving…";
+  }
+  return editingId ? "Save Changes" : "Add Question";
+}
 
 export function QuestionBuilder({ eventId }: { eventId: string }) {
   const router = useRouter();
@@ -181,7 +188,7 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
     useSensor(PointerSensor),
     useSensor(KeyboardSensor, {
       coordinateGetter: sortableKeyboardCoordinates,
-    }),
+    })
   );
 
   useEffect(() => {
@@ -203,22 +210,22 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
         ? (q.options?.[0] ?? "Instagram")
         : "Instagram";
     const collectJobTitle =
-      q.type === "company" && q.options != null && q.options.length > 0;
+      q.type === "company" && q.options !== null && q.options.length > 0;
     const jobTitleLabel = collectJobTitle
-      ? q.options![0]
+      ? (q.options?.[0] ?? "What is your job title?")
       : "What is your job title?";
     setModal({
-      open: true,
-      step: "edit-form",
-      editingId: q.id,
-      type: q.type,
-      label: q.label,
-      required: q.required,
-      options: q.type === "dropdown" ? (q.options ?? []) : [],
-      optionInput: "",
-      platform,
       collectJobTitle,
+      editingId: q.id,
       jobTitleLabel,
+      label: q.label,
+      open: true,
+      optionInput: "",
+      options: q.type === "dropdown" ? (q.options ?? []) : [],
+      platform,
+      required: q.required,
+      step: "edit-form",
+      type: q.type,
     });
   }
 
@@ -229,14 +236,14 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
   function selectType(type: QuestionType) {
     setModal((m) => ({
       ...m,
-      type,
-      step: "edit-form",
-      label: DEFAULT_LABELS[type] ?? "",
-      required: false,
-      options: [],
-      platform: "Instagram",
       collectJobTitle: false,
       jobTitleLabel: "What is your job title?",
+      label: DEFAULT_LABELS[type] ?? "",
+      options: [],
+      platform: "Instagram",
+      required: false,
+      step: "edit-form",
+      type,
     }));
   }
 
@@ -248,16 +255,18 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
   function handlePlatformChange(platform: string) {
     setModal((m) => ({
       ...m,
-      platform,
       label: getSocialLabel(platform),
+      platform,
     }));
   }
 
   // ── Dropdown option tags ──────────────────────────────────────────────────
   function addOption() {
     const val = modal.optionInput.trim();
-    if (!val || modal.options.includes(val)) return;
-    setModal((m) => ({ ...m, options: [...m.options, val], optionInput: "" }));
+    if (!val || modal.options.includes(val)) {
+      return;
+    }
+    setModal((m) => ({ ...m, optionInput: "", options: [...m.options, val] }));
   }
 
   function removeOption(opt: string) {
@@ -273,11 +282,15 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
 
   // ── Build options payload by type ─────────────────────────────────────────
   function buildOptions(): string[] | null {
-    if (modal.type === "dropdown")
+    if (modal.type === "dropdown") {
       return modal.options.length > 0 ? modal.options : null;
-    if (modal.type === "social_profile") return [modal.platform];
-    if (modal.type === "company")
+    }
+    if (modal.type === "social_profile") {
+      return [modal.platform];
+    }
+    if (modal.type === "company") {
       return modal.collectJobTitle ? [modal.jobTitleLabel] : null;
+    }
     return null;
   }
 
@@ -298,16 +311,16 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
     try {
       const payload = {
         label,
-        type: modal.type,
-        required: modal.required,
         options: buildOptions(),
+        required: modal.required,
+        type: modal.type,
       };
 
       if (modal.editingId) {
         const res = await fetch(`/api/events/${eventId}/questions`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id: modal.editingId, ...payload }),
+          headers: { "Content-Type": "application/json" },
+          method: "PUT",
         });
         if (!res.ok) {
           toast.error("Failed to save");
@@ -315,14 +328,14 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
         }
         const updated = await res.json();
         setQuestions((prev) =>
-          prev.map((q) => (q.id === modal.editingId ? updated : q)),
+          prev.map((q) => (q.id === modal.editingId ? updated : q))
         );
         toast.success("Question updated");
       } else {
         const res = await fetch(`/api/events/${eventId}/questions`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ ...payload, order: questions.length }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
         });
         if (!res.ok) {
           toast.error("Failed to add question");
@@ -342,9 +355,9 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
   // ── Delete ────────────────────────────────────────────────────────────────
   async function deleteQuestion(id: string) {
     const res = await fetch(`/api/events/${eventId}/questions`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id }),
+      headers: { "Content-Type": "application/json" },
+      method: "DELETE",
     });
     if (!res.ok) {
       toast.error("Failed to delete");
@@ -357,7 +370,9 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
   // ── Drag reorder ──────────────────────────────────────────────────────────
   async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
-    if (!over || active.id === over.id) return;
+    if (!over || active.id === over.id) {
+      return;
+    }
     const oldIndex = questions.findIndex((q) => q.id === active.id);
     const newIndex = questions.findIndex((q) => q.id === over.id);
     const reordered = arrayMove(questions, oldIndex, newIndex).map((q, i) => ({
@@ -368,36 +383,38 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
     await Promise.all(
       reordered.map((q) =>
         fetch(`/api/events/${eventId}/questions`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id: q.id, order: q.order }),
-        }),
-      ),
+          headers: { "Content-Type": "application/json" },
+          method: "PUT",
+        })
+      )
     );
   }
 
-  if (loading)
-    return <p className="text-sm text-muted-foreground">Loading questions…</p>;
+  if (loading) {
+    return <p className="text-muted-foreground text-sm">Loading questions…</p>;
+  }
 
   const SelectedIcon = TYPE_META[modal.type].icon;
+  const saveButtonLabel = getSaveButtonLabel(saving, modal.editingId);
 
   return (
     <>
       {/* Question list */}
       <div className="space-y-2">
         {questions.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-10 text-center border rounded-lg border-dashed">
+          <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed py-10 text-center">
             <List className="h-7 w-7 text-muted-foreground/50" />
-            <p className="text-sm font-medium">No questions yet</p>
-            <p className="text-xs text-muted-foreground">
+            <p className="font-medium text-sm">No questions yet</p>
+            <p className="text-muted-foreground text-xs">
               Add questions to collect info from attendees when they RSVP.
             </p>
           </div>
         ) : (
           <DndContext
-            sensors={sensors}
             collisionDetection={closestCenter}
             onDragEnd={handleDragEnd}
+            sensors={sensors}
           >
             <SortableContext
               items={questions.map((q) => q.id)}
@@ -406,9 +423,9 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
               {questions.map((q) => (
                 <SortableQuestionRow
                   key={q.id}
-                  question={q}
-                  onEdit={openEdit}
                   onDelete={deleteQuestion}
+                  onEdit={openEdit}
+                  question={q}
                 />
               ))}
             </SortableContext>
@@ -416,20 +433,20 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
         )}
       </div>
 
-      <Button variant="outline" onClick={openAdd} className="mt-3">
+      <Button className="mt-3" onClick={openAdd} variant="outline">
         <Plus className="mr-2 h-4 w-4" />
         Add Question
       </Button>
 
       {/* ── Modal ── */}
-      <Dialog open={modal.open} onOpenChange={(open) => !open && closeModal()}>
-        <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden">
+      <Dialog onOpenChange={(open) => !open && closeModal()} open={modal.open}>
+        <DialogContent className="gap-0 overflow-hidden p-0 sm:max-w-md">
           {/* Step 1 — Pick type */}
           {modal.step === "pick-type" && (
             <>
               <DialogHeader className="px-6 pt-6 pb-4">
                 <DialogTitle>Add Question</DialogTitle>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   Ask guests custom questions when they register.
                 </p>
               </DialogHeader>
@@ -443,13 +460,13 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
                   const Icon = meta.icon;
                   return (
                     <button
+                      className="flex items-center gap-3 rounded-lg border bg-muted/30 px-4 py-3 text-left transition-colors hover:bg-muted"
                       key={type}
-                      type="button"
                       onClick={() => selectType(type)}
-                      className="flex items-center gap-3 rounded-lg border bg-muted/30 hover:bg-muted px-4 py-3 text-left transition-colors"
+                      type="button"
                     >
-                      <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
-                      <span className="text-sm font-medium">{meta.label}</span>
+                      <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                      <span className="font-medium text-sm">{meta.label}</span>
                     </button>
                   );
                 })}
@@ -461,14 +478,14 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
           {modal.step === "edit-form" && (
             <>
               <DialogHeader className="px-6 pt-5 pb-0">
-                <div className="flex items-center gap-2 mb-1">
+                <div className="mb-1 flex items-center gap-2">
                   {!modal.editingId && (
                     <button
-                      type="button"
+                      className="rounded-md p-1 transition-colors hover:bg-muted"
                       onClick={() =>
                         setModal((m) => ({ ...m, step: "pick-type" }))
                       }
-                      className="rounded-md p-1 hover:bg-muted transition-colors"
+                      type="button"
                     >
                       <ChevronLeft className="h-4 w-4" />
                     </button>
@@ -477,27 +494,27 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
                     {modal.editingId ? "Edit Question" : "Add Question"}
                   </DialogTitle>
                 </div>
-                <div className="flex items-center gap-2 mt-1 pb-4 border-b">
+                <div className="mt-1 flex items-center gap-2 border-b pb-4">
                   <SelectedIcon className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-muted-foreground text-sm">
                     {TYPE_META[modal.type].label}
                   </span>
-                  <span className="text-xs text-muted-foreground">·</span>
-                  <span className="text-xs text-muted-foreground">
+                  <span className="text-muted-foreground text-xs">·</span>
+                  <span className="text-muted-foreground text-xs">
                     {TYPE_META[modal.type].description}
                   </span>
                 </div>
               </DialogHeader>
 
-              <div className="px-6 py-4 space-y-4">
+              <div className="space-y-4 px-6 py-4">
                 {/* Social Profile — platform first, then auto-label */}
                 {modal.type === "social_profile" && (
                   <>
                     <div className="space-y-1.5">
                       <Label className="text-sm">Platform</Label>
                       <Select
-                        value={modal.platform}
                         onValueChange={handlePlatformChange}
+                        value={modal.platform}
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -514,14 +531,14 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
                     <div className="space-y-1.5">
                       <Label className="text-sm">Question</Label>
                       <Input
-                        value={modal.label}
                         onChange={(e) =>
                           setModal((m) => ({ ...m, label: e.target.value }))
                         }
-                        placeholder={getSocialLabel(modal.platform)}
                         onKeyDown={(e) => e.key === "Enter" && handleSave()}
+                        placeholder={getSocialLabel(modal.platform)}
+                        value={modal.label}
                       />
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-muted-foreground text-xs">
                         Auto-filled from platform — you can customize it.
                       </p>
                     </div>
@@ -535,30 +552,29 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
                       <Label className="text-sm">Question</Label>
                       <Input
                         autoFocus
-                        value={modal.label}
                         onChange={(e) =>
                           setModal((m) => ({ ...m, label: e.target.value }))
                         }
                         placeholder="What company do you work for?"
+                        value={modal.label}
                       />
                     </div>
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="collect-job" className="text-sm">
+                      <Label className="text-sm" htmlFor="collect-job">
                         Collect Job Title
                       </Label>
                       <Switch
-                        id="collect-job"
                         checked={modal.collectJobTitle}
+                        id="collect-job"
                         onCheckedChange={(v) =>
                           setModal((m) => ({ ...m, collectJobTitle: v }))
                         }
                       />
                     </div>
-                    {modal.collectJobTitle && (
+                    {modal.collectJobTitle ? (
                       <div className="space-y-1.5">
                         <Label className="text-sm">Job Title Question</Label>
                         <Input
-                          value={modal.jobTitleLabel}
                           onChange={(e) =>
                             setModal((m) => ({
                               ...m,
@@ -566,9 +582,10 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
                             }))
                           }
                           placeholder="What is your job title?"
+                          value={modal.jobTitleLabel}
                         />
                       </div>
-                    )}
+                    ) : null}
                   </>
                 )}
 
@@ -579,39 +596,34 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
                       <Label className="text-sm">Question</Label>
                       <Input
                         autoFocus
-                        value={modal.label}
                         onChange={(e) =>
                           setModal((m) => ({ ...m, label: e.target.value }))
                         }
                         placeholder="e.g. Which session will you attend?"
+                        value={modal.label}
                       />
                     </div>
                     <div className="space-y-2">
                       <Label className="text-sm">Options</Label>
-                      <div className="flex flex-wrap gap-1.5 min-h-[40px] rounded-md border bg-background px-3 py-2">
+                      <div className="flex min-h-[40px] flex-wrap gap-1.5 rounded-md border bg-background px-3 py-2">
                         {modal.options.map((opt) => (
                           <span
-                            key={opt}
                             className="flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-sm"
+                            key={opt}
                           >
                             {opt}
                             <button
-                              type="button"
-                              onClick={() => removeOption(opt)}
                               className="text-muted-foreground hover:text-foreground"
+                              onClick={() => removeOption(opt)}
+                              type="button"
                             >
                               <X className="h-3 w-3" />
                             </button>
                           </span>
                         ))}
                         <input
-                          className="flex-1 min-w-[120px] bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-                          placeholder={
-                            modal.options.length === 0
-                              ? "Add options…"
-                              : "Add another…"
-                          }
-                          value={modal.optionInput}
+                          className="min-w-[120px] flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+                          onBlur={addOption}
                           onChange={(e) =>
                             setModal((m) => ({
                               ...m,
@@ -619,10 +631,15 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
                             }))
                           }
                           onKeyDown={handleOptionKeyDown}
-                          onBlur={addOption}
+                          placeholder={
+                            modal.options.length === 0
+                              ? "Add options…"
+                              : "Add another…"
+                          }
+                          value={modal.optionInput}
                         />
                       </div>
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-muted-foreground text-xs">
                         Press Enter or Tab to add an option.
                       </p>
                     </div>
@@ -631,20 +648,20 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
 
                 {/* All other types — just a label input */}
                 {!["social_profile", "company", "dropdown"].includes(
-                  modal.type,
+                  modal.type
                 ) && (
                   <div className="space-y-1.5">
                     <Label className="text-sm">Question</Label>
                     <Input
                       autoFocus
-                      value={modal.label}
                       onChange={(e) =>
                         setModal((m) => ({ ...m, label: e.target.value }))
                       }
+                      onKeyDown={(e) => e.key === "Enter" && handleSave()}
                       placeholder={
                         DEFAULT_LABELS[modal.type] ?? "e.g. What is your…"
                       }
-                      onKeyDown={(e) => e.key === "Enter" && handleSave()}
+                      value={modal.label}
                     />
                   </div>
                 )}
@@ -652,19 +669,19 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
                 {/* Required toggle */}
                 <div className="flex flex-col gap-1">
                   <div className="flex items-center justify-between">
-                    <Label htmlFor="required-toggle" className="text-sm">
+                    <Label className="text-sm" htmlFor="required-toggle">
                       Required
                     </Label>
                     <Switch
-                      id="required-toggle"
                       checked={modal.required}
+                      id="required-toggle"
                       onCheckedChange={(v) =>
                         setModal((m) => ({ ...m, required: v }))
                       }
                     />
                   </div>
                   {modal.type === "checkbox" && modal.required && (
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       When set to Required, guests must check the box (answer
                       Yes) to proceed.
                     </p>
@@ -675,14 +692,10 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
               <div className="px-6 pb-6">
                 <Button
                   className="w-full"
-                  onClick={handleSave}
                   disabled={saving}
+                  onClick={handleSave}
                 >
-                  {saving
-                    ? "Saving…"
-                    : modal.editingId
-                      ? "Save Changes"
-                      : "Add Question"}
+                  {saveButtonLabel}
                 </Button>
               </div>
             </>
@@ -716,9 +729,9 @@ function SortableQuestionRow({
   });
 
   const style = {
+    opacity: isDragging ? 0.5 : 1,
     transform: CSS.Transform.toString(transform),
     transition,
-    opacity: isDragging ? 0.5 : 1,
     zIndex: isDragging ? 10 : undefined,
   };
 
@@ -726,43 +739,43 @@ function SortableQuestionRow({
 
   return (
     <div
+      className="group flex items-center gap-3 rounded-lg border bg-card px-4 py-3 transition-colors hover:bg-muted/40"
       ref={setNodeRef}
       style={style}
-      className="group flex items-center gap-3 rounded-lg border bg-card px-4 py-3 hover:bg-muted/40 transition-colors"
     >
       <button
+        className="cursor-grab touch-none text-muted-foreground/40 transition-colors hover:text-muted-foreground active:cursor-grabbing"
         type="button"
-        className="cursor-grab active:cursor-grabbing touch-none text-muted-foreground/40 hover:text-muted-foreground transition-colors"
         {...attributes}
         {...listeners}
       >
         <GripVertical className="h-4 w-4" />
       </button>
 
-      <Meta.icon className="h-4 w-4 text-muted-foreground shrink-0" />
+      <Meta.icon className="h-4 w-4 shrink-0 text-muted-foreground" />
 
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium truncate">{question.label}</p>
-        <p className="text-xs text-muted-foreground">
+      <div className="min-w-0 flex-1">
+        <p className="truncate font-medium text-sm">{question.label}</p>
+        <p className="text-muted-foreground text-xs">
           {Meta.label}
           {question.required ? " · Required" : ""}
         </p>
       </div>
 
-      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
         <Button
-          size="icon"
-          variant="ghost"
           className="h-7 w-7"
           onClick={() => onEdit(question)}
+          size="icon"
+          variant="ghost"
         >
           <Pencil className="h-3.5 w-3.5" />
         </Button>
         <Button
-          size="icon"
-          variant="ghost"
           className="h-7 w-7 text-destructive hover:text-destructive"
           onClick={() => onDelete(question.id)}
+          size="icon"
+          variant="ghost"
         >
           <Trash2 className="h-3.5 w-3.5" />
         </Button>

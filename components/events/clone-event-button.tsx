@@ -25,7 +25,7 @@ export function CloneEventButton({ eventId }: { eventId: string }) {
       router.push(`/dashboard/events/${id}/edit`);
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : "Something went wrong",
+        error instanceof Error ? error.message : "Something went wrong"
       );
     } finally {
       setLoading(false);
@@ -33,7 +33,7 @@ export function CloneEventButton({ eventId }: { eventId: string }) {
   }
 
   return (
-    <Button variant="outline" onClick={handleClone} disabled={loading}>
+    <Button disabled={loading} onClick={handleClone} variant="outline">
       <Copy className="mr-2 h-4 w-4" />
       {loading ? "Duplicating..." : "Duplicate"}
     </Button>

@@ -17,7 +17,9 @@ export function Portal({ children, className, id }: PortalProps) {
     setMounted(true);
   }, []);
 
-  if (!mounted) return null;
+  if (!mounted) {
+    return null;
+  }
 
   return createPortal(
     <div
@@ -26,7 +28,7 @@ export function Portal({ children, className, id }: PortalProps) {
     >
       {children}
     </div>,
-    document.body,
+    document.body
   );
 }
 
@@ -36,7 +38,7 @@ export function PortalBackdrop({ className }: { className?: string }) {
       aria-hidden
       className={cn(
         "fixed inset-0 z-[-1] bg-background/80 backdrop-blur-sm",
-        className,
+        className
       )}
     />
   );

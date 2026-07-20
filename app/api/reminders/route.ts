@@ -23,36 +23,36 @@ export async function GET(request: NextRequest) {
 
   const [events24h, events1h] = await Promise.all([
     db.query.events.findMany({
+      columns: {
+        endTime: true,
+        id: true,
+        location: true,
+        slug: true,
+        startTime: true,
+        timezone: true,
+        title: true,
+      },
       where: and(
         gte(events.startTime, window24hStart),
         lte(events.startTime, window24hEnd),
-        eq(events.reminderSent24h, false),
+        eq(events.reminderSent24h, false)
       ),
-      columns: {
-        id: true,
-        slug: true,
-        title: true,
-        startTime: true,
-        endTime: true,
-        location: true,
-        timezone: true,
-      },
     }),
     db.query.events.findMany({
+      columns: {
+        endTime: true,
+        id: true,
+        location: true,
+        slug: true,
+        startTime: true,
+        timezone: true,
+        title: true,
+      },
       where: and(
         gte(events.startTime, window1hStart),
         lte(events.startTime, window1hEnd),
-        eq(events.reminderSent1h, false),
+        eq(events.reminderSent1h, false)
       ),
-      columns: {
-        id: true,
-        slug: true,
-        title: true,
-        startTime: true,
-        endTime: true,
-        location: true,
-        timezone: true,
-      },
     }),
   ]);
 
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
       location: string | null;
       timezone: string;
     },
-    flag: "reminderSent24h" | "reminderSent1h",
+    flag: "reminderSent24h" | "reminderSent1h"
   ) {
     const approvedRsvps = await db.query.rsvps.findMany({
       where: and(eq(rsvps.eventId, event.id), eq(rsvps.status, "approved")),
@@ -85,22 +85,22 @@ export async function GET(request: NextRequest) {
           event.startTime,
           event.timezone,
           {
-            id: event.id,
-            slug: event.slug ?? undefined,
             endTime: event.endTime,
+            id: event.id,
             location: event.location,
-          },
-        ),
-      ),
+            slug: event.slug ?? undefined,
+          }
+        )
+      )
     );
 
     let failures = 0;
     results.forEach((result, i) => {
       if (result.status === "rejected") {
-        failures++;
+        failures += 1;
         console.error(
           `Reminder email failed (event ${event.id}, rsvp ${recipients[i].id}):`,
-          result.reason,
+          result.reason
         );
       }
     });
@@ -124,7 +124,7 @@ export async function GET(request: NextRequest) {
   ]);
 
   return Response.json({
-    processed: events24h.length + events1h.length,
     emailsSent: sent,
+    processed: events24h.length + events1h.length,
   });
 }

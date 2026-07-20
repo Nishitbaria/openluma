@@ -30,7 +30,9 @@ export function DeleteEventButton({
     setLoading(true);
     try {
       const res = await fetch(`/api/events/${eventId}`, { method: "DELETE" });
-      if (!res.ok) throw new Error("Failed to delete");
+      if (!res.ok) {
+        throw new Error("Failed to delete");
+      }
       toast.success("Event deleted");
       router.push("/dashboard/events");
       router.refresh();
@@ -43,9 +45,9 @@ export function DeleteEventButton({
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog onOpenChange={setOpen} open={open}>
       <DialogTrigger asChild>
-        <Button variant="destructive" size="sm">
+        <Button size="sm" variant="destructive">
           <Trash2 className="mr-2 h-4 w-4" />
           Delete
         </Button>
@@ -60,13 +62,13 @@ export function DeleteEventButton({
           </DialogDescription>
         </DialogHeader>
         <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>
+          <Button onClick={() => setOpen(false)} variant="outline">
             Cancel
           </Button>
           <Button
-            variant="destructive"
-            onClick={handleDelete}
             disabled={loading}
+            onClick={handleDelete}
+            variant="destructive"
           >
             {loading ? "Deleting..." : "Delete Event"}
           </Button>

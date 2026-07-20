@@ -1,4 +1,4 @@
-import { and, desc, eq, gte, ilike, lte } from "drizzle-orm";
+import { and, desc, eq, gte, ilike, lte, type SQL } from "drizzle-orm";
 import { headers } from "next/headers";
 import type { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
@@ -8,7 +8,7 @@ import { generateEventSlug } from "@/lib/utils/slugify";
 import { createEventSchema } from "@/lib/validators/event";
 
 export async function GET(request: NextRequest) {
-  const searchParams = request.nextUrl.searchParams;
+  const { searchParams } = request.nextUrl;
   const visibility = searchParams.get("visibility");
   const search = searchParams.get("search");
   const hostId = searchParams.get("hostId");
@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
   const limit = Math.min(Number(searchParams.get("limit") ?? 20), 50);
   const offset = Number(searchParams.get("offset") ?? 0);
 
-  const conditions = [];
+  const conditions: SQL[] = [];
 
   // Default to public events only; private events require authentication + ownership
   if (visibility === "private") {
@@ -48,14 +48,14 @@ export async function GET(request: NextRequest) {
   }
 
   const results = await db.query.events.findMany({
-    where: conditions.length > 0 ? and(...conditions) : undefined,
-    with: {
-      host: { columns: { id: true, name: true, image: true } },
-      rsvps: { columns: { id: true } },
-    },
-    orderBy: [desc(events.startTime)],
     limit,
     offset,
+    orderBy: [desc(events.startTime)],
+    where: conditions.length > 0 ? and(...conditions) : undefined,
+    with: {
+      host: { columns: { id: true, image: true, name: true } },
+      rsvps: { columns: { id: true } },
+    },
   });
 
   const formatted = results.map((event) => ({
@@ -78,8 +78,8 @@ export async function POST(request: NextRequest) {
 
   if (!parsed.success) {
     return Response.json(
-      { message: "Invalid data", errors: parsed.error.issues },
-      { status: 400 },
+      { errors: parsed.error.issues, message: "Invalid data" },
+      { status: 400 }
     );
   }
 
@@ -89,10 +89,10 @@ export async function POST(request: NextRequest) {
     .insert(events)
     .values({
       ...eventData,
-      slug: generateEventSlug(eventData.title),
-      startTime: new Date(eventData.startTime),
       endTime: eventData.endTime ? new Date(eventData.endTime) : null,
       hostId: session.user.id,
+      slug: generateEventSlug(eventData.title),
+      startTime: new Date(eventData.startTime),
     })
     .returning();
 
@@ -101,7 +101,7 @@ export async function POST(request: NextRequest) {
       tags.map((tag) => ({
         eventId: event.id,
         tag,
-      })),
+      }))
     );
   }
 

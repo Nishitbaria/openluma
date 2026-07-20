@@ -16,21 +16,21 @@ export function CtaSection() {
           <Code2 className="mx-auto mb-6 size-10 text-primary" />
           <PixelHeading
             as="h2"
-            mode="wave"
             autoPlay
+            className="font-bold text-3xl tracking-tight sm:text-4xl"
             cycleInterval={350}
-            staggerDelay={100}
+            mode="wave"
             showLabel={false}
-            className="text-3xl font-bold tracking-tight sm:text-4xl"
+            staggerDelay={100}
           >
             Open source, forever
           </PixelHeading>
           <PixelParagraph
-            text="OpenLuma is MIT-licensed and free to self-host. Inspect the code, contribute features, or deploy your own instance. No vendor lock-in, no surprise pricing."
-            pixelWords={["MIT-licensed", "self-host", "vendor lock-in"]}
+            className="mt-4 text-muted-foreground leading-relaxed"
             font="circle"
             pixelWordClassName="text-foreground"
-            className="mt-4 text-muted-foreground leading-relaxed"
+            pixelWords={["MIT-licensed", "self-host", "vendor lock-in"]}
+            text="OpenLuma is MIT-licensed and free to self-host. Inspect the code, contribute features, or deploy your own instance. No vendor lock-in, no surprise pricing."
           />
           <div className="mt-8 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <MetalButton asChild size="lg">
@@ -39,11 +39,11 @@ export function CtaSection() {
                 <ArrowRight className="ml-2 size-4" />
               </Link>
             </MetalButton>
-            <Button asChild variant="outline" size="lg">
+            <Button asChild size="lg" variant="outline">
               <a
                 href="https://github.com/Nishitbaria/openluma"
-                target="_blank"
                 rel="noopener noreferrer"
+                target="_blank"
               >
                 <GitHubIcon className="mr-2 size-4" />
                 View on GitHub

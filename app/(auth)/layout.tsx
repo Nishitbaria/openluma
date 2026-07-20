@@ -10,7 +10,9 @@ export default function AuthLayout({
   const { isAuthenticated, isPending } =
     useRedirectIfAuthenticated("/dashboard");
 
-  if (isPending || isAuthenticated) return null;
+  if (isPending || isAuthenticated) {
+    return null;
+  }
 
   return (
     <div className="flex min-h-svh items-center justify-center bg-background">
