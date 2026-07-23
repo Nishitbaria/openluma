@@ -4,14 +4,20 @@ import {
   type FileRouter,
   UploadThingError,
 } from "uploadthing/server";
-import { auth } from "@/lib/auth";
 
 const f = createUploadthing();
 
 // Every upload must come from an authenticated session. The file is bound to
 // the uploader's id so onUploadComplete can attribute it and the client can't
 // forge an upload on behalf of another user.
+//
+// `auth` is imported lazily (request time only) rather than at module load:
+// the root layout imports this file router for extractRouterConfig(), and a
+// static `import { auth }` would pull lib/db into the layout's build-time
+// module graph, crashing page-data collection when DATABASE_URL isn't present
+// in that phase.
 async function requireUser() {
+  const { auth } = await import("@/lib/auth");
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) {
     throw new UploadThingError({
