@@ -3,11 +3,7 @@ import { z } from "zod/v4";
 // Hosts we accept image URLs from. These match the remotePatterns allowlist in
 // next.config.ts — an image URL persisted to the DB must originate from our
 // own Uploadthing storage, never an attacker-controlled origin.
-const ALLOWED_UPLOAD_HOSTS = [
-  "utfs.io",
-  "uploadthing.com",
-  "ufs.sh",
-] as const;
+const ALLOWED_UPLOAD_HOSTS = ["utfs.io", "uploadthing.com", "ufs.sh"] as const;
 
 function isAllowedUploadHost(hostname: string): boolean {
   return ALLOWED_UPLOAD_HOSTS.some(

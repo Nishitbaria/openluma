@@ -27,10 +27,9 @@ function createSecondaryStorage(client: NonNullable<typeof redis>) {
       return value;
     },
     set: (key: string, value: string, ttl?: number) =>
-      (ttl
-        ? client.set(key, value, { ex: ttl })
-        : client.set(key, value)
-      ).then(() => undefined),
+      (ttl ? client.set(key, value, { ex: ttl }) : client.set(key, value)).then(
+        () => undefined
+      ),
   };
 }
 
