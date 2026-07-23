@@ -6,5 +6,5 @@ const base = openai("gpt-5-mini");
 
 export const model =
   process.env.NODE_ENV === "development"
-    ? wrapLanguageModel({ model: base, middleware: devToolsMiddleware() })
+    ? wrapLanguageModel({ middleware: devToolsMiddleware(), model: base })
     : base;

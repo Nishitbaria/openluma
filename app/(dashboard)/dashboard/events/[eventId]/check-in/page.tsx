@@ -17,10 +17,10 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface CheckinRecord {
-  id: string;
-  userId: string;
   checkedInAt: string;
+  id: string;
   user: { id: string; name: string; email: string };
+  userId: string;
 }
 
 export default function CheckInPage() {
@@ -40,18 +40,22 @@ export default function CheckInPage() {
     fetch(`/api/events/${eventId}/check-in`)
       .then((res) => res.json())
       .then((data) => setCheckins(data.checkins ?? []))
-      .catch(() => {});
+      .catch(() => {
+        // ignore: best-effort initial load, list stays empty
+      });
   }, [eventId]);
 
   const handleCheckIn = useCallback(
     async (userId: string) => {
-      if (loading) return;
+      if (loading) {
+        return;
+      }
       setLoading(true);
       try {
         const res = await fetch(`/api/events/${eventId}/check-in`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ userId }),
+          headers: { "Content-Type": "application/json" },
+          method: "POST",
         });
 
         const data = await res.json();
@@ -59,13 +63,13 @@ export default function CheckInPage() {
         if (res.ok || data.message === "Already checked in") {
           const isAlready = data.message === "Already checked in";
           setLastResult({
-            success: true,
             message: isAlready
               ? "Already checked in"
               : "Checked in successfully!",
+            success: true,
           });
           toast.success(
-            isAlready ? "Already checked in" : "Checked in successfully!",
+            isAlready ? "Already checked in" : "Checked in successfully!"
           );
 
           // Refresh check-in list
@@ -73,11 +77,11 @@ export default function CheckInPage() {
           const listData = await listRes.json();
           setCheckins(listData.checkins ?? []);
         } else {
-          setLastResult({ success: false, message: data.message });
+          setLastResult({ message: data.message, success: false });
           toast.error(data.message);
         }
       } catch {
-        setLastResult({ success: false, message: "Check-in failed" });
+        setLastResult({ message: "Check-in failed", success: false });
         toast.error("Check-in failed");
       } finally {
         setLoading(false);
@@ -85,7 +89,7 @@ export default function CheckInPage() {
         setTimeout(() => setLastResult(null), 3000);
       }
     },
-    [eventId, loading],
+    [eventId, loading]
   );
 
   async function startScanner() {
@@ -99,7 +103,7 @@ export default function CheckInPage() {
     try {
       await scanner.start(
         { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
+        { fps: 10, qrbox: { height: 250, width: 250 } },
         (decodedText) => {
           try {
             const payload = JSON.parse(decodedText);
@@ -123,7 +127,7 @@ export default function CheckInPage() {
         },
         () => {
           // Ignore scan failures (no QR detected)
-        },
+        }
       );
     } catch {
       toast.error("Could not access camera. Please allow camera permissions.");
@@ -147,27 +151,30 @@ export default function CheckInPage() {
   }
 
   // Cleanup on unmount
-  useEffect(() => {
-    return () => {
+  useEffect(
+    () => () => {
       const scanner = html5QrScannerRef.current as {
         stop: () => Promise<void>;
       } | null;
       if (scanner) {
-        scanner.stop().catch(() => {});
+        scanner.stop().catch(() => {
+          // ignore: best-effort cleanup on unmount
+        });
       }
-    };
-  }, []);
+    },
+    []
+  );
 
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Button asChild variant="ghost" size="icon">
+        <Button asChild size="icon" variant="ghost">
           <Link href={`/dashboard/events/${eventId}`}>
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Ticket Scanner</h1>
+          <h1 className="font-bold text-3xl tracking-tight">Ticket Scanner</h1>
           <p className="text-muted-foreground">
             Scan attendee QR codes to check them in
           </p>
@@ -181,9 +188,9 @@ export default function CheckInPage() {
             <CardTitle className="flex items-center justify-between">
               QR Scanner
               <Button
-                variant={scanning ? "destructive" : "default"}
-                size="sm"
                 onClick={scanning ? stopScanner : startScanner}
+                size="sm"
+                variant={scanning ? "destructive" : "default"}
               >
                 {scanning ? (
                   <>
@@ -201,16 +208,16 @@ export default function CheckInPage() {
           </CardHeader>
           <CardContent>
             <div
+              className="overflow-hidden rounded-lg bg-muted"
               id="qr-reader"
               ref={scannerRef}
-              className="overflow-hidden rounded-lg bg-muted"
               style={{ minHeight: scanning ? 300 : 0 }}
             />
 
             {!scanning && (
               <div className="flex flex-col items-center justify-center py-12 text-center">
-                <Camera className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-sm text-muted-foreground">
+                <Camera className="mb-4 h-12 w-12 text-muted-foreground" />
+                <p className="text-muted-foreground text-sm">
                   Click &quot;Start Scanner&quot; to open the camera and scan
                   attendee QR codes
                 </p>
@@ -218,7 +225,7 @@ export default function CheckInPage() {
             )}
 
             {/* Scan result feedback */}
-            {lastResult && (
+            {lastResult ? (
               <div
                 className={`mt-4 flex items-center gap-3 rounded-lg border p-4 ${
                   lastResult.success
@@ -232,7 +239,7 @@ export default function CheckInPage() {
                   <XCircle className="h-5 w-5 text-red-600" />
                 )}
                 <p
-                  className={`text-sm font-medium ${
+                  className={`font-medium text-sm ${
                     lastResult.success
                       ? "text-green-700 dark:text-green-300"
                       : "text-red-700 dark:text-red-300"
@@ -241,7 +248,7 @@ export default function CheckInPage() {
                   {lastResult.message}
                 </p>
               </div>
-            )}
+            ) : null}
           </CardContent>
         </Card>
 
@@ -258,25 +265,25 @@ export default function CheckInPage() {
           </CardHeader>
           <CardContent>
             {checkins.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-8">
+              <p className="py-8 text-center text-muted-foreground text-sm">
                 No one checked in yet.
               </p>
             ) : (
-              <div className="divide-y max-h-[400px] overflow-y-auto">
+              <div className="max-h-[400px] divide-y overflow-y-auto">
                 {checkins.map((c) => (
-                  <div key={c.id} className="flex items-center gap-3 py-3">
-                    <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                  <div className="flex items-center gap-3 py-3" key={c.id}>
+                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-green-100 dark:bg-green-900">
                       <CheckCircle2 className="h-4 w-4 text-green-600" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-medium text-sm">
                         {c.user.name}
                       </p>
-                      <p className="text-xs text-muted-foreground truncate">
+                      <p className="truncate text-muted-foreground text-xs">
                         {c.user.email}
                       </p>
                     </div>
-                    <p className="text-xs text-muted-foreground whitespace-nowrap">
+                    <p className="whitespace-nowrap text-muted-foreground text-xs">
                       {new Date(c.checkedInAt).toLocaleTimeString([], {
                         hour: "2-digit",
                         minute: "2-digit",

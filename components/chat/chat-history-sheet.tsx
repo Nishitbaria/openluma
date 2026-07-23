@@ -4,6 +4,7 @@ import { formatDistanceToNow } from "date-fns";
 import { MessageSquare, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import {
@@ -54,7 +55,9 @@ export function ChatHistorySheet({
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      return;
+    }
     setLoading(true);
     listConversationsAction()
       .then(setConversations)
@@ -63,7 +66,9 @@ export function ChatHistorySheet({
   }, [open]);
 
   async function handleDelete() {
-    if (!pendingDelete) return;
+    if (!pendingDelete) {
+      return;
+    }
     const target = pendingDelete;
     // Optimistic: drop it from the list and close the dialog immediately.
     // Snapshot the list to restore on failure. Check the live pathname too: a
@@ -87,7 +92,6 @@ export function ChatHistorySheet({
         // component isn't touched again while the page unloads.
         onOpenChange(false);
         window.location.href = "/dashboard/chat";
-        return;
       }
     } catch {
       // Roll back the optimistic removal.
@@ -98,77 +102,86 @@ export function ChatHistorySheet({
     }
   }
 
+  let listContent: ReactNode;
+  if (loading) {
+    listContent = (
+      <ul className="p-2">
+        {SKELETON_ROWS.map((key) => (
+          <li className="flex flex-col gap-1.5 px-2.5 py-2" key={key}>
+            <Skeleton className="h-4 w-3/4" />
+            <Skeleton className="h-3 w-1/3" />
+          </li>
+        ))}
+      </ul>
+    );
+  } else if (conversations.length === 0) {
+    listContent = (
+      <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
+        <MessageSquare className="size-8 text-muted-foreground" />
+        <p className="font-medium text-sm">No conversations yet</p>
+        <p className="text-muted-foreground text-xs">
+          Start chatting and your conversations will appear here.
+        </p>
+      </div>
+    );
+  } else {
+    listContent = (
+      <ul className="p-2">
+        {conversations.map((conversation) => (
+          <li
+            className={cn(
+              "group flex items-center gap-1 rounded-md transition-colors hover:bg-accent",
+              conversation.id === activeConversationId && "bg-accent"
+            )}
+            key={conversation.id}
+          >
+            <Link
+              className="min-w-0 flex-1 px-2.5 py-2"
+              href={`/dashboard/chat/${conversation.id}`}
+              onClick={() => onOpenChange(false)}
+            >
+              <p className="truncate text-sm">{conversation.title}</p>
+              <p className="text-muted-foreground text-xs">
+                {formatDistanceToNow(new Date(conversation.updatedAt), {
+                  addSuffix: true,
+                })}
+              </p>
+            </Link>
+            <Button
+              aria-label={`Delete "${conversation.title}"`}
+              className="mr-1 size-8 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
+              onClick={() => setPendingDelete(conversation)}
+              size="icon"
+              type="button"
+              variant="ghost"
+            >
+              <Trash2 className="size-4" />
+            </Button>
+          </li>
+        ))}
+      </ul>
+    );
+  }
+
   return (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        <SheetContent side="left" className="w-80 p-0">
+      <Sheet onOpenChange={onOpenChange} open={open}>
+        <SheetContent className="w-80 p-0" side="left">
           <SheetHeader className="border-b px-4 py-3">
             <SheetTitle>Chat history</SheetTitle>
             <SheetDescription>Your past conversations</SheetDescription>
           </SheetHeader>
-          <div className="flex-1 overflow-y-auto">
-            {loading ? (
-              <ul className="p-2">
-                {SKELETON_ROWS.map((key) => (
-                  <li key={key} className="flex flex-col gap-1.5 px-2.5 py-2">
-                    <Skeleton className="h-4 w-3/4" />
-                    <Skeleton className="h-3 w-1/3" />
-                  </li>
-                ))}
-              </ul>
-            ) : conversations.length === 0 ? (
-              <div className="flex flex-col items-center gap-2 px-4 py-10 text-center">
-                <MessageSquare className="size-8 text-muted-foreground" />
-                <p className="text-sm font-medium">No conversations yet</p>
-                <p className="text-xs text-muted-foreground">
-                  Start chatting and your conversations will appear here.
-                </p>
-              </div>
-            ) : (
-              <ul className="p-2">
-                {conversations.map((conversation) => (
-                  <li
-                    key={conversation.id}
-                    className={cn(
-                      "group flex items-center gap-1 rounded-md transition-colors hover:bg-accent",
-                      conversation.id === activeConversationId && "bg-accent",
-                    )}
-                  >
-                    <Link
-                      href={`/dashboard/chat/${conversation.id}`}
-                      onClick={() => onOpenChange(false)}
-                      className="min-w-0 flex-1 px-2.5 py-2"
-                    >
-                      <p className="truncate text-sm">{conversation.title}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatDistanceToNow(new Date(conversation.updatedAt), {
-                          addSuffix: true,
-                        })}
-                      </p>
-                    </Link>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setPendingDelete(conversation)}
-                      className="mr-1 size-8 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
-                      aria-label={`Delete "${conversation.title}"`}
-                    >
-                      <Trash2 className="size-4" />
-                    </Button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+          <div className="flex-1 overflow-y-auto">{listContent}</div>
         </SheetContent>
       </Sheet>
 
       <Dialog
-        open={pendingDelete !== null}
         onOpenChange={(dialogOpen) => {
-          if (!dialogOpen) setPendingDelete(null);
+          if (!dialogOpen) {
+            setPendingDelete(null);
+          }
         }}
+        open={pendingDelete !== null}
       >
         <DialogContent>
           <DialogHeader>
@@ -179,13 +192,13 @@ export function ChatHistorySheet({
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setPendingDelete(null)}>
+            <Button onClick={() => setPendingDelete(null)} variant="outline">
               Cancel
             </Button>
             <Button
-              variant="destructive"
-              onClick={handleDelete}
               disabled={deleting}
+              onClick={handleDelete}
+              variant="destructive"
             >
               {deleting ? "Deleting..." : "Delete"}
             </Button>

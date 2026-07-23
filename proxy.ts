@@ -20,7 +20,7 @@ export async function proxy(request: NextRequest) {
   });
 
   const isProtected = protectedPaths.some(
-    (path) => pathname === path || pathname.startsWith(`${path}/`),
+    (path) => pathname === path || pathname.startsWith(`${path}/`)
   );
 
   if (isProtected && !session) {
@@ -30,7 +30,7 @@ export async function proxy(request: NextRequest) {
   }
 
   const isAuthPage = authPaths.some(
-    (path) => pathname === path || pathname.startsWith(`${path}/`),
+    (path) => pathname === path || pathname.startsWith(`${path}/`)
   );
 
   if (isAuthPage && session) {

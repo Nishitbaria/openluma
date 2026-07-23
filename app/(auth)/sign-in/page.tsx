@@ -65,17 +65,17 @@ export default function SignInPage() {
         }}
       >
         <FlickeringGrid
-          squareSize={4}
-          gridGap={6}
-          flickerChance={0.1}
-          color={gridColor}
-          maxOpacity={0.05}
           className="size-full"
+          color={gridColor}
+          flickerChance={0.1}
+          gridGap={6}
+          maxOpacity={0.05}
+          squareSize={4}
         />
       </div>
       <div
         className={cn(
-          "relative mx-auto flex min-h-screen w-full max-w-sm flex-col justify-between p-6 md:p-8",
+          "relative mx-auto flex min-h-screen w-full max-w-sm flex-col justify-between p-6 md:p-8"
         )}
       >
         <div className="flex justify-center">
@@ -88,30 +88,30 @@ export default function SignInPage() {
           <div className="flex flex-col space-y-1">
             <PixelHeading
               as="h1"
-              mode="wave"
               autoPlay
-              cycleInterval={300}
-              staggerDelay={80}
-              showLabel={false}
               className="font-bold text-2xl tracking-wide"
+              cycleInterval={300}
+              mode="wave"
+              showLabel={false}
+              staggerDelay={80}
             >
               Welcome back!
             </PixelHeading>
             <PixelParagraph
-              text="Sign in to your OpenLuma account."
-              pixelWords={["OpenLuma"]}
+              className="text-base text-muted-foreground"
               font="circle"
               pixelWordClassName="text-foreground"
-              className="text-base text-muted-foreground"
+              pixelWords={["OpenLuma"]}
+              text="Sign in to your OpenLuma account."
             />
           </div>
-          <form onSubmit={handleSubmit} className="space-y-2">
+          <form className="space-y-2" onSubmit={handleSubmit}>
             <InputGroup>
               <InputGroupInput
-                placeholder="your.email@example.com"
-                type="email"
                 name="email"
+                placeholder="your.email@example.com"
                 required
+                type="email"
               />
               <InputGroupAddon align="inline-start">
                 <AtSignIcon />
@@ -120,10 +120,10 @@ export default function SignInPage() {
 
             <InputGroup>
               <InputGroupInput
-                placeholder="Password"
-                type="password"
                 name="password"
+                placeholder="Password"
                 required
+                type="password"
               />
               <InputGroupAddon align="inline-start">
                 <LockIcon />
@@ -132,12 +132,14 @@ export default function SignInPage() {
 
             <MetalButton
               className="w-full"
+              disabled={loading}
               metalFxClassName="w-full"
               size="sm"
               type="submit"
-              disabled={loading}
             >
-              {loading && <Loader2Icon className="mr-2 size-4 animate-spin" />}
+              {loading ? (
+                <Loader2Icon className="mr-2 size-4 animate-spin" />
+              ) : null}
               {loading ? "Signing in..." : "Continue With Email"}
             </MetalButton>
           </form>
@@ -145,24 +147,24 @@ export default function SignInPage() {
           <div className="space-y-2">
             <Button
               className="w-full"
-              type="button"
-              variant="outline"
               onClick={async () => {
                 await authClient.signIn.social({
-                  provider: "google",
                   callbackURL: callbackUrl,
+                  provider: "google",
                 });
               }}
+              type="button"
+              variant="outline"
             >
               <GoogleIcon data-icon="inline-start" />
               Google
             </Button>
           </div>
-          <p className="text-center text-sm text-muted-foreground">
+          <p className="text-center text-muted-foreground text-sm">
             Don&apos;t have an account?{" "}
             <Link
-              href="/sign-up"
               className="font-medium text-foreground underline underline-offset-4 hover:text-primary"
+              href="/sign-up"
             >
               Sign up
             </Link>

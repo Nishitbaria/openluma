@@ -7,7 +7,7 @@ import { eventCohosts, events, user } from "@/lib/db/schema";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ eventId: string }> },
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   const { eventId } = await params;
   const session = await auth.api.getSession({ headers: await headers() });
@@ -41,14 +41,14 @@ export async function POST(
   if (!targetUserId) {
     return Response.json(
       { message: "userId or email required" },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
   const existing = await db.query.eventCohosts.findFirst({
     where: and(
       eq(eventCohosts.eventId, eventId),
-      eq(eventCohosts.userId, targetUserId),
+      eq(eventCohosts.userId, targetUserId)
     ),
   });
 
@@ -66,7 +66,7 @@ export async function POST(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ eventId: string }> },
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   const { eventId } = await params;
   const session = await auth.api.getSession({ headers: await headers() });
@@ -90,8 +90,8 @@ export async function DELETE(
     .where(
       and(
         eq(eventCohosts.eventId, eventId),
-        eq(eventCohosts.userId, cohostUserId),
-      ),
+        eq(eventCohosts.userId, cohostUserId)
+      )
     );
 
   return Response.json({ message: "Co-host removed" });

@@ -80,6 +80,8 @@
   --color-shadow-color: var(--shadow-color);
   --color-destructive-foreground: var(--destructive-foreground);
   --animate-shiny-text: shiny-text 8s infinite;
+  --animate-marquee: marquee var(--duration) infinite linear;
+  --animate-marquee-vertical: marquee-vertical var(--duration) linear infinite;
   @keyframes shiny-text {
     0%,
     90%,
@@ -91,8 +93,6 @@
       background-position: calc(100% + var(--shiny-width)) 0;
     }
   }
-  --animate-marquee: marquee var(--duration) infinite linear;
-  --animate-marquee-vertical: marquee-vertical var(--duration) linear infinite;
   @keyframes marquee {
     from {
       transform: translateX(0);
@@ -237,8 +237,8 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground;
     letter-spacing: var(--tracking-normal);
+    @apply bg-background text-foreground;
   }
   html {
     @apply font-sans;
@@ -247,11 +247,11 @@
 
 /* Tiptap editor placeholder */
 .tiptap p.is-editor-empty:first-child::before {
-  @apply text-muted-foreground;
-  content: attr(data-placeholder);
   float: left;
-  pointer-events: none;
   height: 0;
+  pointer-events: none;
+  content: attr(data-placeholder);
+  @apply text-muted-foreground;
 }
 
 /* Tiptap rich text renderer */

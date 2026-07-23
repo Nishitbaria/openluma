@@ -43,11 +43,11 @@ export function EventCard({ event, href }: EventCardProps) {
         {event.coverImage ? (
           <div className="relative aspect-video overflow-hidden">
             <Image
-              src={event.coverImage}
               alt={event.title}
+              className="object-cover"
               fill
               sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
-              className="object-cover"
+              src={event.coverImage}
             />
           </div>
         ) : (
@@ -69,34 +69,37 @@ export function EventCard({ event, href }: EventCardProps) {
             </Badge>
             <Badge variant="outline">{event.type.replace("_", " ")}</Badge>
           </div>
-          <h3 className="mt-2 text-lg font-semibold leading-tight line-clamp-2">
+          <h3 className="mt-2 line-clamp-2 font-semibold text-lg leading-tight">
             {event.title}
           </h3>
         </CardHeader>
         <CardContent className="space-y-2 pb-2">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <div className="flex items-center gap-2 text-muted-foreground text-sm">
             <Calendar className="h-4 w-4" />
             <span>
               {formatInTimeZone(
                 startTime,
                 event.timezone ?? "UTC",
-                "EEE, MMM d 'at' h:mm a",
+                "EEE, MMM d 'at' h:mm a"
               )}
             </span>
           </div>
-          {event.location && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          {event.location ? (
+            <div className="flex items-center gap-2 text-muted-foreground text-sm">
               <MapPin className="h-4 w-4" />
               <span className="truncate">{event.location}</span>
             </div>
-          )}
+          ) : null}
         </CardContent>
-        <CardFooter className="text-sm text-muted-foreground">
+        <CardFooter className="text-muted-foreground text-sm">
           <div className="flex items-center gap-2">
             <Users className="h-4 w-4" />
+            {/* biome-ignore lint/suspicious/noUnnecessaryConditions: _count is
+            an optional field (`_count?: { rsvps: number }`); it is genuinely
+            absent unless the caller opts in, so the ?? 0 fallback is real. */}
             <span>{event._count?.rsvps ?? 0} attendees</span>
           </div>
-          {event.host && (
+          {event.host ? (
             <div className="ml-auto flex items-center gap-1.5">
               <Avatar size="sm">
                 <AvatarImage src={event.host.image ?? undefined} />
@@ -106,7 +109,7 @@ export function EventCard({ event, href }: EventCardProps) {
               </Avatar>
               <span>by {event.host.name}</span>
             </div>
-          )}
+          ) : null}
         </CardFooter>
       </Card>
     </Link>

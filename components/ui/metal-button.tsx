@@ -11,28 +11,27 @@ import { MetalFx, type MetalFxProps, type MetalFxVariant } from "metal-fx";
  * `normalizeHostStyles={false}` to keep all shadcn chrome on the button (filled
  * variants will cover most of the metal).
  */
-import type { ComponentProps, CSSProperties } from "react";
-import { forwardRef } from "react";
+import type { ComponentProps, CSSProperties, RefObject } from "react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const metalSurfaceVariants = cva("transition-colors", {
+  defaultVariants: {
+    variant: "default",
+  },
   variants: {
     variant: {
       default: "bg-primary! text-primary-foreground! hover:bg-primary/80!",
+      destructive:
+        "bg-destructive/10! text-destructive! hover:bg-destructive/20! dark:bg-destructive/20! dark:hover:bg-destructive/30!",
+      ghost:
+        "bg-transparent! text-foreground! hover:bg-muted/50! dark:hover:bg-muted/50!",
+      link: "bg-transparent! text-primary!",
       outline:
         "bg-background! text-foreground! hover:bg-input/50! dark:bg-input/30!",
       secondary:
         "bg-secondary! text-secondary-foreground! hover:bg-secondary/80!",
-      ghost:
-        "bg-transparent! text-foreground! hover:bg-muted/50! dark:hover:bg-muted/50!",
-      destructive:
-        "bg-destructive/10! text-destructive! hover:bg-destructive/20! dark:bg-destructive/20! dark:hover:bg-destructive/30!",
-      link: "bg-transparent! text-primary!",
     },
-  },
-  defaultVariants: {
-    variant: "default",
   },
 });
 
@@ -71,85 +70,79 @@ export type MetalButtonProps = ComponentProps<typeof Button> & MetalShellProps;
 
 export type MetalIconButtonProps = MetalButtonProps;
 
-export const MetalButton = forwardRef<HTMLDivElement, MetalButtonProps>(
-  function MetalButton(
-    {
-      metalVariant = "button",
-      metalFxClassName,
-      metalFxStyle,
-      preset = "chromatic",
-      theme = "auto",
-      strength = 0.9,
-      paused,
-      borderRadius,
-      disableGlow,
-      reflectionTargets,
-      shaderScale,
-      ringCssPx,
-      scale,
-      normalizeHostStyles = true,
-      variant = "default",
-      className,
-      ...buttonProps
-    },
-    ref,
-  ) {
-    const surfaceVariant = variant as MetalSurfaceVariant;
+export const MetalButton = function MetalButton({
+  metalVariant = "button",
+  metalFxClassName,
+  metalFxStyle,
+  preset = "chromatic",
+  theme = "auto",
+  strength = 0.9,
+  paused,
+  borderRadius,
+  disableGlow,
+  reflectionTargets,
+  shaderScale,
+  ringCssPx,
+  scale,
+  normalizeHostStyles = true,
+  variant = "default",
+  className,
+  ref,
+  ...buttonProps
+}: MetalButtonProps & { ref?: RefObject<HTMLDivElement | null> }) {
+  const surfaceVariant = variant as MetalSurfaceVariant;
 
-    return (
-      <MetalFx
-        borderRadius={borderRadius}
-        className={cn(
-          "overflow-visible! inline-flex w-fit min-w-0 flex-col items-stretch leading-none",
-          metalStableEdge,
-          normalizeHostStyles &&
-            metalSurfaceVariants({ variant: surfaceVariant }),
-          metalFxClassName,
-        )}
-        disableGlow={disableGlow}
-        normalizeHostStyles={normalizeHostStyles}
-        paused={paused}
-        preset={preset}
-        ref={ref}
-        reflectionTargets={reflectionTargets}
-        ringCssPx={ringCssPx}
-        scale={scale}
-        shaderScale={shaderScale}
-        strength={strength}
-        style={metalFxStyle}
-        theme={theme}
-        variant={metalVariant}
-      >
-        <Button
-          className={cn(normalizeHostStyles && metalHostChromeReset, className)}
-          variant={variant}
-          {...buttonProps}
-        />
-      </MetalFx>
-    );
-  },
-);
+  return (
+    <MetalFx
+      borderRadius={borderRadius}
+      className={cn(
+        "overflow-visible! inline-flex w-fit min-w-0 flex-col items-stretch leading-none",
+        metalStableEdge,
+        normalizeHostStyles &&
+          metalSurfaceVariants({ variant: surfaceVariant }),
+        metalFxClassName
+      )}
+      disableGlow={disableGlow}
+      normalizeHostStyles={normalizeHostStyles}
+      paused={paused}
+      preset={preset}
+      ref={ref}
+      reflectionTargets={reflectionTargets}
+      ringCssPx={ringCssPx}
+      scale={scale}
+      shaderScale={shaderScale}
+      strength={strength}
+      style={metalFxStyle}
+      theme={theme}
+      variant={metalVariant}
+    >
+      <Button
+        className={cn(normalizeHostStyles && metalHostChromeReset, className)}
+        variant={variant}
+        {...buttonProps}
+      />
+    </MetalFx>
+  );
+};
 
 MetalButton.displayName = "MetalButton";
 
-export const MetalIconButton = forwardRef<HTMLDivElement, MetalIconButtonProps>(
-  function MetalIconButton(
-    { size = "icon-sm", metalVariant = "circle", className, ...props },
-    ref,
-  ) {
-    return (
-      <MetalButton
-        className={cn(
-          "leading-none! [&_svg]:block [&_svg]:shrink-0",
-          className,
-        )}
-        metalVariant={metalVariant}
-        ref={ref}
-        size={size}
-        {...props}
-      />
-    );
-  },
-);
+export const MetalIconButton = function MetalIconButton({
+  size = "icon-sm",
+  metalVariant = "circle",
+  className,
+  ref,
+  ...props
+}: MetalIconButtonProps & { ref?: RefObject<HTMLDivElement | null> }) {
+  return (
+    <MetalButton
+      className={cn("leading-none! [&_svg]:block [&_svg]:shrink-0", className)}
+      metalVariant={metalVariant}
+      ref={ref}
+      size={size}
+      {...props}
+    />
+  );
+};
 
 MetalIconButton.displayName = "MetalIconButton";

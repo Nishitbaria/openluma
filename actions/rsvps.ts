@@ -10,59 +10,73 @@ import { sendRsvpConfirmationEmail } from "@/lib/email";
 
 export async function submitRsvpAction(eventId: string, message?: string) {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) throw new Error("Unauthorized");
+  if (!session?.user) {
+    throw new Error("Unauthorized");
+  }
 
   const event = await db.query.events.findFirst({
     where: eq(events.id, eventId),
   });
-  if (!event) throw new Error("Event not found");
+  if (!event) {
+    throw new Error("Event not found");
+  }
 
   const existing = await db.query.rsvps.findFirst({
     where: and(eq(rsvps.eventId, eventId), eq(rsvps.userId, session.user.id)),
   });
-  if (existing) throw new Error("Already RSVP'd");
+  if (existing) {
+    throw new Error("Already RSVP'd");
+  }
 
   const status = event.requiresApproval ? "pending" : "approved";
 
   await db.insert(rsvps).values({
     eventId,
-    userId: session.user.id,
-    status,
     message,
+    status,
+    userId: session.user.id,
   });
 
   if (session.user.email) {
     await sendRsvpConfirmationEmail(session.user.email, event.title, status, {
-      id: event.id,
-      slug: event.slug ?? undefined,
-      title: event.title,
-      startTime: event.startTime,
       endTime: event.endTime,
+      id: event.id,
       location: event.location,
+      slug: event.slug ?? undefined,
+      startTime: event.startTime,
       timezone: event.timezone,
+      title: event.title,
     }).catch((err) =>
-      console.error("Failed to send RSVP confirmation email:", err),
+      console.error("Failed to send RSVP confirmation email:", err)
     );
   }
 
   revalidatePath(`/events/${eventId}`);
-  if (event.slug) revalidatePath(`/e/${event.slug}`);
+  if (event.slug) {
+    revalidatePath(`/e/${event.slug}`);
+  }
   revalidatePath(`/dashboard/events/${eventId}`);
 }
 
 export async function approveRsvpAction(rsvpId: string, eventId: string) {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) throw new Error("Unauthorized");
+  if (!session?.user) {
+    throw new Error("Unauthorized");
+  }
 
   const event = await db.query.events.findFirst({
+    columns: { hostId: true },
     where: eq(events.id, eventId),
     with: { cohosts: { columns: { userId: true } } },
-    columns: { hostId: true },
   });
-  if (!event) throw new Error("Event not found");
+  if (!event) {
+    throw new Error("Event not found");
+  }
   const isHost = event.hostId === session.user.id;
   const isCohost = event.cohosts.some((c) => c.userId === session.user.id);
-  if (!isHost && !isCohost) throw new Error("Not authorized");
+  if (!(isHost || isCohost)) {
+    throw new Error("Not authorized");
+  }
 
   const [updated] = await db
     .update(rsvps)
@@ -83,16 +97,16 @@ export async function approveRsvpAction(rsvpId: string, eventId: string) {
         eventForEmail.title,
         "approved",
         {
-          id: eventForEmail.id,
-          slug: eventForEmail.slug ?? undefined,
-          title: eventForEmail.title,
-          startTime: eventForEmail.startTime,
           endTime: eventForEmail.endTime,
+          id: eventForEmail.id,
           location: eventForEmail.location,
+          slug: eventForEmail.slug ?? undefined,
+          startTime: eventForEmail.startTime,
           timezone: eventForEmail.timezone,
-        },
+          title: eventForEmail.title,
+        }
       ).catch((err) =>
-        console.error("Failed to send RSVP approval email:", err),
+        console.error("Failed to send RSVP approval email:", err)
       );
     }
   }
@@ -102,17 +116,23 @@ export async function approveRsvpAction(rsvpId: string, eventId: string) {
 
 export async function rejectRsvpAction(rsvpId: string, eventId: string) {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) throw new Error("Unauthorized");
+  if (!session?.user) {
+    throw new Error("Unauthorized");
+  }
 
   const event = await db.query.events.findFirst({
+    columns: { hostId: true },
     where: eq(events.id, eventId),
     with: { cohosts: { columns: { userId: true } } },
-    columns: { hostId: true },
   });
-  if (!event) throw new Error("Event not found");
+  if (!event) {
+    throw new Error("Event not found");
+  }
   const isHost = event.hostId === session.user.id;
   const isCohost = event.cohosts.some((c) => c.userId === session.user.id);
-  if (!isHost && !isCohost) throw new Error("Not authorized");
+  if (!(isHost || isCohost)) {
+    throw new Error("Not authorized");
+  }
 
   const [updated] = await db
     .update(rsvps)
@@ -133,16 +153,16 @@ export async function rejectRsvpAction(rsvpId: string, eventId: string) {
         eventForEmail.title,
         "rejected",
         {
-          id: eventForEmail.id,
-          slug: eventForEmail.slug ?? undefined,
-          title: eventForEmail.title,
-          startTime: eventForEmail.startTime,
           endTime: eventForEmail.endTime,
+          id: eventForEmail.id,
           location: eventForEmail.location,
+          slug: eventForEmail.slug ?? undefined,
+          startTime: eventForEmail.startTime,
           timezone: eventForEmail.timezone,
-        },
+          title: eventForEmail.title,
+        }
       ).catch((err) =>
-        console.error("Failed to send RSVP rejection email:", err),
+        console.error("Failed to send RSVP rejection email:", err)
       );
     }
   }
@@ -152,17 +172,21 @@ export async function rejectRsvpAction(rsvpId: string, eventId: string) {
 
 export async function cancelRsvpAction(eventId: string) {
   const session = await auth.api.getSession({ headers: await headers() });
-  if (!session?.user) throw new Error("Unauthorized");
+  if (!session?.user) {
+    throw new Error("Unauthorized");
+  }
 
   await db
     .delete(rsvps)
     .where(and(eq(rsvps.eventId, eventId), eq(rsvps.userId, session.user.id)));
 
   const event = await db.query.events.findFirst({
-    where: eq(events.id, eventId),
     columns: { slug: true },
+    where: eq(events.id, eventId),
   });
 
   revalidatePath(`/events/${eventId}`);
-  if (event?.slug) revalidatePath(`/e/${event.slug}`);
+  if (event?.slug) {
+    revalidatePath(`/e/${event.slug}`);
+  }
 }

@@ -6,11 +6,11 @@ import { type ComponentPropsWithoutRef, useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
 
 interface NumberTickerProps extends ComponentPropsWithoutRef<"span"> {
-  value: number;
-  startValue?: number;
-  direction?: "up" | "down";
-  delay?: number;
   decimalPlaces?: number;
+  delay?: number;
+  direction?: "up" | "down";
+  startValue?: number;
+  value: number;
 }
 
 export function NumberTicker({
@@ -28,7 +28,7 @@ export function NumberTicker({
     damping: 60,
     stiffness: 100,
   });
-  const isInView = useInView(ref, { once: true, margin: "0px" });
+  const isInView = useInView(ref, { margin: "0px", once: true });
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout> | null = null;
@@ -51,21 +51,21 @@ export function NumberTicker({
       springValue.on("change", (latest) => {
         if (ref.current) {
           ref.current.textContent = Intl.NumberFormat("en-US", {
-            minimumFractionDigits: decimalPlaces,
             maximumFractionDigits: decimalPlaces,
+            minimumFractionDigits: decimalPlaces,
           }).format(Number(latest.toFixed(decimalPlaces)));
         }
       }),
-    [springValue, decimalPlaces],
+    [springValue, decimalPlaces]
   );
 
   return (
     <span
-      ref={ref}
       className={cn(
-        "inline-block tracking-wider text-black tabular-nums dark:text-white",
-        className,
+        "inline-block text-black tabular-nums tracking-wider dark:text-white",
+        className
       )}
+      ref={ref}
       {...props}
     >
       {startValue}

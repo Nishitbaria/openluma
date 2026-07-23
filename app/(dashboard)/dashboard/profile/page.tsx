@@ -59,16 +59,18 @@ export default function ProfilePage() {
 
     try {
       const res = await fetch("/api/profile", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name,
           bio: bio || undefined,
           image: avatarUrl || undefined,
+          name,
         }),
+        headers: { "Content-Type": "application/json" },
+        method: "PATCH",
       });
 
-      if (!res.ok) throw new Error("Failed");
+      if (!res.ok) {
+        throw new Error("Failed");
+      }
 
       toast.success("Profile updated!");
       router.refresh();
@@ -79,12 +81,14 @@ export default function ProfilePage() {
     }
   }
 
-  if (!user) return null;
+  if (!user) {
+    return null;
+  }
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Profile</h1>
+        <h1 className="font-bold text-3xl tracking-tight">Profile</h1>
         <p className="text-muted-foreground">
           Manage your personal information.
         </p>
@@ -97,16 +101,16 @@ export default function ProfilePage() {
         </CardHeader>
         <CardContent className="flex items-center gap-6">
           <Avatar className="h-20 w-20">
-            <AvatarImage src={currentAvatar ?? undefined} alt={user.name} />
+            <AvatarImage alt={user.name} src={currentAvatar ?? undefined} />
             <AvatarFallback className="text-lg">{initials}</AvatarFallback>
           </Avatar>
           <div>
             <Button
-              type="button"
-              variant="outline"
-              size="sm"
               disabled={isUploading}
               onClick={() => fileInputRef.current?.click()}
+              size="sm"
+              type="button"
+              variant="outline"
             >
               {isUploading ? (
                 <>
@@ -121,8 +125,6 @@ export default function ProfilePage() {
               )}
             </Button>
             <input
-              ref={fileInputRef}
-              type="file"
               accept="image/*"
               className="hidden"
               onChange={(e) => {
@@ -136,8 +138,10 @@ export default function ProfilePage() {
                 }
                 e.target.value = "";
               }}
+              ref={fileInputRef}
+              type="file"
             />
-            <p className="mt-1 text-xs text-muted-foreground">Max 2MB</p>
+            <p className="mt-1 text-muted-foreground text-xs">Max 2MB</p>
           </div>
         </CardContent>
       </Card>
@@ -147,16 +151,16 @@ export default function ProfilePage() {
           <CardTitle>Personal Information</CardTitle>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="space-y-2">
               <Label htmlFor="name">Name</Label>
-              <Input id="name" name="name" defaultValue={user.name} required />
+              <Input defaultValue={user.name} id="name" name="name" required />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" value={user.email} disabled />
-              <p className="text-xs text-muted-foreground">
+              <Input disabled id="email" value={user.email} />
+              <p className="text-muted-foreground text-xs">
                 Email cannot be changed.
               </p>
             </div>
@@ -164,15 +168,15 @@ export default function ProfilePage() {
             <div className="space-y-2">
               <Label htmlFor="bio">Bio</Label>
               <Textarea
+                defaultValue={""}
                 id="bio"
                 name="bio"
                 placeholder="Tell others about yourself..."
                 rows={4}
-                defaultValue={""}
               />
             </div>
 
-            <Button type="submit" disabled={loading}>
+            <Button disabled={loading} type="submit">
               {loading ? "Saving..." : "Save Changes"}
             </Button>
           </form>

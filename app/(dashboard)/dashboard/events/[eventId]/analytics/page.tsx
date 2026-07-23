@@ -18,20 +18,26 @@ export default async function AnalyticsPage({
     params,
     getSession(await headers()),
   ]);
-  if (!session?.user) redirect("/sign-in");
+  if (!session?.user) {
+    redirect("/sign-in");
+  }
 
   const event = await db.query.events.findFirst({
+    columns: { hostId: true, id: true, title: true },
     where: eq(events.id, eventId),
     with: { cohosts: { columns: { userId: true } } },
-    columns: { id: true, title: true, hostId: true },
   });
 
-  if (!event) notFound();
+  if (!event) {
+    notFound();
+  }
 
   const isHost = event.hostId === session.user.id;
   const isCohost = event.cohosts.some((c) => c.userId === session.user.id);
 
-  if (!isHost && !isCohost) notFound();
+  if (!(isHost || isCohost)) {
+    notFound();
+  }
 
   const [eventRsvps, checkins] = await Promise.all([
     db.query.rsvps.findMany({ where: eq(rsvps.eventId, eventId) }),
@@ -42,7 +48,9 @@ export default async function AnalyticsPage({
 
   const counts = { approved: 0, pending: 0, rejected: 0 };
   for (const r of eventRsvps) {
-    if (r.status in counts) counts[r.status as keyof typeof counts]++;
+    if (r.status in counts) {
+      counts[r.status as keyof typeof counts] += 1;
+    }
   }
   const { approved, pending, rejected } = counts;
   const checkedIn = checkins.length;
@@ -50,24 +58,24 @@ export default async function AnalyticsPage({
     approved > 0 ? Math.round((checkedIn / approved) * 100) : 0;
 
   const stats = [
-    { title: "Total RSVPs", value: eventRsvps.length, icon: Users },
-    { title: "Approved", value: approved, icon: CheckCircle },
-    { title: "Pending", value: pending, icon: Clock },
-    { title: "Rejected", value: rejected, icon: XCircle },
-    { title: "Checked In", value: checkedIn, icon: CheckCircle },
-    { title: "Check-in Rate", value: `${checkInRate}%`, icon: Users },
+    { icon: Users, title: "Total RSVPs", value: eventRsvps.length },
+    { icon: CheckCircle, title: "Approved", value: approved },
+    { icon: Clock, title: "Pending", value: pending },
+    { icon: XCircle, title: "Rejected", value: rejected },
+    { icon: CheckCircle, title: "Checked In", value: checkedIn },
+    { icon: Users, title: "Check-in Rate", value: `${checkInRate}%` },
   ];
 
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <Button asChild variant="ghost" size="icon">
+        <Button asChild size="icon" variant="ghost">
           <Link href={`/dashboard/events/${eventId}`}>
             <ArrowLeft className="h-4 w-4" />
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Analytics</h1>
+          <h1 className="font-bold text-3xl tracking-tight">Analytics</h1>
           <p className="text-muted-foreground">{event.title}</p>
         </div>
       </div>
@@ -76,13 +84,13 @@ export default async function AnalyticsPage({
         {stats.map((stat) => (
           <Card key={stat.title}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
+              <CardTitle className="font-medium text-sm">
                 {stat.title}
               </CardTitle>
               <stat.icon className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stat.value}</div>
+              <div className="font-bold text-2xl">{stat.value}</div>
             </CardContent>
           </Card>
         ))}

@@ -13,17 +13,17 @@ import { SidebarTrigger } from "@/components/ui/sidebar";
 import { ThemeToggle } from "./theme-toggle";
 
 const breadcrumbMap: Record<string, string> = {
+  analytics: "Analytics",
+  attendees: "Attendees",
+  chat: "AI Chat",
+  "check-in": "Ticket Scanner",
   dashboard: "Dashboard",
+  edit: "Edit",
   events: "Events",
   new: "Create Event",
-  edit: "Edit",
-  attendees: "Attendees",
-  "check-in": "Ticket Scanner",
-  ticket: "My Ticket",
-  analytics: "Analytics",
-  chat: "AI Chat",
   profile: "Profile",
   settings: "Settings",
+  ticket: "My Ticket",
 };
 
 export function DashboardHeader() {
@@ -44,7 +44,7 @@ export function DashboardHeader() {
             const href = `/${segments.slice(0, index + 2).join("/")}`;
 
             return (
-              <span key={segment} className="contents">
+              <span className="contents" key={segment}>
                 <BreadcrumbSeparator />
                 <BreadcrumbItem>
                   {isLast ? (

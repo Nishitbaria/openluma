@@ -2,7 +2,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function EventsLoading() {
   return (
-    <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-12">
+    <div className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
       <div className="mb-8">
         <Skeleton className="h-9 w-52" />
         <Skeleton className="mt-2 h-5 w-80" />
@@ -17,7 +17,7 @@ export default function EventsLoading() {
       {/* Event cards grid */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 6 }, (_, i) => `sk-${i}`).map((k) => (
-          <div key={k} className="overflow-hidden rounded-lg border">
+          <div className="overflow-hidden rounded-lg border" key={k}>
             <Skeleton className="aspect-video w-full" />
             <div className="space-y-2 p-4">
               <Skeleton className="h-5 w-3/4" />

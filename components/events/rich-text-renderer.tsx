@@ -19,11 +19,13 @@ export function RichTextRenderer({ content }: RichTextRendererProps) {
     }
   }, [content]);
 
-  if (!html) return null;
+  if (!html) {
+    return null;
+  }
 
   return (
     <div
-      className="tiptap-prose text-sm text-muted-foreground"
+      className="tiptap-prose text-muted-foreground text-sm"
       // Safe: generateHTML only renders known Tiptap node types — no arbitrary HTML
       // biome-ignore lint/security/noDangerouslySetInnerHtml: controlled Tiptap output
       dangerouslySetInnerHTML={{ __html: html }}

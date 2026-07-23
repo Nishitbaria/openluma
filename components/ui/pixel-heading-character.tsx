@@ -19,17 +19,17 @@ const FONT_COUNT = PIXEL_FONTS.length;
 
 /** Map short name → Tailwind class for the prefix font. */
 const PREFIX_FONT_MAP: Record<string, string> = {
-  square: "font-pixel-square",
-  grid: "font-pixel-grid",
   circle: "font-pixel-circle",
-  triangle: "font-pixel-triangle",
+  grid: "font-pixel-grid",
   line: "font-pixel-line",
+  square: "font-pixel-square",
+  triangle: "font-pixel-triangle",
 };
 
 /** Map short name → Tailwind class for isolated (non-pixel) characters. */
 const ISOLATE_FONT_MAP: Record<string, string> = {
-  sans: "font-sans",
   mono: "font-mono",
+  sans: "font-sans",
 };
 
 function resolveIsolateFont(value: string): string {
@@ -58,16 +58,23 @@ function goldenBase(index: number): number {
  * Produces a uniform-ish distribution across FONT_COUNT for any (tick, index) pair.
  */
 function pseudoRandom(tick: number, index: number): number {
-  return ((tick * 2654435761 + index * 340573321) >>> 0) % FONT_COUNT;
+  // biome-ignore lint/suspicious/noBitwiseOperators: unsigned 32-bit wraparound is required for a uniform hash distribution
+  return ((tick * 2_654_435_761 + index * 340_573_321) >>> 0) % FONT_COUNT;
 }
 
 /* ─── Helpers ─── */
 
 /** Recursively extract text content from React children. */
 function extractText(children: React.ReactNode): string {
-  if (typeof children === "string") return children;
-  if (typeof children === "number") return String(children);
-  if (Array.isArray(children)) return children.map(extractText).join("");
+  if (typeof children === "string") {
+    return children;
+  }
+  if (typeof children === "number") {
+    return String(children);
+  }
+  if (Array.isArray(children)) {
+    return children.map(extractText).join("");
+  }
   if (
     children !== null &&
     children !== undefined &&
@@ -76,10 +83,35 @@ function extractText(children: React.ReactNode): string {
   ) {
     return extractText(
       (children as React.ReactElement<{ children?: React.ReactNode }>).props
-        .children,
+        .children
     );
   }
   return "";
+}
+
+/** Render a single animated character, isolated character, or space. */
+function renderAnimatedChar(
+  char: string,
+  index: number,
+  isolate: Record<string, string> | undefined,
+  charFonts: number[]
+): React.ReactNode {
+  if (char === " ") {
+    return <span key={index}> </span>;
+  }
+  const isolateFont = isolate?.[char];
+  if (isolateFont) {
+    return (
+      <span aria-hidden className={resolveIsolateFont(isolateFont)} key={index}>
+        {char}
+      </span>
+    );
+  }
+  return (
+    <span aria-hidden className={PIXEL_FONTS[charFonts[index]]} key={index}>
+      {char}
+    </span>
+  );
 }
 
 /* ─── Types ─── */
@@ -105,6 +137,13 @@ export interface PixelHeadingProps extends React.ComponentProps<"h1"> {
    */
   as?: "h1" | "h2" | "h3" | "h4" | "h5" | "h6";
   /**
+   * When true the animation runs automatically on mount —
+   * no hover or focus required. Hover/focus still work to
+   * restart the cascade.
+   * @default false
+   */
+  autoPlay?: boolean;
+  /**
    * Interval in ms between font changes per character.
    * @default 150
    */
@@ -115,14 +154,15 @@ export interface PixelHeadingProps extends React.ComponentProps<"h1"> {
    */
   defaultFontIndex?: number;
   /**
-   * Callback fired when the active font changes (uniform mode only).
+   * Map of characters to exclude from pixel-font animation.
+   * Keys are single characters (case-sensitive).
+   * Values are font short-names ("sans" | "mono") or arbitrary
+   * Tailwind font class names (e.g. "font-serif").
+   *
+   * Isolated characters always render in their assigned font,
+   * even during hover/auto-play animation.
    */
-  onFontIndexChange?: (index: number) => void;
-  /**
-   * Whether to show the label beneath the heading.
-   * @default true
-   */
-  showLabel?: boolean;
+  isolate?: Record<string, string>;
   /**
    * Controls how fonts are distributed across characters.
    *
@@ -135,19 +175,9 @@ export interface PixelHeadingProps extends React.ComponentProps<"h1"> {
    */
   mode?: PixelHeadingMode;
   /**
-   * Milliseconds of delay between each successive character's animation start.
-   * Creates a left→right cascade / ripple effect.
-   * Only applies in `multi`, `wave`, and `random` modes.
-   * @default 50
+   * Callback fired when the active font changes (uniform mode only).
    */
-  staggerDelay?: number;
-  /**
-   * When true the animation runs automatically on mount —
-   * no hover or focus required. Hover/focus still work to
-   * restart the cascade.
-   * @default false
-   */
-  autoPlay?: boolean;
+  onFontIndexChange?: (index: number) => void;
   /**
    * Static text rendered before the animated children.
    * Does not animate — stays locked to the font set by `prefixFont`.
@@ -161,15 +191,17 @@ export interface PixelHeadingProps extends React.ComponentProps<"h1"> {
    */
   prefixFont?: "square" | "grid" | "circle" | "triangle" | "line" | "none";
   /**
-   * Map of characters to exclude from pixel-font animation.
-   * Keys are single characters (case-sensitive).
-   * Values are font short-names ("sans" | "mono") or arbitrary
-   * Tailwind font class names (e.g. "font-serif").
-   *
-   * Isolated characters always render in their assigned font,
-   * even during hover/auto-play animation.
+   * Whether to show the label beneath the heading.
+   * @default true
    */
-  isolate?: Record<string, string>;
+  showLabel?: boolean;
+  /**
+   * Milliseconds of delay between each successive character's animation start.
+   * Creates a left→right cascade / ripple effect.
+   * Only applies in `multi`, `wave`, and `random` modes.
+   * @default 50
+   */
+  staggerDelay?: number;
 }
 
 /* ─── Component ─── */
@@ -256,15 +288,20 @@ export function PixelHeading({
   const prevUniformIndex = useRef(defaultFontIndex);
 
   /* ── Cleanup ── */
-  useEffect(() => {
-    return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current);
-    };
-  }, []);
+  useEffect(
+    () => () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    },
+    []
+  );
 
   /* ── Auto-play: start cycling on mount ── */
   useEffect(() => {
-    if (!autoPlay) return;
+    if (!autoPlay) {
+      return;
+    }
     // Kick off the interval immediately
     setIsActive(true);
     setMsElapsed(0);
@@ -285,8 +322,8 @@ export function PixelHeading({
     const fonts: number[] = [];
     let vi = 0; // visible-character index (skips spaces)
 
-    for (let i = 0; i < text.length; i++) {
-      if (text[i] === " ") {
+    for (const ch of text) {
+      if (ch === " ") {
         fonts.push(-1);
         continue;
       }
@@ -317,15 +354,19 @@ export function PixelHeading({
           fonts.push(cycles > 0 ? pseudoRandom(cycles, vi) : goldenBase(vi));
           break;
         }
+        default:
+          break;
       }
-      vi++;
+      vi += 1;
     }
     return fonts;
   }, [text, mode, msElapsed, cycleInterval, staggerDelay, defaultFontIndex]);
 
   /* ── Fire callback for uniform mode ── */
   useEffect(() => {
-    if (mode !== "uniform") return;
+    if (mode !== "uniform") {
+      return;
+    }
     const idx = charFonts.find((f) => f !== -1) ?? defaultFontIndex;
     if (idx !== prevUniformIndex.current) {
       prevUniformIndex.current = idx;
@@ -340,10 +381,10 @@ export function PixelHeading({
       return FONT_LABELS[idx];
     }
     const modeLabels: Record<PixelHeadingMode, string> = {
-      uniform: "",
       multi: "Multi",
-      wave: "Wave",
       random: "Random",
+      uniform: "",
+      wave: "Wave",
     };
     return modeLabels[mode];
   }, [mode, charFonts]);
@@ -381,7 +422,7 @@ export function PixelHeading({
       startCycling();
       onMouseEnter?.(e);
     },
-    [startCycling, onMouseEnter],
+    [startCycling, onMouseEnter]
   );
 
   const handleMouseLeave = useCallback(
@@ -389,7 +430,7 @@ export function PixelHeading({
       stopCycling();
       onMouseLeave?.(e);
     },
-    [stopCycling, onMouseLeave],
+    [stopCycling, onMouseLeave]
   );
 
   const handleFocus = useCallback(
@@ -397,7 +438,7 @@ export function PixelHeading({
       startCycling();
       onFocus?.(e);
     },
-    [startCycling, onFocus],
+    [startCycling, onFocus]
   );
 
   const handleBlur = useCallback(
@@ -405,7 +446,7 @@ export function PixelHeading({
       stopCycling();
       onBlur?.(e);
     },
-    [stopCycling, onBlur],
+    [stopCycling, onBlur]
   );
 
   const handleKeyDown = useCallback(
@@ -416,7 +457,7 @@ export function PixelHeading({
       }
       onKeyDown?.(e);
     },
-    [cycleInterval, onKeyDown],
+    [cycleInterval, onKeyDown]
   );
 
   /* ── Uniform font index (for class on the Tag itself) ── */
@@ -427,96 +468,84 @@ export function PixelHeading({
 
   return (
     <div
-      data-slot="pixel-heading"
       className="inline-flex flex-col items-start gap-2"
+      data-slot="pixel-heading"
     >
       <Tag
-        data-state={isActive ? "active" : "idle"}
-        data-mode={mode}
         aria-label={prefix ? `${prefix} ${text}` : text}
-        tabIndex={0}
         className={cn(
           "cursor-default select-none",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
           mode === "uniform" && PIXEL_FONTS[uniformIdx],
-          className,
+          className
         )}
+        data-mode={mode}
+        data-state={isActive ? "active" : "idle"}
+        onBlur={handleBlur}
+        onFocus={handleFocus}
+        onKeyDown={handleKeyDown}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        onFocus={handleFocus}
-        onBlur={handleBlur}
-        onKeyDown={handleKeyDown}
+        tabIndex={0}
         {...props}
       >
         {/* ── Static prefix ── */}
-        {prefix && (
+        {prefix ? (
           <>
             {isolate ? (
               prefix.split("").map((char, i) => (
                 <span
-                  key={`p${i}`}
+                  aria-hidden
                   className={cn(
-                    prefixFont !== "none"
-                      ? PREFIX_FONT_MAP[prefixFont]
-                      : undefined,
+                    prefixFont === "none"
+                      ? undefined
+                      : PREFIX_FONT_MAP[prefixFont],
                     isolate[char]
                       ? resolveIsolateFont(isolate[char])
-                      : undefined,
+                      : undefined
                   )}
-                  aria-hidden
+                  key={`p${i}`}
                 >
                   {char}
                 </span>
               ))
             ) : (
               <span
-                className={
-                  prefixFont !== "none"
-                    ? PREFIX_FONT_MAP[prefixFont]
-                    : undefined
-                }
                 aria-hidden
+                className={
+                  prefixFont === "none"
+                    ? undefined
+                    : PREFIX_FONT_MAP[prefixFont]
+                }
               >
                 {prefix}
               </span>
             )}
             <span> </span>
           </>
-        )}
+        ) : null}
 
         {/* ── Animated characters ── */}
         {mode === "uniform"
           ? children
-          : text.split("").map((char, i) =>
-              char === " " ? (
-                <span key={i}> </span>
-              ) : isolate?.[char] ? (
-                <span
-                  key={i}
-                  className={resolveIsolateFont(isolate[char])}
-                  aria-hidden
-                >
-                  {char}
-                </span>
-              ) : (
-                <span key={i} className={PIXEL_FONTS[charFonts[i]]} aria-hidden>
-                  {char}
-                </span>
-              ),
-            )}
+          : text
+              .split("")
+              .map((char, i) =>
+                renderAnimatedChar(char, i, isolate, charFonts)
+              )}
       </Tag>
-      {showLabel && (
+      {showLabel ? (
         <output
-          data-slot="pixel-heading-label"
           aria-live="polite"
           className={cn(
-            "text-xs uppercase tracking-widest text-muted-foreground transition-opacity duration-200",
-            isActive || autoPlay ? "opacity-100" : "opacity-0",
+            "text-muted-foreground text-xs uppercase tracking-widest transition-opacity duration-200",
+            isActive || autoPlay ? "opacity-100" : "opacity-0"
           )}
+          data-slot="pixel-heading-label"
         >
           {activeLabel}
         </output>
-      )}
+      ) : null}
     </div>
   );
 }

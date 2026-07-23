@@ -97,9 +97,9 @@ export function ChatPanel({
 
   return (
     <ChatSession
-      key={inNewChat ? `new-${newChatKey}` : (conversationId ?? "root")}
       conversationId={inNewChat ? undefined : conversationId}
       initialMessages={inNewChat ? undefined : initialMessages}
+      key={inNewChat ? `new-${newChatKey}` : (conversationId ?? "root")}
       onNewChat={() => {
         // Swap the URL without a Next.js navigation, then remount locally.
         window.history.replaceState(null, "", "/dashboard/chat");
@@ -128,8 +128,8 @@ function ChatSession({
   } = useChat<OrchestratorMessage>({
     id: conversationId,
     messages: initialMessages,
-    transport: new DefaultChatTransport({ api: "/api/chat" }),
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithApprovalResponses,
+    transport: new DefaultChatTransport({ api: "/api/chat" }),
   });
   const [input, setInput] = useState("");
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -139,14 +139,16 @@ function ChatSession({
   // without a Next.js route transition — a real navigation would remount
   // the panel and drop the in-flight stream.
   function syncUrlIfNewChat() {
-    if (!conversationId && !hasSyncedUrl.current) {
+    if (!(conversationId || hasSyncedUrl.current)) {
       hasSyncedUrl.current = true;
       window.history.replaceState(null, "", `/dashboard/chat/${chatId}`);
     }
   }
 
   function handleSubmit(message: PromptInputMessage) {
-    if (!message.text?.trim()) return;
+    if (!message.text.trim()) {
+      return;
+    }
     syncUrlIfNewChat();
     sendMessage({ text: message.text });
     setInput("");
@@ -164,22 +166,22 @@ function ChatSession({
     <div className="flex h-full flex-col bg-background">
       <div className="flex items-center justify-end gap-1 border-b px-4 py-2">
         <Button
+          className="text-muted-foreground text-xs hover:text-foreground"
+          onClick={() => setHistoryOpen(true)}
+          size="sm"
           type="button"
           variant="ghost"
-          size="sm"
-          onClick={() => setHistoryOpen(true)}
-          className="text-xs text-muted-foreground hover:text-foreground"
         >
           <History className="size-4" />
           History
         </Button>
         {!isEmpty && (
           <Button
+            className="text-muted-foreground text-xs hover:text-foreground"
+            onClick={onNewChat}
+            size="sm"
             type="button"
             variant="ghost"
-            size="sm"
-            onClick={onNewChat}
-            className="text-xs text-muted-foreground hover:text-foreground"
           >
             <SquarePen className="size-4" />
             New chat
@@ -187,30 +189,30 @@ function ChatSession({
         )}
       </div>
       <ChatHistorySheet
-        open={historyOpen}
-        onOpenChange={setHistoryOpen}
         activeConversationId={conversationId}
+        onOpenChange={setHistoryOpen}
+        open={historyOpen}
       />
 
       {/* Messages area */}
-      <div className="relative flex flex-1 flex-col min-h-0">
+      <div className="relative flex min-h-0 flex-1 flex-col">
         {isEmpty ? (
           /* Empty state */
           <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4">
             <div className="text-center">
               <Sparkles className="mx-auto mb-3 size-8 text-primary" />
-              <h2 className="text-xl font-semibold">How can I help you?</h2>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <h2 className="font-semibold text-xl">How can I help you?</h2>
+              <p className="mt-1 text-muted-foreground text-sm">
                 Ask me to create events, manage RSVPs, or send invitations.
               </p>
             </div>
             <div className="grid w-full max-w-lg grid-cols-1 gap-2 sm:grid-cols-2">
               {suggestions.map((s) => (
                 <button
-                  key={s.label}
-                  type="button"
-                  onClick={() => handleSuggestion(s.label)}
                   className="flex items-start gap-3 rounded-lg border p-3 text-left text-sm transition-colors hover:bg-accent"
+                  key={s.label}
+                  onClick={() => handleSuggestion(s.label)}
+                  type="button"
                 >
                   <s.icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
                   <span className="text-muted-foreground">{s.label}</span>
@@ -220,15 +222,17 @@ function ChatSession({
           </div>
         ) : (
           <Conversation>
-            <ConversationContent className="px-4 py-6 max-w-3xl mx-auto w-full">
+            <ConversationContent className="mx-auto w-full max-w-3xl px-4 py-6">
               {messages.map((message, messageIndex) => {
                 if (message.role === "user") {
                   const textPart = message.parts.find(
-                    (p) => p.type === "text",
+                    (p) => p.type === "text"
                   ) as { text: string } | undefined;
-                  if (!textPart) return null;
+                  if (!textPart) {
+                    return null;
+                  }
                   return (
-                    <div key={message.id} className="flex gap-3 justify-end">
+                    <div className="flex justify-end gap-3" key={message.id}>
                       <Message from="user">
                         <MessageContent>
                           <p className="whitespace-pre-wrap">{textPart.text}</p>
@@ -243,79 +247,75 @@ function ChatSession({
 
                 const isLast = messageIndex === messages.length - 1;
                 const textParts = message.parts
-                  .map((p, idx) => ({ part: p, idx }))
+                  .map((p, idx) => ({ idx, part: p }))
                   .filter(
                     ({ part }) =>
                       part.type === "text" &&
-                      (part as { text: string }).text?.trim(),
+                      (part as { text: string }).text.trim()
                   );
 
                 const artifacts = extractArtifacts(message.parts);
                 const approvalParts = message.parts.filter(
-                  (p) => isToolUIPart(p) && p.state === "approval-requested",
+                  (p) => isToolUIPart(p) && p.state === "approval-requested"
                 );
                 const hasRunningTool = message.parts.some(
                   (p) =>
                     isToolUIPart(p) &&
                     p.state !== "output-available" &&
                     p.state !== "output-error" &&
-                    p.state !== "approval-requested",
+                    p.state !== "approval-requested"
                 );
-                const lastTextIdx =
-                  textParts.length > 0
-                    ? textParts[textParts.length - 1].idx
-                    : -1;
+                const lastTextIdx = textParts.at(-1)?.idx ?? -1;
 
                 return (
-                  <div key={message.id} className="flex gap-3 items-start">
+                  <div className="flex items-start gap-3" key={message.id}>
                     <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary">
                       <Bot className="size-4 text-primary-foreground" />
                     </div>
-                    <div className="flex-1 min-w-0 space-y-3">
-                      {hasRunningTool && isLast && (
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground animate-pulse">
+                    <div className="min-w-0 flex-1 space-y-3">
+                      {hasRunningTool && isLast ? (
+                        <div className="flex animate-pulse items-center gap-2 text-muted-foreground text-xs">
                           <Sparkles className="size-3" />
                           <span>Working on it...</span>
                         </div>
-                      )}
+                      ) : null}
                       {approvalParts.map((part, idx) => {
                         const toolName = getToolName(part);
-                        const input = (
-                          part as { input: Record<string, unknown> }
-                        ).input;
-                        const toolCallId = (part as { toolCallId: string })
-                          .toolCallId;
+                        const { input: toolInput } = part as {
+                          input: Record<string, unknown>;
+                        };
+                        const { toolCallId } = part as { toolCallId: string };
 
                         let actionText = "";
                         if (toolName === "deleteEvent") {
-                          actionText = `Permanently delete "${input.eventTitle || "this event"}"?`;
+                          actionText = `Permanently delete "${toolInput.eventTitle || "this event"}"?`;
                         } else if (toolName === "sendInvitation") {
-                          actionText = `Send invitation to "${input.email}"${input.eventTitle ? ` for "${input.eventTitle}"` : ""}?`;
+                          actionText = `Send invitation to "${toolInput.email}"${toolInput.eventTitle ? ` for "${toolInput.eventTitle}"` : ""}?`;
                         } else {
                           return null;
                         }
 
                         return (
                           <ApprovalCard
-                            key={`approval-${toolCallId}-${idx}`}
                             actionText={actionText}
-                            onConfirm={() =>
-                              addToolApprovalResponse({
-                                id: toolCallId,
-                                approved: true,
-                              })
-                            }
+                            key={`approval-${toolCallId}-${idx}`}
                             onCancel={() =>
                               addToolApprovalResponse({
-                                id: toolCallId,
                                 approved: false,
+                                id: toolCallId,
+                              })
+                            }
+                            onConfirm={() =>
+                              addToolApprovalResponse({
+                                approved: true,
+                                id: toolCallId,
                               })
                             }
                           />
                         );
                       })}
                       {textParts.map(({ part, idx }) => {
-                        const text = (part as { text: string }).text;
+                        const { text } = part as { text: string };
                         const isLastText = idx === lastTextIdx;
                         const isStreaming =
                           status === "streaming" && isLast && isLastText;
@@ -325,9 +325,9 @@ function ChatSession({
                             <Message from="assistant">
                               <MessageContent>
                                 <Streamdown
-                                  plugins={{ code }}
                                   animated={isStreaming}
                                   linkSafety={{ enabled: false }}
+                                  plugins={{ code }}
                                 >
                                   {text}
                                 </Streamdown>
@@ -337,8 +337,8 @@ function ChatSession({
                               <div className="space-y-2">
                                 {artifacts.map((artifact, aIdx) => (
                                   <ArtifactCard
-                                    key={`artifact-${aIdx}`}
                                     artifact={artifact}
+                                    key={`artifact-${aIdx}`}
                                   />
                                 ))}
                               </div>
@@ -373,7 +373,7 @@ function ChatSession({
                         !hasRunningTool && (
                           <div className="flex items-center gap-2 py-2">
                             <Loader2 className="size-4 animate-spin text-muted-foreground" />
-                            <span className="text-sm text-muted-foreground">
+                            <span className="text-muted-foreground text-sm">
                               Processing your request...
                             </span>
                           </div>
@@ -384,13 +384,13 @@ function ChatSession({
               })}
 
               {status === "submitted" && (
-                <div className="flex gap-3 items-start">
+                <div className="flex items-start gap-3">
                   <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary">
                     <Bot className="size-4 text-primary-foreground" />
                   </div>
                   <div className="flex items-center gap-2 rounded-2xl bg-muted px-4 py-3">
                     <Loader2 className="size-4 animate-spin text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-muted-foreground text-sm">
                       Thinking...
                     </span>
                   </div>
@@ -405,20 +405,20 @@ function ChatSession({
       {/* Input */}
       <div className="shrink-0 border-t px-4 py-3">
         <PromptInput
-          onSubmit={handleSubmit}
           className="mx-auto w-full max-w-3xl"
+          onSubmit={handleSubmit}
         >
           <PromptInputBody>
             <PromptInputTextarea
-              value={input}
+              className="overflow-x-hidden"
               onChange={(e) => setInput(e.currentTarget.value)}
               placeholder="Ask me anything about your events..."
-              className="overflow-x-hidden"
+              value={input}
             />
           </PromptInputBody>
           <PromptInputFooter className="border-t-0">
             <PromptInputTools>
-              <span className="text-xs text-muted-foreground">
+              <span className="text-muted-foreground text-xs">
                 <kbd className="rounded border px-1 font-mono text-[10px]">
                   Enter
                 </kbd>{" "}
@@ -426,8 +426,8 @@ function ChatSession({
               </span>
             </PromptInputTools>
             <PromptInputSubmit
+              disabled={!(input.trim() || isLoading)}
               status={isLoading ? "streaming" : "ready"}
-              disabled={!input.trim() && !isLoading}
             />
           </PromptInputFooter>
         </PromptInput>
@@ -439,28 +439,28 @@ function ChatSession({
 // ─── Artifact Types ───────────────────────────────────────────────────────────
 
 interface EventData {
-  id: string;
-  slug?: string;
-  title: string;
-  description?: string | null;
-  startTime: string;
-  endTime?: string | null;
-  location?: string | null;
-  eventType?: string;
-  visibility?: string;
   capacity?: number | null;
-  type?: string;
+  description?: string | null;
+  endTime?: string | null;
+  eventType?: string;
+  id: string;
+  location?: string | null;
   requiresApproval?: boolean;
+  slug?: string;
+  startTime: string;
+  title: string;
+  type?: string;
+  visibility?: string;
 }
 
 interface EventCreatedArtifactType {
-  kind: "event-created";
   event: EventData;
+  kind: "event-created";
 }
 
 interface EventListArtifactType {
-  kind: "event-list";
   events: EventData[];
+  kind: "event-list";
 }
 
 type ChatArtifact = EventCreatedArtifactType | EventListArtifactType;
@@ -477,15 +477,15 @@ function ApprovalCard({
   const [open, setOpen] = useState(false);
 
   return (
-    <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-3">
+    <div className="space-y-3 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
       <div className="flex items-start gap-2">
-        <AlertTriangle className="size-4 text-destructive mt-0.5 shrink-0" />
+        <AlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" />
         <div>
-          <p className="text-sm font-medium">Confirm action</p>
-          <p className="text-sm text-muted-foreground">{actionText}</p>
+          <p className="font-medium text-sm">Confirm action</p>
+          <p className="text-muted-foreground text-sm">{actionText}</p>
         </div>
       </div>
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog onOpenChange={setOpen} open={open}>
         <DialogTrigger asChild>
           <Button size="sm" variant="destructive">
             Review action
@@ -498,20 +498,20 @@ function ApprovalCard({
           </DialogHeader>
           <DialogFooter>
             <Button
-              variant="outline"
               onClick={() => {
                 setOpen(false);
                 onCancel();
               }}
+              variant="outline"
             >
               Cancel
             </Button>
             <Button
-              variant="destructive"
               onClick={() => {
                 setOpen(false);
                 onConfirm();
               }}
+              variant="destructive"
             >
               Confirm
             </Button>
@@ -522,70 +522,86 @@ function ApprovalCard({
   );
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: parses several distinct artifact shapes (event-created, event-list, tool outputs) from a union of message parts; the branches map 1:1 to artifact variants
 function extractArtifacts(parts: OrchestratorMessage["parts"]): ChatArtifact[] {
   const artifacts: ChatArtifact[] = [];
   for (const part of parts) {
-    if (!isToolUIPart(part)) continue;
-    if (part.state !== "output-available") continue;
+    if (!isToolUIPart(part)) {
+      continue;
+    }
+    if (part.state !== "output-available") {
+      continue;
+    }
     const output = part.output as Record<string, unknown> | undefined;
-    if (!output) continue;
+    if (!output) {
+      continue;
+    }
     const partArtifacts = output.artifacts as
       | Array<{ type: string; data: unknown }>
       | undefined;
     if (partArtifacts) {
       for (const a of partArtifacts) {
-        if (a.type === "event-created" && a.data)
+        if (a.type === "event-created" && a.data) {
           artifacts.push({
-            kind: "event-created",
             event: parseEventData(a.data as Record<string, unknown>),
+            kind: "event-created",
           });
-        if (a.type === "event-list" && Array.isArray(a.data))
+        }
+        if (a.type === "event-list" && Array.isArray(a.data)) {
           artifacts.push({
-            kind: "event-list",
             events: (a.data as Record<string, unknown>[]).map(parseEventData),
+            kind: "event-list",
           });
+        }
       }
     }
-    if (output.success && output.event)
+    if (output.success && output.event) {
       artifacts.push({
-        kind: "event-created",
         event: parseEventData(output.event as Record<string, unknown>),
+        kind: "event-created",
       });
+    }
     if (
       output.events &&
       Array.isArray(output.events) &&
       (output.events as unknown[]).length > 0
-    )
+    ) {
       artifacts.push({
-        kind: "event-list",
         events: (output.events as Record<string, unknown>[]).map(
-          parseEventData,
+          parseEventData
         ),
+        kind: "event-list",
       });
+    }
   }
   return artifacts;
 }
 
 function parseEventData(d: Record<string, unknown>): EventData {
   return {
-    id: String(d.id ?? ""),
-    title: String(d.title ?? "Untitled"),
-    description: (d.description as string | null) ?? null,
-    startTime: String(d.startTime ?? ""),
-    endTime: (d.endTime as string | null) ?? null,
-    location: (d.location as string | null) ?? null,
-    eventType: (d.type as string) ?? (d.eventType as string) ?? "in_person",
-    visibility: (d.visibility as string) ?? "public",
     capacity: (d.capacity as number | null) ?? null,
+    description: (d.description as string | null) ?? null,
+    endTime: (d.endTime as string | null) ?? null,
+    eventType:
+      (d.type as string | undefined) ??
+      (d.eventType as string | undefined) ??
+      "in_person",
+    id: String(d.id ?? ""),
+    location: (d.location as string | null) ?? null,
     requiresApproval: (d.requiresApproval as boolean | undefined) ?? undefined,
+    startTime: String(d.startTime ?? ""),
+    title: String(d.title ?? "Untitled"),
+    visibility: (d.visibility as string | undefined) ?? "public",
   };
 }
 
 function ArtifactCard({ artifact }: { artifact: ChatArtifact }) {
-  if (artifact.kind === "event-created")
+  if (artifact.kind === "event-created") {
     return <EventCreatedCard event={artifact.event} />;
-  if (artifact.kind === "event-list")
+  }
+  if (artifact.kind === "event-list") {
     return <EventListCard events={artifact.events} />;
+  }
   return null;
 }
 
@@ -598,56 +614,56 @@ function EventCreatedCard({ event }: { event: EventData }) {
   return (
     <Artifact className="max-w-md">
       <ArtifactHeader>
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0 flex-1">
           <ArtifactTitle>{event.title}</ArtifactTitle>
           <ArtifactDescription>Event created successfully</ArtifactDescription>
         </div>
         <ArtifactActions>
           <ArtifactAction
-            tooltip="Copy link"
             icon={Link2}
             onClick={() => {
               navigator.clipboard.writeText(
-                `${window.location.origin}${eventUrl}`,
+                `${window.location.origin}${eventUrl}`
               );
               toast.success("Event link copied!");
             }}
+            tooltip="Copy link"
           />
           <ArtifactAction
-            tooltip="Edit event"
             icon={Edit}
             onClick={() => window.open(`${dashboardUrl}/edit`, "_blank")}
+            tooltip="Edit event"
           />
           <ArtifactAction
-            tooltip="View event"
             icon={ExternalLink}
             onClick={() => window.open(eventUrl, "_blank")}
+            tooltip="View event"
           />
         </ArtifactActions>
       </ArtifactHeader>
       <ArtifactContent className="space-y-3">
         <div className="flex items-center gap-3 text-sm">
-          <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
+          <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" />
           <div>
             <p className="font-medium">
               {format(startDate, "EEEE, MMMM d, yyyy")}
             </p>
             <p className="text-muted-foreground text-xs">
               {format(startDate, "h:mm a")}
-              {endDate && ` – ${format(endDate, "h:mm a")}`}
+              {endDate ? ` – ${format(endDate, "h:mm a")}` : null}
             </p>
           </div>
         </div>
-        {event.location && (
+        {event.location ? (
           <div className="flex items-center gap-3 text-sm">
-            <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
+            <MapPin className="h-4 w-4 shrink-0 text-muted-foreground" />
             <p>{event.location}</p>
           </div>
-        )}
-        <div className="flex items-center gap-2 flex-wrap">
+        ) : null}
+        <div className="flex flex-wrap items-center gap-2">
           <Badge
-            variant={event.visibility === "public" ? "default" : "secondary"}
             className="text-xs"
+            variant={event.visibility === "public" ? "default" : "secondary"}
           >
             {event.visibility === "public" ? (
               <Globe className="mr-1 h-3 w-3" />
@@ -656,29 +672,29 @@ function EventCreatedCard({ event }: { event: EventData }) {
             )}
             {event.visibility}
           </Badge>
-          {event.eventType && (
-            <Badge variant="outline" className="text-xs">
+          {event.eventType ? (
+            <Badge className="text-xs" variant="outline">
               {event.eventType.replace("_", " ")}
             </Badge>
-          )}
-          {event.capacity != null && (
-            <Badge variant="outline" className="text-xs">
+          ) : null}
+          {event.capacity !== null && (
+            <Badge className="text-xs" variant="outline">
               <Users className="mr-1 h-3 w-3" />
               {event.capacity} spots
             </Badge>
           )}
-          {event.requiresApproval && (
-            <Badge variant="outline" className="text-xs">
+          {event.requiresApproval ? (
+            <Badge className="text-xs" variant="outline">
               <UserCheck className="mr-1 h-3 w-3" />
               Approval required
             </Badge>
-          )}
+          ) : null}
         </div>
-        {event.description && (
-          <p className="text-xs text-muted-foreground line-clamp-2">
+        {event.description ? (
+          <p className="line-clamp-2 text-muted-foreground text-xs">
             {event.description}
           </p>
-        )}
+        ) : null}
       </ArtifactContent>
     </Artifact>
   );
@@ -688,7 +704,7 @@ function EventListCard({ events }: { events: EventData[] }) {
   return (
     <Artifact className="max-w-md">
       <ArtifactHeader>
-        <div className="flex-1 min-w-0">
+        <div className="min-w-0 flex-1">
           <ArtifactTitle>Your Events ({events.length})</ArtifactTitle>
         </div>
       </ArtifactHeader>
@@ -701,28 +717,28 @@ function EventListCard({ events }: { events: EventData[] }) {
               : `/events/${event.id}`;
             return (
               <a
-                key={event.id}
-                href={eventUrl}
-                target="_blank"
-                rel="noopener noreferrer"
                 className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/50"
+                href={eventUrl}
+                key={event.id}
+                rel="noopener noreferrer"
+                target="_blank"
               >
-                <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10 shrink-0">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                   <Calendar className="h-5 w-5 text-primary" />
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{event.title}</p>
-                  <p className="text-xs text-muted-foreground">
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium text-sm">{event.title}</p>
+                  <p className="text-muted-foreground text-xs">
                     {format(startDate, "MMM d, yyyy · h:mm a")}
-                    {event.location && ` · ${event.location}`}
+                    {event.location ? ` · ${event.location}` : null}
                   </p>
                 </div>
-                <div className="flex items-center gap-1.5 shrink-0">
+                <div className="flex shrink-0 items-center gap-1.5">
                   <Badge
+                    className="text-xs"
                     variant={
                       event.visibility === "public" ? "default" : "secondary"
                     }
-                    className="text-xs"
                   >
                     {event.visibility}
                   </Badge>

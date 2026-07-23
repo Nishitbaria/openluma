@@ -31,13 +31,13 @@ export function MobileNav() {
           <MenuIcon className="size-4.5" />
         )}
       </Button>
-      {open && (
+      {open ? (
         <Portal className="top-14" id="mobile-menu">
           <PortalBackdrop />
           <div
             className={cn(
               "data-[slot=open]:zoom-in-97 ease-out data-[slot=open]:animate-in",
-              "size-full p-4",
+              "size-full p-4"
             )}
             data-slot={open ? "open" : "closed"}
           >
@@ -79,7 +79,7 @@ export function MobileNav() {
             </div>
           </div>
         </Portal>
-      )}
+      ) : null}
     </div>
   );
 }

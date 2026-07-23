@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -23,6 +24,8 @@ import { Switch } from "@/components/ui/switch";
 export interface EventQuestion {
   id: string;
   label: string;
+  options: string[] | null;
+  required: boolean;
   type:
     | "text"
     | "paragraph"
@@ -33,16 +36,14 @@ export interface EventQuestion {
     | "phone"
     | "website"
     | "terms";
-  required: boolean;
-  options: string[] | null;
 }
 
 interface RsvpQuestionsDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  questions: EventQuestion[];
-  onSubmit: (answers: Record<string, string | boolean>) => void;
   loading: boolean;
+  onOpenChange: (open: boolean) => void;
+  onSubmit: (answers: Record<string, string | boolean>) => void;
+  open: boolean;
+  questions: EventQuestion[];
   submitLabel: string;
 }
 
@@ -60,6 +61,17 @@ export function RsvpQuestionsDialog({
     setAnswers((prev) => ({ ...prev, [id]: value }));
   }
 
+  function textValue(id: string) {
+    const v = answers[id];
+    return typeof v === "string" ? v : "";
+  }
+
+  function boolValue(id: string) {
+    const v = answers[id];
+    return typeof v === "boolean" ? v : false;
+  }
+
+  // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: form-submit validation branches over every supported question type; splitting it would scatter tightly-coupled validation logic without reducing real complexity
   function handleSubmit() {
     for (const q of questions) {
       if (q.required) {
@@ -68,11 +80,11 @@ export function RsvpQuestionsDialog({
           // checkbox is a yes/no — any answer is valid
         } else if (q.type === "terms") {
           if (!answer) {
-            alert(`You must agree to "${q.label}".`);
+            toast.error(`You must agree to "${q.label}".`);
             return;
           }
         } else if (!answer || (typeof answer === "string" && !answer.trim())) {
-          alert(`"${q.label}" is required.`);
+          toast.error(`"${q.label}" is required.`);
           return;
         }
       }
@@ -80,48 +92,52 @@ export function RsvpQuestionsDialog({
     onSubmit(answers);
   }
 
+  const submitButtonLabel = loading ? "Submitting..." : submitLabel;
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md max-h-[80vh] overflow-y-auto">
+    <Dialog onOpenChange={onOpenChange} open={open}>
+      <DialogContent className="max-h-[80vh] max-w-md overflow-y-auto">
         <DialogHeader>
           <DialogTitle>A few quick questions</DialogTitle>
         </DialogHeader>
 
         <div className="space-y-5 py-2">
           {questions.map((q) => (
-            <div key={q.id} className="space-y-1.5">
+            <div className="space-y-1.5" key={q.id}>
               <Label>
                 {q.label}
-                {q.required && <span className="text-destructive ml-1">*</span>}
+                {q.required ? (
+                  <span className="ml-1 text-destructive">*</span>
+                ) : null}
               </Label>
 
               {q.type === "text" && (
                 <Input
-                  value={(answers[q.id] as string) ?? ""}
                   onChange={(e) => setAnswer(q.id, e.target.value)}
                   placeholder="Your answer"
+                  value={textValue(q.id)}
                 />
               )}
 
               {q.type === "paragraph" && (
                 <textarea
-                  className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm resize-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  value={(answers[q.id] as string) ?? ""}
+                  className="min-h-[80px] w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                   onChange={(e) => setAnswer(q.id, e.target.value)}
                   placeholder="Your answer"
+                  value={textValue(q.id)}
                 />
               )}
 
               {q.type === "checkbox" && (
                 <div className="flex items-center gap-2">
                   <Switch
+                    checked={boolValue(q.id)}
                     id={`answer-${q.id}`}
-                    checked={(answers[q.id] as boolean) ?? false}
                     onCheckedChange={(checked) => setAnswer(q.id, checked)}
                   />
                   <Label
+                    className="text-muted-foreground text-sm"
                     htmlFor={`answer-${q.id}`}
-                    className="text-sm text-muted-foreground"
                   >
                     Yes
                   </Label>
@@ -130,8 +146,8 @@ export function RsvpQuestionsDialog({
 
               {q.type === "dropdown" && (
                 <Select
-                  value={(answers[q.id] as string) ?? ""}
                   onValueChange={(val) => setAnswer(q.id, val)}
+                  value={textValue(q.id)}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select an option" />
@@ -148,19 +164,19 @@ export function RsvpQuestionsDialog({
 
               {q.type === "social_profile" && (
                 <div className="space-y-2">
-                  {q.options?.[0] && (
-                    <p className="text-xs text-muted-foreground">
+                  {q.options?.[0] ? (
+                    <p className="text-muted-foreground text-xs">
                       Platform: {q.options[0]}
                     </p>
-                  )}
+                  ) : null}
                   <Input
-                    value={(answers[q.id] as string) ?? ""}
                     onChange={(e) => setAnswer(q.id, e.target.value)}
                     placeholder={
                       q.options?.[0]
                         ? `Your ${q.options[0]} username`
                         : "Your username"
                     }
+                    value={textValue(q.id)}
                   />
                 </div>
               )}
@@ -168,56 +184,56 @@ export function RsvpQuestionsDialog({
               {q.type === "company" && (
                 <div className="space-y-2">
                   <Input
-                    value={(answers[q.id] as string) ?? ""}
                     onChange={(e) => setAnswer(q.id, e.target.value)}
                     placeholder="Your company name"
+                    value={textValue(q.id)}
                   />
-                  {q.options?.[0] && (
+                  {q.options?.[0] ? (
                     <Input
-                      value={(answers[`${q.id}_jobtitle`] as string) ?? ""}
                       onChange={(e) =>
                         setAnswer(`${q.id}_jobtitle`, e.target.value)
                       }
                       placeholder={q.options[0]}
+                      value={textValue(`${q.id}_jobtitle`)}
                     />
-                  )}
+                  ) : null}
                 </div>
               )}
 
               {q.type === "phone" && (
                 <Input
-                  type="tel"
-                  value={(answers[q.id] as string) ?? ""}
                   onChange={(e) => setAnswer(q.id, e.target.value)}
                   placeholder="+1 (555) 000-0000"
+                  type="tel"
+                  value={textValue(q.id)}
                 />
               )}
 
               {q.type === "website" && (
                 <Input
-                  type="url"
-                  value={(answers[q.id] as string) ?? ""}
                   onChange={(e) => setAnswer(q.id, e.target.value)}
                   placeholder="https://yourwebsite.com"
+                  type="url"
+                  value={textValue(q.id)}
                 />
               )}
 
               {q.type === "terms" && (
                 <div className="flex items-start gap-3 rounded-lg border bg-muted/30 p-3">
                   <Switch
-                    id={`answer-${q.id}`}
-                    checked={(answers[q.id] as boolean) ?? false}
-                    onCheckedChange={(checked) => setAnswer(q.id, checked)}
+                    checked={boolValue(q.id)}
                     className="mt-0.5"
+                    id={`answer-${q.id}`}
+                    onCheckedChange={(checked) => setAnswer(q.id, checked)}
                   />
                   <Label
+                    className="cursor-pointer text-sm leading-snug"
                     htmlFor={`answer-${q.id}`}
-                    className="text-sm leading-snug cursor-pointer"
                   >
                     I agree to the terms and conditions
-                    {q.required && (
-                      <span className="text-destructive ml-1">*</span>
-                    )}
+                    {q.required ? (
+                      <span className="ml-1 text-destructive">*</span>
+                    ) : null}
                   </Label>
                 </div>
               )}
@@ -227,14 +243,14 @@ export function RsvpQuestionsDialog({
 
         <DialogFooter>
           <Button
-            variant="outline"
-            onClick={() => onOpenChange(false)}
             disabled={loading}
+            onClick={() => onOpenChange(false)}
+            variant="outline"
           >
             Cancel
           </Button>
-          <Button onClick={handleSubmit} disabled={loading}>
-            {loading ? "Submitting..." : submitLabel}
+          <Button disabled={loading} onClick={handleSubmit}>
+            {submitButtonLabel}
           </Button>
         </DialogFooter>
       </DialogContent>

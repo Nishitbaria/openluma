@@ -38,19 +38,21 @@ export async function generateMetadata({
 }) {
   const { slug } = await params;
   const event = await db.query.events.findFirst({
-    where: eq(events.slug, slug),
     columns: {
-      title: true,
-      description: true,
-      visibility: true,
       coverImage: true,
+      description: true,
+      title: true,
+      visibility: true,
     },
+    where: eq(events.slug, slug),
   });
-  if (!event) return { title: "Event Not Found" };
+  if (!event) {
+    return { title: "Event Not Found" };
+  }
   if (event.visibility === "private") {
     return {
-      title: "Private Event - OpenLuma",
       description: "This event is invite-only.",
+      title: "Private Event - OpenLuma",
     };
   }
 
@@ -58,23 +60,24 @@ export async function generateMetadata({
   const description = event.description ?? `Join ${event.title} on OpenLuma`;
 
   return {
-    title: `${event.title} - OpenLuma`,
     description,
     openGraph: {
-      title: `${event.title} - OpenLuma`,
       description,
-      images: [{ url: ogImageUrl, width: 1200, height: 630, alt: event.title }],
+      images: [{ alt: event.title, height: 630, url: ogImageUrl, width: 1200 }],
+      title: `${event.title} - OpenLuma`,
       type: "website",
     },
+    title: `${event.title} - OpenLuma`,
     twitter: {
       card: "summary_large_image",
-      title: `${event.title} - OpenLuma`,
       description,
       images: [ogImageUrl],
+      title: `${event.title} - OpenLuma`,
     },
   };
 }
 
+// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: top-level page component composing many conditional sections (auth state, RSVP status, event metadata); complexity is inherent to server-rendering the full page
 export default async function PublicEventBySlugPage({
   params,
   searchParams,
@@ -89,19 +92,21 @@ export default async function PublicEventBySlugPage({
     db.query.events.findFirst({
       where: eq(events.slug, slug),
       with: {
-        host: { columns: { id: true, name: true, image: true } },
         category: true,
-        tags: true,
+        host: { columns: { id: true, image: true, name: true } },
         rsvps: {
           columns: { id: true, status: true },
-          with: { user: { columns: { id: true, name: true, image: true } } },
+          with: { user: { columns: { id: true, image: true, name: true } } },
         },
+        tags: true,
       },
     }),
     getSession(await headers()).catch(() => null),
   ]);
 
-  if (!event) notFound();
+  if (!event) {
+    notFound();
+  }
   let currentRsvpStatus:
     | "pending"
     | "approved"
@@ -112,31 +117,31 @@ export default async function PublicEventBySlugPage({
   const [userRsvpResult, questions, invitationResult] = await Promise.all([
     session?.user
       ? db.query.rsvps.findFirst({
+          columns: { createdAt: true, status: true },
           where: and(
             eq(rsvps.eventId, event.id),
-            eq(rsvps.userId, session.user.id),
+            eq(rsvps.userId, session.user.id)
           ),
-          columns: { status: true, createdAt: true },
         })
       : Promise.resolve(undefined),
     db.query.eventQuestions.findMany({
-      where: eq(eventQuestions.eventId, event.id),
-      orderBy: (q, { asc }) => [asc(q.order)],
       columns: {
         id: true,
         label: true,
-        type: true,
-        required: true,
         options: true,
+        required: true,
+        type: true,
       },
+      orderBy: (q, { asc }) => [asc(q.order)],
+      where: eq(eventQuestions.eventId, event.id),
     }),
     session?.user?.email && event.visibility === "private"
       ? db.query.invitations.findFirst({
+          columns: { status: true, token: true },
           where: and(
             eq(invitations.eventId, event.id),
-            eq(invitations.email, session.user.email),
+            eq(invitations.email, session.user.email)
           ),
-          columns: { token: true, status: true },
         })
       : Promise.resolve(undefined),
   ]);
@@ -149,13 +154,13 @@ export default async function PublicEventBySlugPage({
   const hasAcceptedInvitation = invitationResult?.status === "accepted";
 
   // ── Non-blocking pageview tracking ──────────────────────────────────────────
-  void (async () => {
+  (async () => {
     try {
       const reqHeaders = await headers();
       const ip =
         reqHeaders.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
       const ipHash = Buffer.from(
-        await crypto.subtle.digest("SHA-256", new TextEncoder().encode(ip)),
+        await crypto.subtle.digest("SHA-256", new TextEncoder().encode(ip))
       ).toString("hex");
       const city = reqHeaders.get("x-vercel-ip-city") ?? null;
       const rawRef = reqHeaders.get("referer") ?? null;
@@ -172,10 +177,16 @@ export default async function PublicEventBySlugPage({
       const dedupKey = `pv:${event.id}:${ipHash}`;
       const already = redis ? await redis.get(dedupKey) : null;
       if (!already) {
-        if (redis) redis.set(dedupKey, "1", { ex: 3600 }).catch(() => {});
+        if (redis) {
+          redis.set(dedupKey, "1", { ex: 3600 }).catch(() => {
+            // ignore: best-effort dedup cache, safe to drop
+          });
+        }
         db.insert(eventPageviews)
-          .values({ eventId: event.id, ipHash, referrer, city })
-          .catch(() => {});
+          .values({ city, eventId: event.id, ipHash, referrer })
+          .catch(() => {
+            // ignore: best-effort analytics write, must not break page load
+          });
       }
     } catch {
       // silently ignore — never break page load
@@ -186,12 +197,12 @@ export default async function PublicEventBySlugPage({
   let waitlistPosition: number | null = null;
   if (currentRsvpStatus === "waitlisted" && userRsvpResult?.createdAt) {
     const earlier = await db.query.rsvps.findMany({
+      columns: { id: true },
       where: and(
         eq(rsvps.eventId, event.id),
         eq(rsvps.status, "waitlisted"),
-        lte(rsvps.createdAt, userRsvpResult.createdAt),
+        lte(rsvps.createdAt, userRsvpResult.createdAt)
       ),
-      columns: { id: true },
     });
     waitlistPosition = earlier.length;
   }
@@ -200,11 +211,11 @@ export default async function PublicEventBySlugPage({
     const isHost = session?.user?.id === event.host.id;
     const hasApprovedRsvp = currentRsvpStatus === "approved";
 
-    if (!isHost && !hasApprovedRsvp && !hasAcceptedInvitation) {
+    if (!(isHost || hasApprovedRsvp || hasAcceptedInvitation)) {
       return (
-        <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8 py-24 text-center">
+        <div className="mx-auto w-full max-w-7xl px-4 py-24 text-center sm:px-6 lg:px-8">
           <Lock className="mx-auto h-12 w-12 text-muted-foreground" />
-          <h1 className="mt-4 text-2xl font-bold">Private Event</h1>
+          <h1 className="mt-4 font-bold text-2xl">Private Event</h1>
           {pendingInvitation ? (
             <>
               <p className="mt-2 text-muted-foreground">
@@ -247,19 +258,19 @@ export default async function PublicEventBySlugPage({
     !!event.location && (event.type === "in_person" || event.type === "hybrid");
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 sm:px-6 lg:px-8 py-12">
+    <div className="mx-auto w-full max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
       {event.coverImage ? (
-        <div className="relative aspect-video overflow-hidden rounded-xl mb-8">
+        <div className="relative mb-8 aspect-video overflow-hidden rounded-xl">
           <Image
-            src={event.coverImage}
             alt={event.title}
-            fill
             className="object-cover"
+            fill
+            src={event.coverImage}
           />
         </div>
       ) : null}
 
-      <div className="flex items-center gap-2 mb-4">
+      <div className="mb-4 flex items-center gap-2">
         <Badge
           variant={event.visibility === "public" ? "default" : "secondary"}
         >
@@ -271,25 +282,25 @@ export default async function PublicEventBySlugPage({
           {event.visibility === "public" ? "Public" : "Private"}
         </Badge>
         <Badge variant="outline">{event.type.replace("_", " ")}</Badge>
-        {event.category && (
+        {event.category ? (
           <Badge variant="outline">{event.category.name}</Badge>
-        )}
+        ) : null}
       </div>
 
       <div className="flex items-start justify-between gap-3">
-        <h1 className="text-4xl font-bold tracking-tight">{event.title}</h1>
+        <h1 className="font-bold text-4xl tracking-tight">{event.title}</h1>
         <CopyLinkButton url={`${appUrl}/e/${slug}`} />
       </div>
       <HoverCard>
         <HoverCardTrigger asChild>
           <Link
-            href={`/u/${event.host.id}`}
             className="mt-2 inline-flex items-center gap-2 text-muted-foreground hover:text-foreground"
+            href={`/u/${event.host.id}`}
           >
             <Avatar size="sm">
               <AvatarImage
-                src={event.host.image ?? undefined}
                 alt={event.host.name}
+                src={event.host.image ?? undefined}
               />
               <AvatarFallback>
                 {event.host.name.charAt(0).toUpperCase()}
@@ -302,8 +313,8 @@ export default async function PublicEventBySlugPage({
           <div className="flex items-center gap-3">
             <Avatar size="lg">
               <AvatarImage
-                src={event.host.image ?? undefined}
                 alt={event.host.name}
+                src={event.host.image ?? undefined}
               />
               <AvatarFallback>
                 {event.host.name.charAt(0).toUpperCase()}
@@ -312,8 +323,8 @@ export default async function PublicEventBySlugPage({
             <div>
               <p className="font-medium">{event.host.name}</p>
               <Link
+                className="text-primary text-sm hover:underline"
                 href={`/u/${event.host.id}`}
-                className="text-sm text-primary hover:underline"
               >
                 View profile
               </Link>
@@ -322,10 +333,10 @@ export default async function PublicEventBySlugPage({
         </HoverCardContent>
       </HoverCard>
 
-      <div className="grid gap-8 md:grid-cols-3 mt-8 items-start">
-        <div className="md:col-span-2 space-y-6">
+      <div className="mt-8 grid items-start gap-8 md:grid-cols-3">
+        <div className="space-y-6 md:col-span-2">
           <Card>
-            <CardContent className="pt-6 space-y-4">
+            <CardContent className="space-y-4 pt-6">
               <div className="flex items-center gap-3">
                 <Calendar className="h-5 w-5 text-primary" />
                 <div>
@@ -333,41 +344,42 @@ export default async function PublicEventBySlugPage({
                     {formatInTimeZone(
                       startTime,
                       event.timezone,
-                      "EEEE, MMMM d, yyyy",
+                      "EEEE, MMMM d, yyyy"
                     )}
                   </p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-muted-foreground text-sm">
                     {formatInTimeZone(startTime, event.timezone, "h:mm a")}
-                    {endTime &&
-                      ` - ${formatInTimeZone(endTime, event.timezone, "h:mm a")}`}{" "}
+                    {endTime
+                      ? ` - ${formatInTimeZone(endTime, event.timezone, "h:mm a")}`
+                      : ""}{" "}
                     ({formatInTimeZone(startTime, event.timezone, "zzz")})
                   </p>
                 </div>
               </div>
 
-              {event.location && (
+              {event.location ? (
                 <div className="flex items-center gap-3">
                   <MapPin className="h-5 w-5 text-primary" />
                   <div>
                     <p className="font-medium">{event.location}</p>
-                    {event.locationDetails && (
-                      <p className="text-sm text-muted-foreground">
+                    {event.locationDetails ? (
+                      <p className="text-muted-foreground text-sm">
                         {event.locationDetails}
                       </p>
-                    )}
-                    {showDirectionsLink && (
+                    ) : null}
+                    {showDirectionsLink ? (
                       <a
+                        className="text-primary text-sm hover:underline"
                         href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(event.location)}`}
-                        target="_blank"
                         rel="noopener noreferrer"
-                        className="text-sm text-primary hover:underline"
+                        target="_blank"
                       >
                         Get directions →
                       </a>
-                    )}
+                    ) : null}
                   </div>
                 </div>
-              )}
+              ) : null}
 
               <div className="flex items-center gap-3">
                 <Users className="h-5 w-5 text-primary" />
@@ -380,13 +392,13 @@ export default async function PublicEventBySlugPage({
                     <div className="flex -space-x-2">
                       {visibleAttendees.map((rsvp) => (
                         <Avatar
+                          className="ring-2 ring-background"
                           key={rsvp.id}
                           size="sm"
-                          className="ring-2 ring-background"
                         >
                           <AvatarImage
-                            src={rsvp.user.image ?? undefined}
                             alt={rsvp.user.name}
+                            src={rsvp.user.image ?? undefined}
                           />
                           <AvatarFallback>
                             {rsvp.user.name.charAt(0).toUpperCase()}
@@ -394,7 +406,7 @@ export default async function PublicEventBySlugPage({
                         </Avatar>
                       ))}
                       {remainingAttendeeCount > 0 && (
-                        <div className="flex size-6 items-center justify-center rounded-full bg-muted text-xs text-muted-foreground ring-2 ring-background">
+                        <div className="flex size-6 items-center justify-center rounded-full bg-muted text-muted-foreground text-xs ring-2 ring-background">
                           +{remainingAttendeeCount}
                         </div>
                       )}
@@ -405,7 +417,7 @@ export default async function PublicEventBySlugPage({
             </CardContent>
           </Card>
 
-          {(event.richDescription || event.description) && (
+          {event.richDescription || event.description ? (
             <Card>
               <CardHeader>
                 <CardTitle>About this event</CardTitle>
@@ -414,16 +426,16 @@ export default async function PublicEventBySlugPage({
                 {event.richDescription ? (
                   <RichTextRenderer content={event.richDescription} />
                 ) : (
-                  <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                  <p className="whitespace-pre-wrap text-muted-foreground text-sm">
                     {event.description}
                   </p>
                 )}
               </CardContent>
             </Card>
-          )}
+          ) : null}
 
           {event.tags.length > 0 && (
-            <div className="flex gap-2 flex-wrap">
+            <div className="flex flex-wrap gap-2">
               {event.tags.map((tag) => (
                 <Badge key={tag.id} variant="secondary">
                   {tag.tag}
@@ -433,33 +445,33 @@ export default async function PublicEventBySlugPage({
           )}
         </div>
 
-        <div className="md:sticky md:top-24 space-y-4">
+        <div className="space-y-4 md:sticky md:top-24">
           <Card>
-            <CardContent className="pt-6 space-y-4">
+            <CardContent className="space-y-4 pt-6">
               {session?.user?.id === event.host.id ? (
-                <p className="text-sm text-center text-muted-foreground">
+                <p className="text-center text-muted-foreground text-sm">
                   You are the host of this event
                 </p>
               ) : (
                 <RsvpButton
+                  autoRegister={register === "1"}
+                  currentRsvpStatus={currentRsvpStatus}
                   eventId={event.id}
                   eventSlug={slug}
-                  requiresApproval={event.requiresApproval}
-                  currentRsvpStatus={currentRsvpStatus}
                   questions={questions}
+                  requiresApproval={event.requiresApproval}
                   waitlistPosition={waitlistPosition}
-                  autoRegister={register === "1"}
                 />
               )}
               <CalendarExportButton
                 event={{
-                  title: event.title,
                   description: event.description,
-                  startTime: event.startTime.toISOString(),
                   endTime: event.endTime?.toISOString() ?? null,
-                  location: event.location,
                   id: event.id,
+                  location: event.location,
                   slug: event.slug,
+                  startTime: event.startTime.toISOString(),
+                  title: event.title,
                 }}
               />
             </CardContent>

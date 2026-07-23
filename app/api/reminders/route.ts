@@ -1,13 +1,32 @@
+import { timingSafeEqual } from "node:crypto";
 import { and, eq, gte, lte } from "drizzle-orm";
 import type { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { events, rsvps } from "@/lib/db/schema";
 import { sendEventReminderEmail } from "@/lib/email";
 
+// Constant-time bearer-token check so the shared cron secret can't be probed
+// via response timing.
+function isAuthorizedCron(authHeader: string | null): boolean {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) {
+    // Fail closed: a missing secret must never authenticate.
+    return false;
+  }
+  if (!authHeader?.startsWith("Bearer ")) {
+    return false;
+  }
+  const provided = Buffer.from(authHeader.slice("Bearer ".length));
+  const expected = Buffer.from(secret);
+  if (provided.length !== expected.length) {
+    return false;
+  }
+  return timingSafeEqual(provided, expected);
+}
+
 export async function GET(request: NextRequest) {
   // Verify cron secret — Vercel sets Authorization: Bearer <CRON_SECRET>
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isAuthorizedCron(request.headers.get("authorization"))) {
     return Response.json({ message: "Unauthorized" }, { status: 401 });
   }
 
@@ -23,36 +42,36 @@ export async function GET(request: NextRequest) {
 
   const [events24h, events1h] = await Promise.all([
     db.query.events.findMany({
+      columns: {
+        endTime: true,
+        id: true,
+        location: true,
+        slug: true,
+        startTime: true,
+        timezone: true,
+        title: true,
+      },
       where: and(
         gte(events.startTime, window24hStart),
         lte(events.startTime, window24hEnd),
-        eq(events.reminderSent24h, false),
+        eq(events.reminderSent24h, false)
       ),
-      columns: {
-        id: true,
-        slug: true,
-        title: true,
-        startTime: true,
-        endTime: true,
-        location: true,
-        timezone: true,
-      },
     }),
     db.query.events.findMany({
+      columns: {
+        endTime: true,
+        id: true,
+        location: true,
+        slug: true,
+        startTime: true,
+        timezone: true,
+        title: true,
+      },
       where: and(
         gte(events.startTime, window1hStart),
         lte(events.startTime, window1hEnd),
-        eq(events.reminderSent1h, false),
+        eq(events.reminderSent1h, false)
       ),
-      columns: {
-        id: true,
-        slug: true,
-        title: true,
-        startTime: true,
-        endTime: true,
-        location: true,
-        timezone: true,
-      },
     }),
   ]);
 
@@ -68,7 +87,7 @@ export async function GET(request: NextRequest) {
       location: string | null;
       timezone: string;
     },
-    flag: "reminderSent24h" | "reminderSent1h",
+    flag: "reminderSent24h" | "reminderSent1h"
   ) {
     const approvedRsvps = await db.query.rsvps.findMany({
       where: and(eq(rsvps.eventId, event.id), eq(rsvps.status, "approved")),
@@ -85,22 +104,22 @@ export async function GET(request: NextRequest) {
           event.startTime,
           event.timezone,
           {
-            id: event.id,
-            slug: event.slug ?? undefined,
             endTime: event.endTime,
+            id: event.id,
             location: event.location,
-          },
-        ),
-      ),
+            slug: event.slug ?? undefined,
+          }
+        )
+      )
     );
 
     let failures = 0;
     results.forEach((result, i) => {
       if (result.status === "rejected") {
-        failures++;
+        failures += 1;
         console.error(
           `Reminder email failed (event ${event.id}, rsvp ${recipients[i].id}):`,
-          result.reason,
+          result.reason
         );
       }
     });
@@ -124,7 +143,7 @@ export async function GET(request: NextRequest) {
   ]);
 
   return Response.json({
-    processed: events24h.length + events1h.length,
     emailsSent: sent,
+    processed: events24h.length + events1h.length,
   });
 }

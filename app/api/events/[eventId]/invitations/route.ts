@@ -9,7 +9,7 @@ import { sendInvitationEmail } from "@/lib/email";
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: Promise<{ eventId: string }> },
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   const { eventId } = await params;
   const session = await auth.api.getSession({ headers: await headers() });
@@ -18,9 +18,9 @@ export async function GET(
   }
 
   const event = await db.query.events.findFirst({
+    columns: { hostId: true, id: true },
     where: eq(events.id, eventId),
     with: { cohosts: true },
-    columns: { id: true, hostId: true },
   });
 
   if (!event) {
@@ -30,13 +30,13 @@ export async function GET(
   const isHost = event.hostId === session.user.id;
   const isCohost = event.cohosts.some((c) => c.userId === session.user.id);
 
-  if (!isHost && !isCohost) {
+  if (!(isHost || isCohost)) {
     return Response.json({ message: "Not authorized" }, { status: 403 });
   }
 
   const eventInvitations = await db.query.invitations.findMany({
+    orderBy: (invitationRows, { desc }) => [desc(invitationRows.createdAt)],
     where: eq(invitations.eventId, eventId),
-    orderBy: (invitations, { desc }) => [desc(invitations.createdAt)],
   });
 
   return Response.json(eventInvitations);
@@ -44,7 +44,7 @@ export async function GET(
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ eventId: string }> },
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   const { eventId } = await params;
   const session = await auth.api.getSession({ headers: await headers() });
@@ -64,7 +64,7 @@ export async function POST(
   const isHost = event.hostId === session.user.id;
   const isCohost = event.cohosts.some((c) => c.userId === session.user.id);
 
-  if (!isHost && !isCohost) {
+  if (!(isHost || isCohost)) {
     return Response.json({ message: "Not authorized" }, { status: 403 });
   }
 
@@ -77,13 +77,13 @@ export async function POST(
 
   // Filter out the host's own email
   const filteredEmails = emails.filter(
-    (email) => email.toLowerCase() !== session.user.email?.toLowerCase(),
+    (email) => email.toLowerCase() !== session.user.email?.toLowerCase()
   );
 
   if (filteredEmails.length === 0 && emails.length > 0) {
     return Response.json(
       { message: "You cannot invite yourself to your own event" },
-      { status: 400 },
+      { status: 400 }
     );
   }
 
@@ -96,12 +96,12 @@ export async function POST(
       const [invitation] = await db
         .insert(invitations)
         .values({
-          eventId,
           email,
-          token,
-          role,
-          invitedBy: session.user.id,
+          eventId,
           expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+          invitedBy: session.user.id,
+          role,
+          token,
         })
         .returning();
 
@@ -112,7 +112,7 @@ export async function POST(
       });
 
       return invitation;
-    }),
+    })
   );
 
   return Response.json(
@@ -120,13 +120,13 @@ export async function POST(
       invitations: results,
       ...(failed.length > 0 && { failedEmails: failed }),
     },
-    { status: 201 },
+    { status: 201 }
   );
 }
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: Promise<{ eventId: string }> },
+  { params }: { params: Promise<{ eventId: string }> }
 ) {
   const { eventId } = await params;
   const session = await auth.api.getSession({ headers: await headers() });
@@ -146,7 +146,7 @@ export async function DELETE(
   const isHost = event.hostId === session.user.id;
   const isCohost = event.cohosts.some((c) => c.userId === session.user.id);
 
-  if (!isHost && !isCohost) {
+  if (!(isHost || isCohost)) {
     return Response.json({ message: "Not authorized" }, { status: 403 });
   }
 
@@ -160,7 +160,7 @@ export async function DELETE(
   await db
     .delete(invitations)
     .where(
-      and(eq(invitations.id, invitationId), eq(invitations.eventId, eventId)),
+      and(eq(invitations.id, invitationId), eq(invitations.eventId, eventId))
     );
 
   return Response.json({ message: "Invitation revoked" });

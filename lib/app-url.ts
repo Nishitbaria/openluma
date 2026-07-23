@@ -7,13 +7,15 @@
  */
 export function getAppUrl(): string {
   const fromEnv = process.env.NEXT_PUBLIC_APP_URL;
-  if (fromEnv) return fromEnv;
+  if (fromEnv) {
+    return fromEnv;
+  }
 
   if (process.env.NODE_ENV === "development") {
     return "http://localhost:3000";
   }
 
   throw new Error(
-    "NEXT_PUBLIC_APP_URL is not set. Configure it for non-development environments.",
+    "NEXT_PUBLIC_APP_URL is not set. Configure it for non-development environments."
   );
 }

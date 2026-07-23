@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 export default function EventDetailLoading() {
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 sm:px-6 lg:px-8 py-12">
+    <div className="mx-auto w-full max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
       {/* Cover image */}
       <Skeleton className="mb-8 aspect-video w-full rounded-xl" />
 
@@ -23,7 +23,7 @@ export default function EventDetailLoading() {
           <Card>
             <CardContent className="space-y-4 pt-6">
               {Array.from({ length: 3 }, (_, i) => `sk-${i}`).map((k) => (
-                <div key={k} className="flex items-center gap-3">
+                <div className="flex items-center gap-3" key={k}>
                   <Skeleton className="size-5 rounded" />
                   <div className="space-y-1">
                     <Skeleton className="h-4 w-48" />

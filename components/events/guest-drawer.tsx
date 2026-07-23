@@ -32,12 +32,12 @@ import {
 import { Separator } from "@/components/ui/separator";
 
 interface TimelineEntry {
-  id: string;
-  type: string;
-  fromStatus: string | null;
-  toStatus: string | null;
   changedByName: string | null;
   createdAt: string;
+  fromStatus: string | null;
+  id: string;
+  toStatus: string | null;
+  type: string;
 }
 
 interface Question {
@@ -47,11 +47,11 @@ interface Question {
 }
 
 interface Attendee {
-  id: string;
-  status: "pending" | "approved" | "rejected" | "waitlisted";
-  message: string | null;
-  customAnswers: Record<string, string | boolean> | null;
   createdAt: string;
+  customAnswers: Record<string, string | boolean> | null;
+  id: string;
+  message: string | null;
+  status: "pending" | "approved" | "rejected" | "waitlisted";
   timeline: TimelineEntry[];
   user: {
     id: string;
@@ -63,29 +63,38 @@ interface Attendee {
 
 interface GuestDrawerProps {
   attendee: Attendee;
-  questions: Question[];
   eventId: string;
-  isHost: boolean;
-  onPrev: () => void;
-  onNext: () => void;
-  hasPrev: boolean;
   hasNext: boolean;
+  hasPrev: boolean;
+  isHost: boolean;
+  onNext: () => void;
+  onPrev: () => void;
   onStatusChange: () => void;
+  questions: Question[];
 }
 
 const STATUS_LABELS: Record<string, string> = {
   approved: "Going",
   pending: "Pending",
-  waitlisted: "Waiting list",
   rejected: "Not going",
+  waitlisted: "Waiting list",
 };
 
 function statusBadgeClass(status: string) {
-  if (status === "approved")
+  if (status === "approved") {
     return "bg-primary/10 text-primary border-primary/20";
-  if (status === "rejected")
+  }
+  if (status === "rejected") {
     return "bg-destructive/10 text-destructive border-destructive/20";
+  }
   return "bg-muted text-muted-foreground";
+}
+
+function formatAnswer(ans: string | boolean) {
+  if (typeof ans === "boolean") {
+    return ans ? "Yes" : "No";
+  }
+  return String(ans);
 }
 
 export function GuestDrawer({
@@ -105,23 +114,25 @@ export function GuestDrawer({
   const [customMessage, setCustomMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const initial = attendee.user.name?.[0]?.toUpperCase() ?? "?";
+  const initial = attendee.user.name[0]?.toUpperCase() ?? "?";
   const regDate = new Date(attendee.createdAt);
 
   async function changeStatus(status: string) {
     setLoading(true);
     try {
       const res = await fetch(`/api/events/${eventId}/rsvp`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          customMessage: customMessage.trim() || undefined,
+          notifyGuest,
           rsvpId: attendee.id,
           status,
-          notifyGuest,
-          customMessage: customMessage.trim() || undefined,
         }),
+        headers: { "Content-Type": "application/json" },
+        method: "PATCH",
       });
-      if (!res.ok) throw new Error("Failed");
+      if (!res.ok) {
+        throw new Error("Failed");
+      }
       toast.success(`Status updated to ${STATUS_LABELS[status] ?? status}`);
       setStatusModalOpen(false);
       setNewStatus("");
@@ -134,29 +145,29 @@ export function GuestDrawer({
     }
   }
 
-  const hasAnswers = attendee.customAnswers && questions.length > 0;
+  const hasAnswers = Boolean(attendee.customAnswers) && questions.length > 0;
 
   return (
     <div className="flex h-full flex-col">
       {/* Header with nav arrows */}
       <div className="flex items-center justify-between pb-4">
-        <h3 className="text-base font-semibold">Guest Details</h3>
+        <h3 className="font-semibold text-base">Guest Details</h3>
         <div className="flex items-center gap-1">
           <Button
-            size="icon"
-            variant="ghost"
             className="h-7 w-7"
             disabled={!hasPrev}
             onClick={onPrev}
+            size="icon"
+            variant="ghost"
           >
             <ChevronUp className="h-4 w-4" />
           </Button>
           <Button
-            size="icon"
-            variant="ghost"
             className="h-7 w-7"
             disabled={!hasNext}
             onClick={onNext}
+            size="icon"
+            variant="ghost"
           >
             <ChevronDown className="h-4 w-4" />
           </Button>
@@ -169,8 +180,8 @@ export function GuestDrawer({
           <div className="flex items-start gap-3">
             <Avatar className="h-10 w-10">
               <AvatarImage
-                src={attendee.user.image ?? undefined}
                 alt={attendee.user.name}
+                src={attendee.user.image ?? undefined}
               />
               <AvatarFallback>{initial}</AvatarFallback>
             </Avatar>
@@ -178,23 +189,23 @@ export function GuestDrawer({
               <div className="flex items-center gap-2">
                 <p className="truncate font-semibold">{attendee.user.name}</p>
                 <button
-                  type="button"
+                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-medium text-xs ${statusBadgeClass(attendee.status)} ${isHost ? "cursor-pointer transition-opacity hover:opacity-80" : ""}`}
                   onClick={() => isHost && setStatusModalOpen(true)}
-                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium ${statusBadgeClass(attendee.status)} ${isHost ? "cursor-pointer hover:opacity-80 transition-opacity" : ""}`}
+                  type="button"
                 >
                   {STATUS_LABELS[attendee.status] ?? attendee.status}
-                  {isHost && <Pencil className="h-2.5 w-2.5" />}
+                  {isHost ? <Pencil className="h-2.5 w-2.5" /> : null}
                 </button>
               </div>
-              <p className="text-sm text-muted-foreground truncate">
+              <p className="truncate text-muted-foreground text-sm">
                 {attendee.user.email}
               </p>
             </div>
           </div>
 
           <div>
-            <p className="text-xs text-muted-foreground">Registration Time</p>
-            <p className="text-sm font-medium">
+            <p className="text-muted-foreground text-xs">Registration Time</p>
+            <p className="font-medium text-sm">
               {format(regDate, "MMM d 'at' h:mm a")}
             </p>
           </div>
@@ -203,26 +214,22 @@ export function GuestDrawer({
         <Separator />
 
         {/* Registration Questions */}
-        {hasAnswers && (
+        {hasAnswers ? (
           <>
             <div>
-              <h4 className="text-sm font-semibold mb-3">
+              <h4 className="mb-3 font-semibold text-sm">
                 Registration Questions
               </h4>
               <div className="space-y-3">
                 {questions.map((q) => {
                   const ans = attendee.customAnswers?.[q.id];
-                  if (ans === undefined || ans === null) return null;
+                  if (ans === undefined || ans === null) {
+                    return null;
+                  }
                   return (
                     <div key={q.id}>
-                      <p className="text-xs text-muted-foreground">{q.label}</p>
-                      <p className="text-sm font-medium">
-                        {typeof ans === "boolean"
-                          ? ans
-                            ? "Yes"
-                            : "No"
-                          : String(ans)}
-                      </p>
+                      <p className="text-muted-foreground text-xs">{q.label}</p>
+                      <p className="font-medium text-sm">{formatAnswer(ans)}</p>
                     </div>
                   );
                 })}
@@ -230,23 +237,23 @@ export function GuestDrawer({
             </div>
             <Separator />
           </>
-        )}
+        ) : null}
 
         {/* Message */}
-        {attendee.message && (
+        {attendee.message ? (
           <>
             <div>
-              <p className="text-xs text-muted-foreground mb-1">Message</p>
+              <p className="mb-1 text-muted-foreground text-xs">Message</p>
               <p className="text-sm italic">"{attendee.message}"</p>
             </div>
             <Separator />
           </>
-        )}
+        ) : null}
 
         {/* Timeline */}
         {attendee.timeline.length > 0 && (
           <div>
-            <h4 className="text-sm font-semibold mb-3">Timeline</h4>
+            <h4 className="mb-3 font-semibold text-sm">Timeline</h4>
             <div className="space-y-0">
               {attendee.timeline.map((entry, idx) => {
                 const isLast = idx === attendee.timeline.length - 1;
@@ -255,7 +262,7 @@ export function GuestDrawer({
                 const Icon = isRegistered ? CheckSquare : UserCog;
 
                 return (
-                  <div key={entry.id} className="flex gap-3">
+                  <div className="flex gap-3" key={entry.id}>
                     {/* Timeline line + icon */}
                     <div className="flex flex-col items-center">
                       <div className="flex h-6 w-6 items-center justify-center rounded-full bg-muted">
@@ -265,29 +272,31 @@ export function GuestDrawer({
                     </div>
 
                     {/* Content */}
-                    <div className="pb-4 min-w-0">
+                    <div className="min-w-0 pb-4">
                       {isRegistered ? (
                         <>
-                          <p className="text-sm font-medium">Registered</p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="font-medium text-sm">Registered</p>
+                          <p className="text-muted-foreground text-xs">
                             {format(entryDate, "MMM d 'at' h:mm a")}
                           </p>
                         </>
                       ) : (
                         <>
-                          <p className="text-sm font-medium">
+                          <p className="font-medium text-sm">
                             {STATUS_LABELS[entry.fromStatus ?? ""] ??
                               entry.fromStatus}{" "}
                             →{" "}
                             {STATUS_LABELS[entry.toStatus ?? ""] ??
                               entry.toStatus}
                           </p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-muted-foreground text-xs">
                             Status Updated
                           </p>
-                          <p className="text-xs text-muted-foreground">
+                          <p className="text-muted-foreground text-xs">
                             {format(entryDate, "MMM d 'at' h:mm a")}
-                            {entry.changedByName && ` · ${entry.changedByName}`}
+                            {entry.changedByName
+                              ? ` · ${entry.changedByName}`
+                              : ""}
                           </p>
                         </>
                       )}
@@ -304,9 +313,9 @@ export function GuestDrawer({
       <Separator className="my-3" />
       <div className="flex items-center justify-between text-xs">
         <Link
+          className="flex items-center gap-1 text-muted-foreground transition-colors hover:text-foreground"
           href={`/ticket/${eventId}?userId=${attendee.user.id}`}
           target="_blank"
-          className="flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors"
         >
           <Ticket className="h-3 w-3" />
           Ticket QR Code ↗
@@ -314,7 +323,7 @@ export function GuestDrawer({
       </div>
 
       {/* Status change modal */}
-      <Dialog open={statusModalOpen} onOpenChange={setStatusModalOpen}>
+      <Dialog onOpenChange={setStatusModalOpen} open={statusModalOpen}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <div className="flex items-center gap-3">
@@ -324,16 +333,16 @@ export function GuestDrawer({
               </Avatar>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
-                  <DialogTitle className="text-base truncate">
+                  <DialogTitle className="truncate text-base">
                     {attendee.user.name}
                   </DialogTitle>
                   <span
-                    className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium flex-shrink-0 ${statusBadgeClass(attendee.status)}`}
+                    className={`inline-flex flex-shrink-0 items-center rounded-full border px-2 py-0.5 font-medium text-[10px] ${statusBadgeClass(attendee.status)}`}
                   >
                     {STATUS_LABELS[attendee.status] ?? attendee.status}
                   </span>
                 </div>
-                <p className="text-sm text-muted-foreground truncate">
+                <p className="truncate text-muted-foreground text-sm">
                   {attendee.user.email}
                 </p>
               </div>
@@ -345,21 +354,21 @@ export function GuestDrawer({
               <>
                 <div className="flex items-center gap-2">
                   <Checkbox
-                    id="notify-pending"
                     checked={notifyGuest}
+                    id="notify-pending"
                     onCheckedChange={(v) => setNotifyGuest(v === true)}
                   />
-                  <Label htmlFor="notify-pending" className="text-sm">
+                  <Label className="text-sm" htmlFor="notify-pending">
                     Notify Guest
                   </Label>
                 </div>
                 <textarea
-                  className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm resize-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  className="min-h-[80px] w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  onChange={(e) => setCustomMessage(e.target.value)}
                   placeholder="Add an optional, custom message..."
                   value={customMessage}
-                  onChange={(e) => setCustomMessage(e.target.value)}
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   Any message you specified in the registration emails will
                   always be included.
                 </p>
@@ -373,9 +382,9 @@ export function GuestDrawer({
                   </Button>
                   <Button
                     className="flex-1"
-                    variant="destructive"
                     disabled={loading}
                     onClick={() => changeStatus("rejected")}
+                    variant="destructive"
                   >
                     Decline
                   </Button>
@@ -385,7 +394,7 @@ export function GuestDrawer({
               <>
                 <div className="space-y-1.5">
                   <Label className="text-sm">Change status to:</Label>
-                  <Select value={newStatus} onValueChange={setNewStatus}>
+                  <Select onValueChange={setNewStatus} value={newStatus}>
                     <SelectTrigger>
                       <SelectValue placeholder="Choose new status" />
                     </SelectTrigger>
@@ -405,21 +414,21 @@ export function GuestDrawer({
                 </div>
                 <div className="flex items-center gap-2">
                   <Checkbox
-                    id="notify-change"
                     checked={notifyGuest}
+                    id="notify-change"
                     onCheckedChange={(v) => setNotifyGuest(v === true)}
                   />
-                  <Label htmlFor="notify-change" className="text-sm">
+                  <Label className="text-sm" htmlFor="notify-change">
                     Notify Guest
                   </Label>
                 </div>
                 <textarea
-                  className="w-full min-h-[80px] rounded-md border border-input bg-background px-3 py-2 text-sm resize-none focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  className="min-h-[80px] w-full resize-none rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  onChange={(e) => setCustomMessage(e.target.value)}
                   placeholder="Add an optional, custom message..."
                   value={customMessage}
-                  onChange={(e) => setCustomMessage(e.target.value)}
                 />
-                <p className="text-xs text-muted-foreground">
+                <p className="text-muted-foreground text-xs">
                   Any message you specified in the registration emails will
                   always be included.
                 </p>
