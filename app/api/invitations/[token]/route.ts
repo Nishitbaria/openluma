@@ -10,11 +10,18 @@ import {
   invitations,
   rsvps,
 } from "@/lib/db/schema";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ token: string }> }
 ) {
+  // Token lookup is unauthenticated — throttle to blunt token-guessing.
+  const limited = await checkRateLimit(request, "invitation");
+  if (limited) {
+    return limited;
+  }
+
   const { token } = await params;
   const action = request.nextUrl.searchParams.get("action");
 

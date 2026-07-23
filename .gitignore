@@ -78,3 +78,6 @@ next-env.d.ts
 .zencoder/
 skills/
 .agents/
+
+# gstack local artifacts (security reports, etc.)
+.gstack/

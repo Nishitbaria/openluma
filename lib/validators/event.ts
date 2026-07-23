@@ -1,9 +1,10 @@
 import { z } from "zod/v4";
+import { uploadedImageUrl } from "@/lib/validators/image";
 
 export const createEventSchema = z.object({
   capacity: z.number().int().positive().optional(),
   categoryId: z.string().optional(),
-  coverImage: z.string().optional(),
+  coverImage: uploadedImageUrl.optional(),
   description: z.string().optional(),
   endTime: z.string().optional(),
   location: z.string().optional(),

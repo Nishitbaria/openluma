@@ -8,6 +8,7 @@ import {
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { chatConversations, chatMessages } from "@/lib/db/schema";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 function deriveTitle(messages: UIMessage[]): string {
   const firstUserText = messages
@@ -29,6 +30,13 @@ export async function POST(req: Request) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
   const userId = session.user.id;
+
+  // LLM calls cost money per turn — throttle to prevent a single user from
+  // driving unbounded spend.
+  const limited = await checkRateLimit(req, `chat:${userId}`);
+  if (limited) {
+    return limited;
+  }
 
   const { id, messages } = (await req.json()) as {
     id?: string;

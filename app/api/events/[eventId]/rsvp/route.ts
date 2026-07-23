@@ -11,6 +11,7 @@ import {
   user,
 } from "@/lib/db/schema";
 import { sendRsvpConfirmationEmail } from "@/lib/email";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function GET(
   _request: NextRequest,
@@ -58,6 +59,11 @@ export async function POST(
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user) {
     return Response.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  const limited = await checkRateLimit(request, `rsvp:${session.user.id}`);
+  if (limited) {
+    return limited;
   }
 
   const event = await db.query.events.findFirst({

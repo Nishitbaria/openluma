@@ -1,13 +1,32 @@
+import { timingSafeEqual } from "node:crypto";
 import { and, eq, gte, lte } from "drizzle-orm";
 import type { NextRequest } from "next/server";
 import { db } from "@/lib/db";
 import { events, rsvps } from "@/lib/db/schema";
 import { sendEventReminderEmail } from "@/lib/email";
 
+// Constant-time bearer-token check so the shared cron secret can't be probed
+// via response timing.
+function isAuthorizedCron(authHeader: string | null): boolean {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) {
+    // Fail closed: a missing secret must never authenticate.
+    return false;
+  }
+  if (!authHeader?.startsWith("Bearer ")) {
+    return false;
+  }
+  const provided = Buffer.from(authHeader.slice("Bearer ".length));
+  const expected = Buffer.from(secret);
+  if (provided.length !== expected.length) {
+    return false;
+  }
+  return timingSafeEqual(provided, expected);
+}
+
 export async function GET(request: NextRequest) {
   // Verify cron secret — Vercel sets Authorization: Bearer <CRON_SECRET>
-  const authHeader = request.headers.get("authorization");
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (!isAuthorizedCron(request.headers.get("authorization"))) {
     return Response.json({ message: "Unauthorized" }, { status: 401 });
   }
 
