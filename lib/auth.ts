@@ -1,6 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { cache } from "react";
+import { createSecondaryStorage } from "./auth-secondary-storage";
 import { db } from "./db";
 import { account, session, user, verification } from "./db/schema";
 import { redis } from "./redis";
@@ -9,29 +10,6 @@ import { redis } from "./redis";
 export const getSession = cache((hdrs: Headers) =>
   auth.api.getSession({ headers: hdrs })
 );
-
-// Back rate limiting (and session lookups) with Redis so limits hold across
-// serverless instances. Without secondary storage, Better Auth's limiter is
-// in-memory and resets on every cold start — useless against brute force.
-function createSecondaryStorage(client: NonNullable<typeof redis>) {
-  return {
-    delete: (key: string) => client.del(key).then(() => undefined),
-    get: (key: string) => client.get<string>(key),
-    // Atomic increment for rate-limit counters — TTL applied only on
-    // creation so the window expires a fixed time after first hit.
-    increment: async (key: string, ttl: number) => {
-      const value = await client.incr(key);
-      if (value === 1) {
-        await client.expire(key, ttl);
-      }
-      return value;
-    },
-    set: (key: string, value: string, ttl?: number) =>
-      (ttl ? client.set(key, value, { ex: ttl }) : client.set(key, value)).then(
-        () => undefined
-      ),
-  };
-}
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -59,6 +37,11 @@ export const auth = betterAuth({
     storage: redis ? "secondary-storage" : "memory",
     window: 10,
   },
+  session: {
+    // Redis is an acceleration layer, not the source of truth. Keeping sessions
+    // in Postgres lets authentication continue during a Redis outage.
+    storeSessionInDatabase: true,
+  },
   socialProviders: {
     google: {
       clientId: process.env.GOOGLE_CLIENT_ID ?? "",
@@ -71,4 +54,8 @@ export const auth = betterAuth({
   trustedOrigins: process.env.TRUSTED_ORIGINS
     ? process.env.TRUSTED_ORIGINS.split(",")
     : [],
+  verification: {
+    // OAuth state must remain available from Postgres if Redis is unreachable.
+    storeInDatabase: true,
+  },
 });
