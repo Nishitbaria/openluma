@@ -29,6 +29,7 @@ export default function SignInPage() {
   const callbackUrl =
     raw.startsWith("/") && !raw.startsWith("//") ? raw : "/dashboard";
   const [loading, setLoading] = useState(false);
+  const [socialLoading, setSocialLoading] = useState(false);
   const { resolvedTheme } = useTheme();
   const gridColor =
     resolvedTheme === "dark" ? "rgb(255,255,255)" : "rgb(0,0,0)";
@@ -54,6 +55,25 @@ export default function SignInPage() {
 
     router.push(callbackUrl);
     router.refresh();
+  }
+
+  async function handleGoogleSignIn() {
+    setSocialLoading(true);
+
+    try {
+      const { error } = await authClient.signIn.social({
+        callbackURL: callbackUrl,
+        provider: "google",
+      });
+
+      if (error) {
+        toast.error(error.message ?? "Failed to connect to Google");
+        setSocialLoading(false);
+      }
+    } catch {
+      toast.error("Failed to connect to Google. Please try again.");
+      setSocialLoading(false);
+    }
   }
 
   return (
@@ -132,7 +152,7 @@ export default function SignInPage() {
 
             <MetalButton
               className="w-full"
-              disabled={loading}
+              disabled={loading || socialLoading}
               metalFxClassName="w-full"
               size="sm"
               type="submit"
@@ -147,17 +167,20 @@ export default function SignInPage() {
           <div className="space-y-2">
             <Button
               className="w-full"
-              onClick={async () => {
-                await authClient.signIn.social({
-                  callbackURL: callbackUrl,
-                  provider: "google",
-                });
-              }}
+              disabled={loading || socialLoading}
+              onClick={handleGoogleSignIn}
               type="button"
               variant="outline"
             >
-              <GoogleIcon data-icon="inline-start" />
-              Google
+              {socialLoading ? (
+                <Loader2Icon
+                  className="animate-spin"
+                  data-icon="inline-start"
+                />
+              ) : (
+                <GoogleIcon data-icon="inline-start" />
+              )}
+              {socialLoading ? "Connecting..." : "Google"}
             </Button>
           </div>
           <p className="text-center text-muted-foreground text-sm">

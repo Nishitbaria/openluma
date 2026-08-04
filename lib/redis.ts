@@ -9,7 +9,12 @@ function createRedis() {
     return null;
   }
 
-  return new Redis({ token, url });
+  return new Redis({
+    retry: false,
+    signal: () => AbortSignal.timeout(2000),
+    token,
+    url,
+  });
 }
 
 export const redis = createRedis();

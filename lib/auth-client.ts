@@ -2,6 +2,6 @@
 
 import { createAuthClient } from "better-auth/react";
 
-export const authClient = createAuthClient({
-  baseURL: process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000",
-});
+// A relative auth URL keeps OAuth requests on the same origin in previews,
+// custom domains, and production deployments.
+export const authClient = createAuthClient();
