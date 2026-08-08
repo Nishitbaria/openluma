@@ -1,7 +1,6 @@
 import { eq } from "drizzle-orm";
 import { ImageResponse } from "next/og";
 import { getAppUrl } from "@/lib/app-url";
-import { db } from "@/lib/db";
 import { events } from "@/lib/db/schema";
 import { redis } from "@/lib/redis";
 
@@ -43,6 +42,11 @@ async function getEventData(slug: string): Promise<OGEventData | null> {
       // Ignore and read through to Postgres.
     }
   }
+
+  // `lib/db` throws at module scope without `DATABASE_URL`, and Next collects
+  // page data for this segment at build time. Importing it lazily keeps the
+  // database out of the static graph so a build never needs a live connection.
+  const { db } = await import("@/lib/db");
 
   const event = await db.query.events.findFirst({
     columns: {
