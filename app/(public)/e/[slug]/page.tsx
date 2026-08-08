@@ -1,6 +1,7 @@
 import { formatInTimeZone } from "date-fns-tz";
 import { and, eq, lte } from "drizzle-orm";
 import { Calendar, Globe, Lock, MapPin, Users } from "lucide-react";
+import type { Metadata } from "next";
 import { headers } from "next/headers";
 import Image from "next/image";
 import Link from "next/link";
@@ -9,6 +10,7 @@ import { CalendarExportButton } from "@/components/events/calendar-export-button
 import { CopyLinkButton } from "@/components/events/copy-link-button";
 import { RichTextRenderer } from "@/components/events/rich-text-renderer";
 import { RsvpButton } from "@/components/events/rsvp-button";
+import { JsonLd } from "@/components/seo/json-ld";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -18,63 +20,58 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
+import { getAppUrl } from "@/lib/app-url";
 import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
   eventPageviews,
   eventQuestions,
-  events,
   invitations,
   rsvps,
 } from "@/lib/db/schema";
+import { getEventBySlug } from "@/lib/events/get-event-by-slug";
 import { redis } from "@/lib/redis";
+import { buildPageMetadata } from "@/lib/seo/metadata";
+import {
+  buildBreadcrumbJsonLd,
+  buildEventJsonLd,
+} from "@/lib/seo/structured-data";
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+const appUrl = getAppUrl();
 
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ slug: string }>;
-}) {
+}): Promise<Metadata> {
   const { slug } = await params;
-  const event = await db.query.events.findFirst({
-    columns: {
-      coverImage: true,
-      description: true,
-      title: true,
-      visibility: true,
-    },
-    where: eq(events.slug, slug),
-  });
+  const event = await getEventBySlug(slug);
+
   if (!event) {
-    return { title: "Event Not Found" };
+    return {
+      robots: { follow: false, index: false },
+      title: "Event Not Found",
+    };
   }
   if (event.visibility === "private") {
+    // Invite-only content must not be indexed, and the title/description are
+    // deliberately generic so the event name never leaks into a SERP.
     return {
       description: "This event is invite-only.",
-      title: "Private Event - OpenLuma",
+      robots: { follow: false, index: false },
+      title: "Private Event",
     };
   }
 
-  const ogImageUrl = `${appUrl}/api/og?slug=${slug}`;
   const description = event.description ?? `Join ${event.title} on OpenLuma`;
 
-  return {
+  // `images` is omitted — the sibling opengraph-image.tsx is wired in
+  // automatically for both `og:image` and `twitter:image`.
+  return buildPageMetadata({
     description,
-    openGraph: {
-      description,
-      images: [{ alt: event.title, height: 630, url: ogImageUrl, width: 1200 }],
-      title: `${event.title} - OpenLuma`,
-      type: "website",
-    },
-    title: `${event.title} - OpenLuma`,
-    twitter: {
-      card: "summary_large_image",
-      description,
-      images: [ogImageUrl],
-      title: `${event.title} - OpenLuma`,
-    },
-  };
+    path: `/e/${slug}`,
+    title: event.title,
+  });
 }
 
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: top-level page component composing many conditional sections (auth state, RSVP status, event metadata); complexity is inherent to server-rendering the full page
@@ -89,18 +86,7 @@ export default async function PublicEventBySlugPage({
   const { register } = await searchParams;
 
   const [event, session] = await Promise.all([
-    db.query.events.findFirst({
-      where: eq(events.slug, slug),
-      with: {
-        category: true,
-        host: { columns: { id: true, image: true, name: true } },
-        rsvps: {
-          columns: { id: true, status: true },
-          with: { user: { columns: { id: true, image: true, name: true } } },
-        },
-        tags: true,
-      },
-    }),
+    getEventBySlug(slug),
     getSession(await headers()).catch(() => null),
   ]);
 
@@ -259,6 +245,22 @@ export default async function PublicEventBySlugPage({
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
+      {/* Structured data is emitted for public events only — signalling rich
+          results for content we simultaneously mark noindex would contradict. */}
+      {event.visibility === "public" ? (
+        <>
+          <JsonLd data={buildEventJsonLd(event)} id="ld-event" />
+          <JsonLd
+            data={buildBreadcrumbJsonLd([
+              { name: "Home", path: "/" },
+              { name: "Events", path: "/events" },
+              { name: event.title, path: `/e/${slug}` },
+            ])}
+            id="ld-breadcrumb"
+          />
+        </>
+      ) : null}
+
       {event.coverImage ? (
         <div className="relative mb-8 aspect-video overflow-hidden rounded-xl">
           <Image

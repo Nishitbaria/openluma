@@ -38,6 +38,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { getAppUrl } from "@/lib/app-url";
 import { getSession } from "@/lib/auth";
 import { db } from "@/lib/db";
 import {
@@ -319,8 +320,7 @@ export default async function EventDetailPage({
   }
 
   const publicEventUrl = `/e/${event.slug}`;
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-  const shareUrl = `${appUrl}/e/${event.slug}`;
+  const shareUrl = `${getAppUrl()}/e/${event.slug}`;
 
   return (
     <div className="space-y-6">

@@ -2,11 +2,12 @@ import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import type { NextRequest } from "next/server";
 import QRCode from "qrcode";
+import { getAppUrl } from "@/lib/app-url";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { events, rsvps } from "@/lib/db/schema";
 
-const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+const appUrl = getAppUrl();
 
 export async function GET(
   _request: NextRequest,
