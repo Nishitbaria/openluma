@@ -29,12 +29,19 @@ const steps = [
 export function HowItWorks() {
   return (
     <div className="relative mx-auto grid max-w-3xl gap-8 md:grid-cols-3">
-      {/* Dashed connector line — desktop only */}
-      <div className="pointer-events-none absolute top-5 right-[calc(16.67%+2rem)] left-[calc(16.67%+2rem)] hidden h-px border-border border-t border-dashed md:block" />
+      {/*
+        Desktop connector: span from col-1 center → col-3 center.
+        With 3 equal tracks + gap-8 (2rem × 2), each center sits at (100% - 4rem) / 6 from the edge.
+        Circles sit above (z-10) so the dashed line reads as joining into them.
+      */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute top-5 z-0 hidden h-px border-border border-t border-dashed md:right-[calc((100%-4rem)/6)] md:left-[calc((100%-4rem)/6)] md:block"
+      />
 
       {steps.map((item, i) => (
         <div
-          className="fade-in slide-in-from-bottom-4 animate-in text-center duration-500"
+          className="fade-in slide-in-from-bottom-4 relative z-10 animate-in text-center duration-500"
           key={item.step}
           style={{
             animationDelay: `${i * 150}ms`,
@@ -43,7 +50,8 @@ export function HowItWorks() {
         >
           <MetalIconButton
             aria-label={`Step ${item.step}`}
-            className="mx-auto mb-4 font-bold text-base"
+            className="size-10! font-bold text-base"
+            metalFxClassName="relative z-10 mx-auto mb-4 size-10!"
             size="icon"
           >
             {item.step}

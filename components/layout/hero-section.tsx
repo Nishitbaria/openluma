@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useTheme } from "next-themes";
 
@@ -37,48 +37,37 @@ export function HeroSection() {
 
       <div className="relative mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto flex max-w-4xl flex-col items-center">
-          {/* Badge with AnimatedShinyText */}
-          <div className="mb-8 inline-flex items-center gap-2 rounded-full border bg-muted/50 px-4 py-1.5 text-muted-foreground text-sm">
-            <Sparkles className="size-3.5 shrink-0" />
+          {/* Single memorable claim — not a multi-feature pill */}
+          <div className="mb-8 inline-flex items-center rounded-full border bg-muted/50 px-4 py-1.5 text-muted-foreground text-sm">
             <AnimatedShinyText>
-              Open source · Self-hostable · AI-powered
+              Open-source Lu.ma — no vendor lock-in
             </AnimatedShinyText>
           </div>
 
-          {/* Pixel headings */}
-          <div className="mb-3 flex flex-col items-center gap-1">
-            <PixelHeading
-              autoPlay
-              className="font-bold text-5xl leading-none tracking-tight sm:text-7xl lg:text-8xl"
-              cycleInterval={300}
-              mode="wave"
-              showLabel={false}
-              staggerDelay={120}
-            >
-              Events,
-            </PixelHeading>
-            <PixelHeading
-              autoPlay
-              className="font-bold text-5xl text-primary leading-none tracking-tight sm:text-7xl lg:text-8xl"
-              cycleInterval={400}
-              mode="random"
-              showLabel={false}
-              staggerDelay={80}
-            >
-              simplified.
-            </PixelHeading>
-          </div>
+          {/* Brand-first: OpenLuma is the hero-level signal */}
+          <PixelHeading
+            autoPlay
+            className="font-bold text-5xl leading-none tracking-tight sm:text-7xl lg:text-8xl"
+            cycleInterval={300}
+            mode="wave"
+            showLabel={false}
+            staggerDelay={120}
+          >
+            OpenLuma
+          </PixelHeading>
 
-          {/* Description */}
+          <p className="mt-4 font-semibold text-2xl text-foreground tracking-tight sm:text-3xl">
+            Events, simplified.
+          </p>
+
           <PixelParagraph
             className="mx-auto mt-8 max-w-2xl text-lg text-muted-foreground leading-relaxed"
             font="circle"
             pixelWordClassName="text-foreground"
             pixelWords={["open-source", "AI", "vendor lock-in"]}
-            text="OpenLuma is a free, open-source event management platform. Create events with AI, manage attendees, send invitations, and check in guests all without vendor lock-in."
+            text="Free, open-source event management. Create with AI, manage attendees, send invitations, and check in guests — without vendor lock-in."
           />
 
-          {/* CTAs */}
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <MetalButton asChild size="lg">
               <Link href="/sign-up">

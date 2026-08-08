@@ -52,7 +52,7 @@ export function FeatureCards() {
     <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
       {features.map(({ icon: Icon, title, description, pixelWords }) => (
         <Card
-          className="border-transparent bg-background shadow-sm transition-shadow hover:shadow-md"
+          className="border border-border bg-background shadow-sm transition-[border-color,box-shadow] duration-200 hover:border-foreground hover:shadow-md"
           key={title}
         >
           <CardContent className="pt-6">
