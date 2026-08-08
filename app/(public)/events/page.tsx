@@ -1,6 +1,7 @@
 import { formatInTimeZone } from "date-fns-tz";
 import { and, asc, eq, gte, ilike } from "drizzle-orm";
 import { CalendarX } from "lucide-react";
+import type { Metadata } from "next";
 import { EventCard } from "@/components/events/event-card";
 import { EventFilters } from "@/components/events/event-filters";
 import {
@@ -12,6 +13,19 @@ import {
 } from "@/components/ui/empty";
 import { db } from "@/lib/db";
 import { events } from "@/lib/db/schema";
+import { buildPageMetadata } from "@/lib/seo/metadata";
+
+const EVENTS_DESCRIPTION =
+  "Browse upcoming public events on OpenLuma — meetups, workshops, and virtual sessions you can RSVP to in one click.";
+
+// Canonical points at the bare path so `?search=` and `?type=` variants
+// consolidate into one indexed URL instead of competing with each other.
+// `images` is omitted — this segment has its own `opengraph-image.tsx`.
+export const metadata: Metadata = buildPageMetadata({
+  description: EVENTS_DESCRIPTION,
+  path: "/events",
+  title: "Discover events",
+});
 
 function dayLabel(date: Date, timezone: string) {
   const now = new Date();

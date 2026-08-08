@@ -119,6 +119,8 @@ providers/          # Context providers
 
 ## Design System
 
+See [`DESIGN.md`](DESIGN.md) for the full source of truth.
+
 **Always follow these rules for UI changes.**
 
 ### Colors — Theme Tokens Only
