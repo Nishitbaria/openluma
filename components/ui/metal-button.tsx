@@ -140,7 +140,7 @@ export const MetalIconButton = function MetalIconButton({
 
   return (
     <MetalButton
-      borderRadius={borderRadius ?? (isCircle ? "9999px" : undefined)}
+      borderRadius={borderRadius ?? (isCircle ? 9999 : undefined)}
       className={cn(
         "leading-none! [&_svg]:block [&_svg]:shrink-0",
         isCircle && "rounded-full!",
