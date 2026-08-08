@@ -131,12 +131,27 @@ export const MetalIconButton = function MetalIconButton({
   size = "icon-sm",
   metalVariant = "circle",
   className,
+  metalFxClassName,
+  borderRadius,
   ref,
   ...props
 }: MetalIconButtonProps & { ref?: RefObject<HTMLDivElement | null> }) {
+  const isCircle = metalVariant === "circle";
+
   return (
     <MetalButton
-      className={cn("leading-none! [&_svg]:block [&_svg]:shrink-0", className)}
+      borderRadius={borderRadius ?? (isCircle ? "9999px" : undefined)}
+      className={cn(
+        "leading-none! [&_svg]:block [&_svg]:shrink-0",
+        isCircle && "rounded-full!",
+        className
+      )}
+      metalFxClassName={cn(
+        // MetalFx defaults to w-fit/flex-col and can stretch taller than wide,
+        // which turns "circle" into a rounded rectangle — lock a true disc.
+        isCircle && "overflow-hidden! aspect-square! shrink-0 rounded-full!",
+        metalFxClassName
+      )}
       metalVariant={metalVariant}
       ref={ref}
       size={size}

@@ -31,10 +31,11 @@ const sections = [
 
 export function Footer() {
   return (
-    <footer className="w-full bg-background" role="contentinfo">
+    <footer
+      className="w-full border-border border-t bg-background"
+      role="contentinfo"
+    >
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-        <Separator aria-hidden="true" role="presentation" />
-
         <div className="grid grid-cols-1 gap-10 py-14 sm:grid-cols-2 lg:grid-cols-12 lg:gap-8 lg:py-20">
           {/* Brand column */}
           <div className="flex flex-col gap-6 sm:col-span-2 lg:col-span-4">
