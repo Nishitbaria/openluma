@@ -1,5 +1,4 @@
 import { Bot, Calendar, Globe, Mail, QrCode, Users } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { PixelParagraph } from "@/components/ui/pixel-paragraph-words";
 
 const features = [
@@ -49,27 +48,34 @@ const features = [
 
 export function FeatureCards() {
   return (
-    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-      {features.map(({ icon: Icon, title, description, pixelWords }) => (
-        <Card
-          className="border-transparent bg-background shadow-sm transition-shadow hover:shadow-md"
+    <ul className="divide-y border-y">
+      {features.map(({ icon: Icon, title, description, pixelWords }, index) => (
+        <li
+          className="grid gap-4 py-8 sm:grid-cols-[auto_1fr] sm:items-start sm:gap-8 md:grid-cols-2 md:gap-12"
           key={title}
         >
-          <CardContent className="pt-6">
-            <div className="mb-4 flex size-10 items-center justify-center rounded-lg bg-primary/10">
-              <Icon className="size-5 text-primary" />
+          <div className="flex items-start gap-3 sm:max-w-xs">
+            <span className="mt-0.5 flex size-9 shrink-0 items-center justify-center border border-border text-primary">
+              <Icon aria-hidden className="size-4" />
+            </span>
+            <div>
+              <p className="font-mono text-muted-foreground text-xs tracking-wide">
+                {String(index + 1).padStart(2, "0")}
+              </p>
+              <h3 className="mt-1 font-semibold text-lg tracking-tight">
+                {title}
+              </h3>
             </div>
-            <h3 className="font-semibold text-lg">{title}</h3>
-            <PixelParagraph
-              className="mt-2 text-muted-foreground text-sm leading-relaxed"
-              font="circle"
-              pixelWordClassName="text-foreground"
-              pixelWords={pixelWords}
-              text={description}
-            />
-          </CardContent>
-        </Card>
+          </div>
+          <PixelParagraph
+            className="text-muted-foreground text-sm leading-relaxed md:pt-6"
+            font="circle"
+            pixelWordClassName="text-foreground"
+            pixelWords={pixelWords}
+            text={description}
+          />
+        </li>
       ))}
-    </div>
+    </ul>
   );
 }

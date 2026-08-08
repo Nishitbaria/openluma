@@ -66,14 +66,9 @@ export function Header() {
               <Link href="/dashboard">Dashboard</Link>
             </Button>
           ) : (
-            <>
-              <Button asChild size="sm" variant="outline">
-                <Link href="/sign-in">Sign In</Link>
-              </Button>
-              <Button asChild size="sm">
-                <Link href="/sign-up">Get Started</Link>
-              </Button>
-            </>
+            <Button asChild size="sm" variant="ghost">
+              <Link href="/sign-in">Sign In</Link>
+            </Button>
           )}
           <ThemeToggle />
         </div>
