@@ -2,7 +2,7 @@ import { type InferAgentUIMessage, isStepCount, ToolLoopAgent, tool } from "ai";
 import { eq } from "drizzle-orm";
 import { nanoid } from "nanoid";
 import { z } from "zod/v4";
-import { model } from "@/lib/ai/model";
+import { model, reasoningProviderOptions } from "@/lib/ai/model";
 import { db } from "@/lib/db";
 import { events, invitations } from "@/lib/db/schema";
 import { sendInvitationEmail } from "@/lib/email";
@@ -42,6 +42,7 @@ For these, first get the event details from the user (eventId and title), then c
 - If a risky action is denied by the user, acknowledge it and do NOT retry the same tool.
 - Keep responses SHORT (1-2 sentences max when artifacts are present).`,
     model,
+    providerOptions: reasoningProviderOptions,
     stopWhen: isStepCount(5),
     toolApproval: {
       deleteEvent: "user-approval",

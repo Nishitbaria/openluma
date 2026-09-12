@@ -149,7 +149,7 @@ export function ChatHistorySheet({
             </Link>
             <Button
               aria-label={`Delete "${conversation.title}"`}
-              className="mr-1 size-8 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
+              className="mr-1 size-8 text-muted-foreground transition-opacity hover:text-destructive focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
               onClick={() => setPendingDelete(conversation)}
               size="icon"
               type="button"
@@ -166,7 +166,7 @@ export function ChatHistorySheet({
   return (
     <>
       <Sheet onOpenChange={onOpenChange} open={open}>
-        <SheetContent className="w-80 p-0" side="left">
+        <SheetContent className="gap-0 p-0" side="left">
           <SheetHeader className="border-b px-4 py-3">
             <SheetTitle>Chat history</SheetTitle>
             <SheetDescription>Your past conversations</SheetDescription>

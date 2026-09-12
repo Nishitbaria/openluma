@@ -2,10 +2,7 @@ import { ChatPanel } from "@/components/chat/chat-panel";
 
 export default function ChatPage() {
   return (
-    <div
-      className="-m-6 flex flex-col"
-      style={{ height: "calc(100vh - 4rem)" }}
-    >
+    <div className="-m-6 flex h-[calc(100dvh-4rem)] flex-col">
       <ChatPanel />
     </div>
   );

@@ -19,7 +19,6 @@ import {
   Globe,
   History,
   Link2,
-  Loader2,
   Lock,
   MapPin,
   Plus,
@@ -62,6 +61,11 @@ import {
   PromptInputTextarea,
   PromptInputTools,
 } from "@/components/ai-elements/prompt-input";
+import {
+  Reasoning,
+  ReasoningContent,
+  ReasoningTrigger,
+} from "@/components/ai-elements/reasoning";
 import { ChatHistorySheet } from "@/components/chat/chat-history-sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -74,6 +78,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { LoadingState } from "@/components/ui/loading-state";
 import type { OrchestratorMessage } from "@/lib/ai/agents/orchestrator";
 
 const suggestions = [
@@ -162,6 +167,20 @@ function ChatSession({
   const isLoading = status === "streaming" || status === "submitted";
   const isEmpty = messages.length === 0;
 
+  // Single "Thinking" indicator: shown from submit until the assistant emits
+  // something renderable (reasoning, text, or a tool call). Once reasoning
+  // parts arrive, the Reasoning component takes over as the live indicator.
+  const lastMessage = messages.at(-1);
+  const lastAssistantHasContent =
+    lastMessage?.role === "assistant" &&
+    lastMessage.parts.some(
+      (p) =>
+        (p.type === "text" && (p as { text: string }).text.trim().length > 0) ||
+        p.type === "reasoning" ||
+        isToolUIPart(p)
+    );
+  const awaitingResponse = isLoading && !lastAssistantHasContent;
+
   return (
     <div className="flex h-full flex-col bg-background">
       <div className="flex items-center justify-end gap-1 border-b px-4 py-2">
@@ -198,7 +217,7 @@ function ChatSession({
       <div className="relative flex min-h-0 flex-1 flex-col">
         {isEmpty ? (
           /* Empty state */
-          <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4">
+          <div className="flex flex-1 flex-col items-center justify-center gap-6 px-4 pb-32 sm:pb-36">
             <div className="text-center">
               <Sparkles className="mx-auto mb-3 size-8 text-primary" />
               <h2 className="font-semibold text-xl">How can I help you?</h2>
@@ -206,15 +225,15 @@ function ChatSession({
                 Ask me to create events, manage RSVPs, or send invitations.
               </p>
             </div>
-            <div className="grid w-full max-w-lg grid-cols-1 gap-2 sm:grid-cols-2">
+            <div className="grid w-full max-w-lg grid-cols-1 gap-2 sm:grid-cols-2 sm:grid-rows-2">
               {suggestions.map((s) => (
                 <button
-                  className="flex items-start gap-3 rounded-lg border p-3 text-left text-sm transition-colors hover:bg-accent"
+                  className="flex h-full min-h-20 items-center gap-3 rounded-lg border px-3.5 py-3 text-left text-sm leading-snug transition-colors hover:bg-accent sm:min-h-24"
                   key={s.label}
                   onClick={() => handleSuggestion(s.label)}
                   type="button"
                 >
-                  <s.icon className="mt-0.5 size-4 shrink-0 text-muted-foreground" />
+                  <s.icon className="size-4 shrink-0 text-muted-foreground" />
                   <span className="text-muted-foreground">{s.label}</span>
                 </button>
               ))}
@@ -222,7 +241,7 @@ function ChatSession({
           </div>
         ) : (
           <Conversation>
-            <ConversationContent className="mx-auto w-full max-w-3xl px-4 py-6">
+            <ConversationContent className="mx-auto w-full max-w-3xl gap-6 px-3 pt-4 pb-32 sm:gap-8 sm:px-4 sm:pt-6 sm:pb-36">
               {messages.map((message, messageIndex) => {
                 if (message.role === "user") {
                   const textPart = message.parts.find(
@@ -232,13 +251,18 @@ function ChatSession({
                     return null;
                   }
                   return (
-                    <div className="flex justify-end gap-3" key={message.id}>
+                    <div
+                      className="flex justify-end gap-2 sm:gap-3"
+                      key={message.id}
+                    >
                       <Message from="user">
                         <MessageContent>
-                          <p className="whitespace-pre-wrap">{textPart.text}</p>
+                          <p className="whitespace-pre-wrap break-words">
+                            {textPart.text}
+                          </p>
                         </MessageContent>
                       </Message>
-                      <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-muted">
+                      <div className="hidden size-8 shrink-0 items-center justify-center rounded-full bg-muted sm:flex">
                         <User className="size-4 text-muted-foreground" />
                       </div>
                     </div>
@@ -254,6 +278,17 @@ function ChatSession({
                       (part as { text: string }).text.trim()
                   );
 
+                const reasoningParts = message.parts.filter(
+                  (p) => p.type === "reasoning"
+                ) as Array<{ text: string; state?: "streaming" | "done" }>;
+                const reasoningText = reasoningParts
+                  .map((p) => p.text)
+                  .join("\n\n");
+                const isReasoningStreaming =
+                  isLast &&
+                  isLoading &&
+                  reasoningParts.some((p) => p.state === "streaming");
+
                 const artifacts = extractArtifacts(message.parts);
                 const approvalParts = message.parts.filter(
                   (p) => isToolUIPart(p) && p.state === "approval-requested"
@@ -267,12 +302,36 @@ function ChatSession({
                 );
                 const lastTextIdx = textParts.at(-1)?.idx ?? -1;
 
+                // Nothing renderable yet — the unified "Thinking" bubble below
+                // covers this state; don't render an empty avatar row.
+                if (
+                  textParts.length === 0 &&
+                  reasoningParts.length === 0 &&
+                  approvalParts.length === 0 &&
+                  artifacts.length === 0 &&
+                  !hasRunningTool
+                ) {
+                  return null;
+                }
+
                 return (
-                  <div className="flex items-start gap-3" key={message.id}>
-                    <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary">
+                  <div
+                    className="flex items-start gap-2 sm:gap-3"
+                    key={message.id}
+                  >
+                    <div className="hidden size-8 shrink-0 items-center justify-center rounded-full bg-primary sm:flex">
                       <Bot className="size-4 text-primary-foreground" />
                     </div>
                     <div className="min-w-0 flex-1 space-y-3">
+                      {reasoningParts.length > 0 && (
+                        <Reasoning
+                          className="mb-0"
+                          isStreaming={isReasoningStreaming}
+                        >
+                          <ReasoningTrigger />
+                          <ReasoningContent>{reasoningText}</ReasoningContent>
+                        </Reasoning>
+                      )}
                       {hasRunningTool && isLast ? (
                         <div className="flex animate-pulse items-center gap-2 text-muted-foreground text-xs">
                           <Sparkles className="size-3" />
@@ -367,70 +426,56 @@ function ChatSession({
                           </Fragment>
                         );
                       })}
-                      {isLast &&
-                        textParts.length === 0 &&
-                        isLoading &&
-                        !hasRunningTool && (
-                          <div className="flex items-center gap-2 py-2">
-                            <Loader2 className="size-4 animate-spin text-muted-foreground" />
-                            <span className="text-muted-foreground text-sm">
-                              Processing your request...
-                            </span>
-                          </div>
-                        )}
                     </div>
                   </div>
                 );
               })}
 
-              {status === "submitted" && (
-                <div className="flex items-start gap-3">
-                  <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary">
+              {awaitingResponse ? (
+                <div className="flex items-start gap-2 sm:gap-3">
+                  <div className="hidden size-8 shrink-0 items-center justify-center rounded-full bg-primary sm:flex">
                     <Bot className="size-4 text-primary-foreground" />
                   </div>
-                  <div className="flex items-center gap-2 rounded-2xl bg-muted px-4 py-3">
-                    <Loader2 className="size-4 animate-spin text-muted-foreground" />
-                    <span className="text-muted-foreground text-sm">
-                      Thinking...
-                    </span>
+                  <div className="flex items-center rounded-2xl bg-muted px-4 py-3">
+                    <LoadingState label="Thinking" variant="Dots" />
                   </div>
                 </div>
-              )}
+              ) : null}
             </ConversationContent>
-            <ConversationScrollButton />
+            <ConversationScrollButton className="bottom-28 sm:bottom-32" />
           </Conversation>
         )}
-      </div>
 
-      {/* Input */}
-      <div className="shrink-0 border-t px-4 py-3">
-        <PromptInput
-          className="mx-auto w-full max-w-3xl"
-          onSubmit={handleSubmit}
-        >
-          <PromptInputBody>
-            <PromptInputTextarea
-              className="overflow-x-hidden"
-              onChange={(e) => setInput(e.currentTarget.value)}
-              placeholder="Ask me anything about your events..."
-              value={input}
-            />
-          </PromptInputBody>
-          <PromptInputFooter className="border-t-0">
-            <PromptInputTools>
-              <span className="text-muted-foreground text-xs">
-                <kbd className="rounded border px-1 font-mono text-[10px]">
-                  Enter
-                </kbd>{" "}
-                to send
-              </span>
-            </PromptInputTools>
-            <PromptInputSubmit
-              disabled={!(input.trim() || isLoading)}
-              status={isLoading ? "streaming" : "ready"}
-            />
-          </PromptInputFooter>
-        </PromptInput>
+        {/* Input — floats over the conversation, pinned to the bottom */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 px-3 pb-[calc(0.5rem+env(safe-area-inset-bottom))] sm:px-6 sm:pb-4 lg:pb-6">
+          <PromptInput
+            className="pointer-events-auto mx-auto w-full max-w-3xl [&>[data-slot=input-group]]:bg-background/95 [&>[data-slot=input-group]]:shadow-lg [&>[data-slot=input-group]]:backdrop-blur-md sm:[&>[data-slot=input-group]]:rounded-xl dark:[&>[data-slot=input-group]]:bg-background/90"
+            onSubmit={handleSubmit}
+          >
+            <PromptInputBody>
+              <PromptInputTextarea
+                className="max-h-36 min-h-12 overflow-x-hidden sm:max-h-48 sm:min-h-16"
+                onChange={(e) => setInput(e.currentTarget.value)}
+                placeholder="Ask me anything about your events..."
+                value={input}
+              />
+            </PromptInputBody>
+            <PromptInputFooter className="border-t-0">
+              <PromptInputTools>
+                <span className="hidden text-muted-foreground text-xs sm:inline">
+                  <kbd className="rounded border px-1 font-mono text-[10px]">
+                    Enter
+                  </kbd>{" "}
+                  to send
+                </span>
+              </PromptInputTools>
+              <PromptInputSubmit
+                disabled={!(input.trim() || isLoading)}
+                status={isLoading ? "streaming" : "ready"}
+              />
+            </PromptInputFooter>
+          </PromptInput>
+        </div>
       </div>
     </div>
   );
@@ -717,7 +762,7 @@ function EventListCard({ events }: { events: EventData[] }) {
               : `/events/${event.id}`;
             return (
               <a
-                className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-accent/50"
+                className="flex items-center gap-3 px-3 py-3 transition-colors hover:bg-accent/50 sm:px-4"
                 href={eventUrl}
                 key={event.id}
                 rel="noopener noreferrer"
@@ -735,7 +780,7 @@ function EventListCard({ events }: { events: EventData[] }) {
                 </div>
                 <div className="flex shrink-0 items-center gap-1.5">
                   <Badge
-                    className="text-xs"
+                    className="hidden text-xs sm:inline-flex"
                     variant={
                       event.visibility === "public" ? "default" : "secondary"
                     }

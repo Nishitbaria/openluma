@@ -111,6 +111,27 @@
   }
 }
 
+/* Driven via inline `animation` styles (components/ui/loading-state.tsx),
+   so these must live outside @theme inline to always be emitted. */
+@keyframes pixel-on {
+  0%,
+  100% {
+    opacity: 0.15;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes shimmer-text {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
 :root {
   --background: oklch(0.99 0 0);
   --foreground: oklch(0 0 0);

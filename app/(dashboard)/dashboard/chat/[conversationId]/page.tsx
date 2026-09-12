@@ -42,10 +42,7 @@ export default async function ChatConversationPage({
   })) as OrchestratorMessage[];
 
   return (
-    <div
-      className="-m-6 flex flex-col"
-      style={{ height: "calc(100vh - 4rem)" }}
-    >
+    <div className="-m-6 flex h-[calc(100dvh-4rem)] flex-col">
       <ChatPanel
         conversationId={conversationId}
         initialMessages={initialMessages}
