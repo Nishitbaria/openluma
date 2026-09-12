@@ -6,6 +6,19 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.4.0](https://github.com/Nishitbaria/openluma/compare/v0.3.0...v0.4.0) (2026-09-12)
+
+
+### Features
+
+* **chat:** stream model reasoning with shimmer loading states ([078868a](https://github.com/Nishitbaria/openluma/commit/078868a11e7afe1ce70f41b58a4b3510a725f0f4))
+
+
+### Bug Fixes
+
+* **security:** hide private-event registration questions from non-members ([#27](https://github.com/Nishitbaria/openluma/issues/27)) ([96234e5](https://github.com/Nishitbaria/openluma/commit/96234e597eda74a2731aa1da8c80fd5877bfa85d)), closes [#26](https://github.com/Nishitbaria/openluma/issues/26)
+* **security:** scope registration-question edits and deletes to their event ([#28](https://github.com/Nishitbaria/openluma/issues/28)) ([c538667](https://github.com/Nishitbaria/openluma/commit/c538667c8b71c27cf48594aa6d8fd4bb5ee38bcf))
+
 ## [0.3.0](https://github.com/Nishitbaria/openluma/compare/v0.2.0...v0.3.0) (2026-08-08)
 
 
