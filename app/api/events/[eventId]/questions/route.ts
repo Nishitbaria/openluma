@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import type { NextRequest } from "next/server";
 import { z } from "zod/v4";
@@ -100,8 +100,12 @@ export async function PUT(
   const [updated] = await db
     .update(eventQuestions)
     .set(parsed.data)
-    .where(eq(eventQuestions.id, id))
+    .where(and(eq(eventQuestions.id, id), eq(eventQuestions.eventId, eventId)))
     .returning();
+
+  if (!updated) {
+    return Response.json({ message: "Not found" }, { status: 404 });
+  }
 
   return Response.json(updated);
 }
@@ -126,6 +130,14 @@ export async function DELETE(
     return Response.json({ message: "Missing id" }, { status: 400 });
   }
 
-  await db.delete(eventQuestions).where(eq(eventQuestions.id, id));
+  const deleted = await db
+    .delete(eventQuestions)
+    .where(and(eq(eventQuestions.id, id), eq(eventQuestions.eventId, eventId)))
+    .returning({ id: eventQuestions.id });
+
+  if (deleted.length === 0) {
+    return Response.json({ message: "Not found" }, { status: 404 });
+  }
+
   return Response.json({ message: "Deleted" });
 }
