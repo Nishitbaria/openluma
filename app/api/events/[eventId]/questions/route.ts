@@ -5,6 +5,7 @@ import { z } from "zod/v4";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { eventQuestions, events, questionTypeEnum } from "@/lib/db/schema";
+import { canViewPrivateEvent } from "@/lib/events/visibility";
 
 const questionSchema = z.object({
   label: z.string().min(1).max(300),
@@ -33,6 +34,28 @@ export async function GET(
   { params }: { params: Promise<{ eventId: string }> }
 ) {
   const { eventId } = await params;
+
+  const event = await db.query.events.findFirst({
+    columns: { hostId: true, visibility: true },
+    where: eq(events.id, eventId),
+  });
+
+  if (!event) {
+    return Response.json({ message: "Event not found" }, { status: 404 });
+  }
+
+  if (event.visibility === "private") {
+    const session = await auth.api.getSession({ headers: await headers() });
+    const canView = await canViewPrivateEvent(
+      eventId,
+      event.hostId,
+      session?.user?.id
+    );
+
+    if (!canView) {
+      return Response.json({ message: "Event not found" }, { status: 404 });
+    }
+  }
 
   const questions = await db.query.eventQuestions.findMany({
     orderBy: [asc(eventQuestions.order)],

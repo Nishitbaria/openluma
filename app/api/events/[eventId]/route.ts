@@ -3,7 +3,8 @@ import { headers } from "next/headers";
 import type { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { events, rsvps } from "@/lib/db/schema";
+import { events } from "@/lib/db/schema";
+import { canViewPrivateEvent } from "@/lib/events/visibility";
 import { updateEventSchema } from "@/lib/validators/event";
 
 export async function GET(
@@ -35,21 +36,13 @@ export async function GET(
 
   if (event.visibility === "private") {
     const session = await auth.api.getSession({ headers: await headers() });
-    const userId = session?.user?.id;
+    const canView = await canViewPrivateEvent(
+      eventId,
+      event.hostId,
+      session?.user?.id
+    );
 
-    const isHost = event.hostId === userId;
-    const isCohost = event.cohosts.some((c) => c.userId === userId);
-
-    let hasApprovedRsvp = false;
-    if (userId) {
-      const userRsvp = await db.query.rsvps.findFirst({
-        columns: { status: true },
-        where: and(eq(rsvps.eventId, eventId), eq(rsvps.userId, userId)),
-      });
-      hasApprovedRsvp = userRsvp?.status === "approved";
-    }
-
-    if (!(isHost || isCohost || hasApprovedRsvp)) {
+    if (!canView) {
       return Response.json({ message: "Not authorized" }, { status: 403 });
     }
   }
