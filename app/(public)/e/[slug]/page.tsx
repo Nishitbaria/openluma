@@ -31,6 +31,7 @@ import {
 } from "@/lib/db/schema";
 import { getEventBySlug } from "@/lib/events/get-event-by-slug";
 import { invitationEmailMatches } from "@/lib/events/invitations";
+import { canViewPrivateEvent } from "@/lib/events/visibility";
 import { redis } from "@/lib/redis";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 import {
@@ -195,10 +196,11 @@ export default async function PublicEventBySlugPage({
   }
 
   if (event.visibility === "private") {
-    const isHost = session?.user?.id === event.host.id;
-    const hasApprovedRsvp = currentRsvpStatus === "approved";
+    const canView =
+      hasAcceptedInvitation ||
+      (await canViewPrivateEvent(event.id, event.host.id, session?.user?.id));
 
-    if (!(isHost || hasApprovedRsvp || hasAcceptedInvitation)) {
+    if (!canView) {
       return (
         <div className="mx-auto w-full max-w-7xl px-4 py-24 text-center sm:px-6 lg:px-8">
           <Lock className="mx-auto h-12 w-12 text-muted-foreground" />
