@@ -3,7 +3,8 @@ import { and, desc, eq, gte, ilike } from "drizzle-orm";
 import { z } from "zod/v4";
 import { model } from "@/lib/ai/model";
 import { db } from "@/lib/db";
-import { events, eventTags, invitations, rsvps, user } from "@/lib/db/schema";
+import { events, eventTags, rsvps, user } from "@/lib/db/schema";
+import { submitRsvp } from "@/lib/events/rsvp";
 import { generateEventSlug } from "@/lib/utils/slugify";
 
 export function createEventAgent(userId: string) {
@@ -389,51 +390,22 @@ RULES:
       submitRsvp: tool({
         description: "RSVP to an event on behalf of the user.",
         execute: async ({ eventId, message }) => {
-          const event = await db.query.events.findFirst({
-            where: eq(events.id, eventId),
+          const currentUser = await db.query.user.findFirst({
+            columns: { email: true, emailVerified: true, id: true },
+            where: eq(user.id, userId),
           });
-          if (!event) {
-            return { error: "Event not found" };
+          if (!currentUser) {
+            return { error: "User not found" };
           }
 
-          if (event.visibility === "private" && event.hostId !== userId) {
-            const currentUser = await db.query.user.findFirst({
-              columns: { email: true, emailVerified: true },
-              where: eq(user.id, userId),
-            });
-            // Email-matched invitations only count for a verified address.
-            const invitation = currentUser?.emailVerified
-              ? await db.query.invitations.findFirst({
-                  where: and(
-                    eq(invitations.eventId, eventId),
-                    eq(invitations.email, currentUser.email),
-                    eq(invitations.status, "accepted")
-                  ),
-                })
-              : null;
-            if (!invitation) {
-              return {
-                error:
-                  "This is a private event. You need an accepted invitation to RSVP.",
-              };
-            }
+          const result = await submitRsvp(eventId, currentUser, { message });
+          if (!result.ok) {
+            return { error: result.error };
           }
-
-          const existing = await db.query.rsvps.findFirst({
-            where: and(eq(rsvps.eventId, eventId), eq(rsvps.userId, userId)),
-          });
-          if (existing) {
-            return { error: "Already RSVP'd", rsvp: existing };
-          }
-
-          const status = event.requiresApproval ? "pending" : "approved";
-
-          const [rsvp] = await db
-            .insert(rsvps)
-            .values({ eventId, message, status, userId })
-            .returning();
-
-          return { rsvp: { id: rsvp.id, status: rsvp.status }, success: true };
+          const rsvp = { id: result.rsvp.id, status: result.rsvp.status };
+          return result.created
+            ? { rsvp, success: true }
+            : { error: "Already RSVP'd", rsvp };
         },
         inputSchema: z.object({
           eventId: z.string().describe("The event ID to RSVP to"),

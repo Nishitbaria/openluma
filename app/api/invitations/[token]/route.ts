@@ -123,7 +123,12 @@ export async function GET(
     });
 
     if (existingRsvp) {
-      if (existingRsvp.status !== "approved") {
+      // A rejection stands until the host changes it; an invitation link
+      // (possibly issued before the rejection) must not silently undo it.
+      if (
+        existingRsvp.status !== "approved" &&
+        existingRsvp.status !== "rejected"
+      ) {
         await tx
           .update(rsvps)
           .set({ status: "approved", updatedAt: new Date() })
