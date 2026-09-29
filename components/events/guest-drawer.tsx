@@ -131,7 +131,9 @@ export function GuestDrawer({
         method: "PATCH",
       });
       if (!res.ok) {
-        throw new Error("Failed");
+        const data = await res.json().catch(() => null);
+        toast.error(data?.message ?? "Failed to update status");
+        return;
       }
       toast.success(`Status updated to ${STATUS_LABELS[status] ?? status}`);
       setStatusModalOpen(false);
