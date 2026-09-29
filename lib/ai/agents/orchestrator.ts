@@ -1,11 +1,10 @@
 import { type InferAgentUIMessage, isStepCount, ToolLoopAgent, tool } from "ai";
 import { eq } from "drizzle-orm";
-import { nanoid } from "nanoid";
 import { z } from "zod/v4";
 import { model, reasoningProviderOptions } from "@/lib/ai/model";
 import { db } from "@/lib/db";
-import { events, invitations } from "@/lib/db/schema";
-import { sendInvitationEmail } from "@/lib/email";
+import { events, user } from "@/lib/db/schema";
+import { createInvitations } from "@/lib/events/invitations";
 import { createEventAgent } from "./event-agent";
 
 export function createOrchestrator(userId: string) {
@@ -135,19 +134,25 @@ For these, first get the event details from the user (eventId and title), then c
           if (event.hostId !== userId) {
             return { error: "Not authorized" };
           }
-          const token = nanoid(32);
-          const [invitation] = await db
-            .insert(invitations)
-            .values({
-              email,
-              eventId,
-              expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-              invitedBy: userId,
-              token,
-            })
-            .returning();
-          await sendInvitationEmail(email, event.title, token);
-          return { email, invitationId: invitation.id, success: true };
+          const inviter = await db.query.user.findFirst({
+            columns: { email: true, id: true },
+            where: eq(user.id, userId),
+          });
+          if (!inviter) {
+            return { error: "User not found" };
+          }
+          const result = await createInvitations(event, inviter, [email]);
+          if (!result.ok) {
+            return { error: result.error };
+          }
+          if (result.failedEmails.length > 0) {
+            return { error: `Could not deliver the invitation to ${email}` };
+          }
+          return {
+            email: result.invitations[0].email,
+            invitationId: result.invitations[0].id,
+            success: true,
+          };
         },
         inputSchema: z.object({
           email: z.string().describe("Email address to invite"),
