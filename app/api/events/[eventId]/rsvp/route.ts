@@ -3,14 +3,9 @@ import { headers } from "next/headers";
 import type { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import {
-  events,
-  invitations,
-  rsvps,
-  rsvpTimeline,
-  user,
-} from "@/lib/db/schema";
+import { events, rsvps, rsvpTimeline, user } from "@/lib/db/schema";
 import { sendRsvpConfirmationEmail } from "@/lib/email";
+import { submitRsvp } from "@/lib/events/rsvp";
 import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function GET(
@@ -66,133 +61,19 @@ export async function POST(
     return limited;
   }
 
-  const event = await db.query.events.findFirst({
-    columns: {
-      capacity: true,
-      endTime: true,
-      hostId: true,
-      id: true,
-      location: true,
-      requiresApproval: true,
-      slug: true,
-      startTime: true,
-      timezone: true,
-      title: true,
-      visibility: true,
-    },
-    where: eq(events.id, eventId),
-    with: {
-      rsvps: {
-        columns: { id: true },
-        where: eq(rsvps.status, "approved"),
-      },
-    },
-  });
-
-  if (!event) {
-    return Response.json({ message: "Event not found" }, { status: 404 });
-  }
-
-  // Host cannot RSVP to their own event
-  if (event.hostId === session.user.id) {
-    return Response.json(
-      { message: "You are the host of this event" },
-      { status: 400 }
-    );
-  }
-
-  // Look up this user's invitation once — used both to gate private-event
-  // access and to auto-approve invited guests once they complete registration.
-  // Invitations are matched by email, which only proves identity once verified.
-  const userInvitation = session.user.emailVerified
-    ? await db.query.invitations.findFirst({
-        columns: { status: true },
-        where: and(
-          eq(invitations.eventId, eventId),
-          eq(invitations.email, session.user.email)
-        ),
-      })
-    : undefined;
-  const hasAcceptedInvite = userInvitation?.status === "accepted";
-
-  // Private events require an accepted invitation to RSVP
-  if (
-    event.visibility === "private" &&
-    event.hostId !== session.user.id &&
-    !hasAcceptedInvite
-  ) {
-    return Response.json(
-      { message: "This is a private event. You need an invitation to RSVP." },
-      { status: 403 }
-    );
-  }
-
-  const isFull = !!(event.capacity && event.rsvps.length >= event.capacity);
-  // Invited guests who accepted are approved outright; everyone else follows
-  // the event's approval and capacity rules.
-  const resolveStatus = () => {
-    if (hasAcceptedInvite) {
-      return "approved";
-    }
-    if (isFull) {
-      return "waitlisted";
-    }
-    return event.requiresApproval ? "pending" : "approved";
-  };
-
-  const existing = await db.query.rsvps.findFirst({
-    where: and(eq(rsvps.eventId, eventId), eq(rsvps.userId, session.user.id)),
-  });
-
-  if (existing) {
-    // Allow re-RSVP if previously rejected
-    if (existing.status === "rejected") {
-      const newStatus = resolveStatus();
-      const [updated] = await db
-        .update(rsvps)
-        .set({ status: newStatus, updatedAt: new Date() })
-        .where(eq(rsvps.id, existing.id))
-        .returning();
-      return Response.json(updated, { status: 200 });
-    }
-    return Response.json({ message: "Already RSVP'd", rsvp: existing });
-  }
-
   const body = await request.json().catch(() => ({}));
-  const status = resolveStatus();
+  const result = await submitRsvp(eventId, session.user, {
+    customAnswers: body.customAnswers,
+    message: body.message,
+  });
 
-  const [rsvp] = await db
-    .insert(rsvps)
-    .values({
-      customAnswers: body.customAnswers ?? null,
-      eventId,
-      message: body.message,
-      status,
-      userId: session.user.id,
-    })
-    .returning();
-
-  // Log timeline entry
-  db.insert(rsvpTimeline)
-    .values({ eventId, rsvpId: rsvp.id, toStatus: status, type: "registered" })
-    .catch(() => {
-      // ignore: best-effort timeline logging, must not block RSVP creation
-    });
-
-  // Send confirmation email (ticket if auto-approved, pending notice otherwise)
-  if ((status === "approved" || status === "pending") && session.user.email) {
-    await sendRsvpConfirmationEmail(session.user.email, event.title, status, {
-      endTime: event.endTime,
-      id: event.id,
-      location: event.location,
-      slug: event.slug ?? undefined,
-      startTime: event.startTime,
-      timezone: event.timezone,
-      title: event.title,
-    }).catch((err) => console.error("Failed to send ticket email:", err));
+  if (!result.ok) {
+    return Response.json({ message: result.error }, { status: result.status });
   }
-
-  return Response.json(rsvp, { status: 201 });
+  if (!result.created) {
+    return Response.json({ message: "Already RSVP'd", rsvp: result.rsvp });
+  }
+  return Response.json(result.rsvp, { status: 201 });
 }
 
 export async function PATCH(
@@ -346,6 +227,14 @@ export async function DELETE(
     columns: { id: true, status: true },
     where: and(eq(rsvps.eventId, eventId), eq(rsvps.userId, session.user.id)),
   });
+
+  // Deleting a rejected RSVP would let the guest register again from scratch.
+  if (cancelledRsvp?.status === "rejected") {
+    return Response.json(
+      { message: "The host declined your RSVP for this event." },
+      { status: 403 }
+    );
+  }
 
   await db
     .delete(rsvps)
