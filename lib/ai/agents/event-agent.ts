@@ -11,12 +11,12 @@ import { createEventSchema, updateEventSchema } from "@/lib/validators/event";
 
 // The approval prompt shows the model-supplied title, so a tool only runs when
 // that title belongs to the event it is about to change.
-const TITLE_MISMATCH = {
+export const TITLE_MISMATCH = {
   error:
     "The event ID doesn't match the title shown to the user. Look the event up again and ask them to confirm.",
 };
 
-const eventTitleInput = z
+export const eventTitleInput = z
   .string()
   .describe("The event's current title, shown in the confirmation prompt");
 

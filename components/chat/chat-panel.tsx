@@ -66,6 +66,7 @@ import {
   ReasoningContent,
   ReasoningTrigger,
 } from "@/components/ai-elements/reasoning";
+import { untrustedMarkdownProps } from "@/components/ai-elements/untrusted-markdown";
 import { ChatHistorySheet } from "@/components/chat/chat-history-sheet";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -384,8 +385,8 @@ function ChatSession({
                               <MessageContent>
                                 <Streamdown
                                   animated={isStreaming}
-                                  linkSafety={{ enabled: false }}
                                   plugins={{ code }}
+                                  {...untrustedMarkdownProps}
                                 >
                                   {text}
                                 </Streamdown>
