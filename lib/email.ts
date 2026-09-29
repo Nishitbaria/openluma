@@ -5,6 +5,7 @@ import InvitationEmail from "@/emails/invitation-email";
 import RsvpStatusEmail from "@/emails/rsvp-status-email";
 import VerifyEmail from "@/emails/verify-email";
 import { getAppUrl } from "@/lib/app-url";
+import { icsText } from "@/lib/utils/export";
 
 const apiKey = process.env.RESEND_API_KEY;
 export const resend = apiKey ? new Resend(apiKey) : null;
@@ -152,8 +153,8 @@ function generateICS(event: {
     "BEGIN:VEVENT",
     `DTSTART:${formatDate(event.startTime)}`,
     `DTEND:${formatDate(end)}`,
-    `SUMMARY:${event.title}`,
-    `LOCATION:${event.location ?? ""}`,
+    `SUMMARY:${icsText(event.title)}`,
+    `LOCATION:${icsText(event.location)}`,
     `URL:${eventLink(event)}`,
     `DESCRIPTION:View your ticket: ${appUrl}/ticket/${event.id}`,
     "END:VEVENT",
