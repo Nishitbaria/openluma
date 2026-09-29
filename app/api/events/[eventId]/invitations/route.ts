@@ -75,6 +75,15 @@ export async function POST(
   const role: "attendee" | "cohost" =
     body.role === "cohost" ? "cohost" : "attendee";
 
+  // Cohost management is host-only; otherwise a cohost could mint extra
+  // cohost seats that survive the host removing them.
+  if (role === "cohost" && !isHost) {
+    return Response.json(
+      { message: "Only the host can invite co-hosts" },
+      { status: 403 }
+    );
+  }
+
   // Filter out the host's own email
   const filteredEmails = emails.filter(
     (email) => email.toLowerCase() !== session.user.email?.toLowerCase()
@@ -155,6 +164,22 @@ export async function DELETE(
 
   if (!invitationId) {
     return Response.json({ message: "Missing invitationId" }, { status: 400 });
+  }
+
+  if (!isHost) {
+    const invitation = await db.query.invitations.findFirst({
+      columns: { role: true },
+      where: and(
+        eq(invitations.id, invitationId),
+        eq(invitations.eventId, eventId)
+      ),
+    });
+    if (invitation?.role === "cohost") {
+      return Response.json(
+        { message: "Only the host can revoke co-host invitations" },
+        { status: 403 }
+      );
+    }
   }
 
   await db

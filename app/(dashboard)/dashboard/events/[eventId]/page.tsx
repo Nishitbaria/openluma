@@ -374,7 +374,7 @@ export default async function EventDetailPage({
 
       {tab === "guests" && canManage && attendeesData && (
         <div className="space-y-6">
-          <InviteForm eventId={eventId} />
+          <InviteForm canInviteCohosts={isHost} eventId={eventId} />
           <AttendeeList
             attendees={attendeesData.attendees}
             cohosts={attendeesData.cohostsList}
