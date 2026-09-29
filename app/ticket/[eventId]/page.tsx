@@ -3,7 +3,7 @@
 import { formatInTimeZone } from "date-fns-tz";
 import { ArrowLeft, Calendar, Download, MapPin, Ticket } from "lucide-react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,12 +25,15 @@ interface TicketData {
 
 export default function TicketPage() {
   const { eventId } = useParams<{ eventId: string }>();
+  // Set when a host opens a guest's ticket from the guest list.
+  const userId = useSearchParams().get("userId");
   const [ticket, setTicket] = useState<TicketData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`/api/events/${eventId}/ticket`)
+    const query = userId ? `?userId=${encodeURIComponent(userId)}` : "";
+    fetch(`/api/events/${eventId}/ticket${query}`)
       .then(async (res) => {
         if (!res.ok) {
           const data = await res.json();
@@ -41,7 +44,7 @@ export default function TicketPage() {
       .then((data) => setTicket(data.ticket))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [eventId]);
+  }, [eventId, userId]);
 
   if (loading) {
     return (

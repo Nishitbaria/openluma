@@ -316,7 +316,7 @@ export function GuestDrawer({
       <div className="flex items-center justify-between text-xs">
         <Link
           className="flex items-center gap-1 text-muted-foreground transition-colors hover:text-foreground"
-          href={`/ticket/${eventId}?userId=${attendee.user.id}`}
+          href={`/ticket/${eventId}?userId=${encodeURIComponent(attendee.user.id)}`}
           target="_blank"
         >
           <Ticket className="h-3 w-3" />

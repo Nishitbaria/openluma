@@ -83,6 +83,9 @@ export const auth = betterAuth({
       ),
     },
   },
+  // Settings > Delete Account. Better Auth requires a recent sign-in (or the
+  // password) before deleting.
+  user: { deleteUser: { enabled: true } },
   trustedOrigins: process.env.TRUSTED_ORIGINS
     ? process.env.TRUSTED_ORIGINS.split(",")
     : [],

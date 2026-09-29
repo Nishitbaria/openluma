@@ -193,7 +193,12 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
 
   useEffect(() => {
     fetch(`/api/events/${eventId}/questions`)
-      .then((r) => r.json())
+      .then((r) => {
+        if (!r.ok) {
+          throw new Error("Failed to load questions");
+        }
+        return r.json();
+      })
       .then(setQuestions)
       .catch(() => toast.error("Failed to load questions"))
       .finally(() => setLoading(false));
@@ -380,15 +385,28 @@ export function QuestionBuilder({ eventId }: { eventId: string }) {
       order: i,
     }));
     setQuestions(reordered);
-    await Promise.all(
+    const saved = await Promise.all(
       reordered.map((q) =>
         fetch(`/api/events/${eventId}/questions`, {
           body: JSON.stringify({ id: q.id, order: q.order }),
           headers: { "Content-Type": "application/json" },
           method: "PUT",
-        })
+        }).then(
+          (res) => res.ok,
+          () => false
+        )
       )
     );
+    if (!saved.every(Boolean)) {
+      toast.error("Failed to save the new order");
+      // Some updates may have landed; show what the server has.
+      const res = await fetch(`/api/events/${eventId}/questions`).catch(
+        () => null
+      );
+      if (res?.ok) {
+        setQuestions(await res.json());
+      }
+    }
   }
 
   if (loading) {
