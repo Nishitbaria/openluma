@@ -34,7 +34,7 @@ const geistMono = Geist_Mono({
 });
 
 const SITE_NAME = "OpenLuma";
-const SITE_TITLE = "OpenLuma — Open Source Event Platform";
+const SITE_TITLE = "OpenLuma | Open Source Event Platform";
 const SITE_DESCRIPTION =
   "Create, manage, and discover events. Open source alternative to Luma with AI-powered event management, RSVPs, invitations, and check-in.";
 

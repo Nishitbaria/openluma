@@ -18,7 +18,7 @@ export function HeroSection() {
 
   return (
     <section className="relative w-full overflow-hidden py-24 text-center md:py-36">
-      {/* Flickering grid background — fades out toward bottom */}
+      {/* Flickering grid background, fades out toward bottom */}
       <div
         className="pointer-events-none absolute inset-0 -z-10"
         style={{
@@ -37,10 +37,10 @@ export function HeroSection() {
 
       <div className="relative mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="mx-auto flex max-w-4xl flex-col items-center">
-          {/* Single memorable claim — not a multi-feature pill */}
+          {/* Single memorable claim, not a multi-feature pill */}
           <div className="mb-8 inline-flex items-center rounded-full border bg-muted/50 px-4 py-1.5 text-muted-foreground text-sm">
             <AnimatedShinyText>
-              Open-source Lu.ma — no vendor lock-in
+              Open-source Lu.ma, no vendor lock-in
             </AnimatedShinyText>
           </div>
 
@@ -65,7 +65,7 @@ export function HeroSection() {
             font="circle"
             pixelWordClassName="text-foreground"
             pixelWords={["open-source", "AI", "vendor lock-in"]}
-            text="Free, open-source event management. Create with AI, manage attendees, send invitations, and check in guests — without vendor lock-in."
+            text="Free, open-source event management. Create with AI, manage attendees, send invitations, and check in guests without vendor lock-in."
           />
 
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">

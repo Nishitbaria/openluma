@@ -5,7 +5,7 @@
 [![Release](https://img.shields.io/github/v/release/Nishitbaria/openluma?color=black)](https://github.com/Nishitbaria/openluma/releases)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-black.svg)](https://github.com/Nishitbaria/openluma/blob/main/CONTRIBUTING.md)
 
-An open-source event management platform inspired by [Lu.ma](https://lu.ma) — built with Next.js 16, AI-powered event creation, and a modern full-stack architecture.
+An open-source event management platform inspired by [Lu.ma](https://lu.ma), built with Next.js 16, AI-powered event creation, and a modern full-stack architecture.
 
 > **Use natural language to create, manage, and discover events.** OpenLuma features an AI agent that handles event operations through conversation, alongside a full-featured web UI for hosts and attendees.
 
@@ -13,15 +13,15 @@ An open-source event management platform inspired by [Lu.ma](https://lu.ma) — 
 
 ## Features
 
-- **AI-Powered Event Management** — Create, edit, search, and manage events through natural language conversation
-- **Event Discovery** — Browse and search public events with filtering by type and date
-- **RSVP & Ticketing** — Full RSVP workflow with approval, waitlisting, and QR code tickets
-- **Email Notifications** — Automated emails for invitations, RSVP confirmations, and reminders with ICS calendar attachments
-- **Role-Based Access** — Host, co-host, and attendee roles with granular permissions
-- **Attendee Check-in** — QR code scanning for event check-in with audit trail
-- **OAuth Authentication** — Google login with session management via Better Auth
-- **File Uploads** — Image uploads for events and profiles via Uploadthing
-- **Dark Mode** — Theme switching with next-themes
+- **AI-Powered Event Management**: Create, edit, search, and manage events through natural language conversation
+- **Event Discovery**: Browse and search public events with filtering by type and date
+- **RSVP & Ticketing**: Full RSVP workflow with approval, waitlisting, and QR code tickets
+- **Email Notifications**: Automated emails for invitations, RSVP confirmations, and reminders with ICS calendar attachments
+- **Role-Based Access**: Host, co-host, and attendee roles with granular permissions
+- **Attendee Check-in**: QR code scanning for event check-in with audit trail
+- **OAuth Authentication**: Google login with session management via Better Auth
+- **File Uploads**: Image uploads for events and profiles via Uploadthing
+- **Dark Mode**: Theme switching with next-themes
 
 ## Tech Stack
 
@@ -194,19 +194,19 @@ The core data model:
      └───────────┘ └────────┘ └─────────────┘
 ```
 
-- **events** — Title, description, location, capacity, visibility, type, approval settings
-- **rsvps** — Status workflow: pending -> approved / rejected / waitlisted
-- **invitations** — Token-based email invitations with 7-day expiry
-- **eventCohosts** — Co-host delegation
-- **attendeeCheckins** — Check-in audit trail
+- **events**: Title, description, location, capacity, visibility, type, approval settings
+- **rsvps**: Status workflow: pending -> approved / rejected / waitlisted
+- **invitations**: Token-based email invitations with 7-day expiry
+- **eventCohosts**: Co-host delegation
+- **attendeeCheckins**: Check-in audit trail
 
 ## Deployment
 
 OpenLuma can be deployed to any platform that supports Next.js:
 
-- **[Vercel](https://vercel.com)** — Zero-config deployment (recommended)
-- **[Railway](https://railway.app)** — Full-stack with managed PostgreSQL
-- **Docker** — Self-hosted (Dockerfile coming soon)
+- **[Vercel](https://vercel.com)**: Zero-config deployment (recommended)
+- **[Railway](https://railway.app)**: Full-stack with managed PostgreSQL
+- **Docker**: Self-hosted (Dockerfile coming soon)
 
 Make sure to set all environment variables from `.env.example` in your deployment platform.
 

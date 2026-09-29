@@ -12,7 +12,7 @@ export default function manifest(): MetadataRoute.Manifest {
       { sizes: "32x32", src: "/icon", type: "image/png" },
       { sizes: "180x180", src: "/apple-icon", type: "image/png" },
     ],
-    name: "OpenLuma — Open Source Event Platform",
+    name: "OpenLuma | Open Source Event Platform",
     short_name: "OpenLuma",
     start_url: "/",
     theme_color: "#0a0a0a",
