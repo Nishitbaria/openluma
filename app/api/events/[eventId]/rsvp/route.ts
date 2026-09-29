@@ -56,7 +56,9 @@ export async function POST(
     return Response.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  const limited = await checkRateLimit(request, `rsvp:${session.user.id}`);
+  const limited = await checkRateLimit(request, "rsvp", {
+    userId: session.user.id,
+  });
   if (limited) {
     return limited;
   }
