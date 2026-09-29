@@ -1,11 +1,17 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { cache } from "react";
 import { createRateLimitStorage } from "./auth-rate-limit-storage";
 import { db } from "./db";
 import { account, session, user, verification } from "./db/schema";
 import { sendVerificationEmail } from "./email";
 import { redis } from "./redis";
+import { uploadedImageUrl } from "./validators/image";
+
+// Endpoints that let the caller set their own avatar URL. OAuth avatars come
+// from the provider, not the request, so they aren't checked here.
+const USER_IMAGE_PATHS = new Set(["/sign-up/email", "/update-user"]);
 
 /** Per-request cached session lookup — safe to call from layout + page + components. */
 export const getSession = cache((hdrs: Headers) =>
@@ -22,6 +28,22 @@ export const auth = betterAuth({
       verification,
     },
   }),
+  hooks: {
+    // Same allowlist as /api/profile: an avatar is shown to other users, so it
+    // must come from our upload storage (or be cleared with null).
+    before: createAuthMiddleware(async (ctx) => {
+      const image = ctx.body?.image;
+      if (
+        USER_IMAGE_PATHS.has(ctx.path) &&
+        image != null &&
+        !uploadedImageUrl.safeParse(image).success
+      ) {
+        throw new APIError("BAD_REQUEST", {
+          message: "Image must be an allowed upload URL",
+        });
+      }
+    }),
+  },
   emailAndPassword: {
     enabled: true,
     // Invitations and private-event access are matched by email, so an
