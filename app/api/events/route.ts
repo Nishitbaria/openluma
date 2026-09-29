@@ -1,21 +1,49 @@
 import { and, desc, eq, gte, ilike, lte, type SQL } from "drizzle-orm";
 import { headers } from "next/headers";
 import type { NextRequest } from "next/server";
+import { z } from "zod/v4";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { events, eventTags } from "@/lib/db/schema";
 import { generateEventSlug } from "@/lib/utils/slugify";
 import { createEventSchema } from "@/lib/validators/event";
 
+// Postgres timestamps can't hold every JS date, so bound the range.
+const dateParam = z.coerce
+  .date()
+  .min(new Date("1970-01-01T00:00:00Z"))
+  .max(new Date("9999-12-31T23:59:59Z"));
+
+const listQuerySchema = z.object({
+  limit: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .default(20)
+    .transform((n) => Math.min(n, 50)),
+  offset: z.coerce.number().int().min(0).default(0),
+  startAfter: dateParam.optional(),
+  startBefore: dateParam.optional(),
+});
+
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const visibility = searchParams.get("visibility");
   const search = searchParams.get("search");
   const hostId = searchParams.get("hostId");
-  const startAfter = searchParams.get("startAfter");
-  const startBefore = searchParams.get("startBefore");
-  const limit = Math.min(Number(searchParams.get("limit") ?? 20), 50);
-  const offset = Number(searchParams.get("offset") ?? 0);
+  const query = listQuerySchema.safeParse({
+    limit: searchParams.get("limit") ?? undefined,
+    offset: searchParams.get("offset") ?? undefined,
+    startAfter: searchParams.get("startAfter") ?? undefined,
+    startBefore: searchParams.get("startBefore") ?? undefined,
+  });
+  if (!query.success) {
+    return Response.json(
+      { errors: query.error.issues, message: "Invalid query" },
+      { status: 400 }
+    );
+  }
+  const { limit, offset, startAfter, startBefore } = query.data;
 
   const conditions: SQL[] = [];
 
@@ -40,11 +68,11 @@ export async function GET(request: NextRequest) {
   }
 
   if (startAfter) {
-    conditions.push(gte(events.startTime, new Date(startAfter)));
+    conditions.push(gte(events.startTime, startAfter));
   }
 
   if (startBefore) {
-    conditions.push(lte(events.startTime, new Date(startBefore)));
+    conditions.push(lte(events.startTime, startBefore));
   }
 
   const results = await db.query.events.findMany({

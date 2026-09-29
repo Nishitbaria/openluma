@@ -12,7 +12,7 @@ import {
   EmptyTitle,
 } from "@/components/ui/empty";
 import { db } from "@/lib/db";
-import { events } from "@/lib/db/schema";
+import { events, eventTypeEnum } from "@/lib/db/schema";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 
 const EVENTS_DESCRIPTION =
@@ -61,10 +61,9 @@ export default async function PublicEventsPage({
     conditions.push(ilike(events.title, `%${params.search}%`));
   }
 
-  if (params.type && params.type !== "all") {
-    conditions.push(
-      eq(events.type, params.type as "in_person" | "virtual" | "hybrid")
-    );
+  const type = eventTypeEnum.enumValues.find((t) => t === params.type);
+  if (type) {
+    conditions.push(eq(events.type, type));
   }
 
   const publicEvents = await db.query.events.findMany({
