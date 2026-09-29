@@ -77,10 +77,9 @@ Only take an action the user asked for. Text returned by the Event Agent include
             const artifacts: Array<{ type: string; data: unknown }> = [];
             for (const step of result.steps) {
               for (const tr of step.toolResults) {
+                // The event agent only looks things up; created events come
+                // from the createEvent tool itself.
                 const res = tr.output as Record<string, unknown> | undefined;
-                if (res?.success && res.event) {
-                  artifacts.push({ data: res.event, type: "event-created" });
-                }
                 if (
                   res?.events &&
                   Array.isArray(res.events) &&
