@@ -1,11 +1,11 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, eq, ne, type SQL } from "drizzle-orm";
 import { headers } from "next/headers";
 import type { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { events, rsvps, rsvpTimeline, user } from "@/lib/db/schema";
 import { sendRsvpConfirmationEmail } from "@/lib/email";
-import { submitRsvp } from "@/lib/events/rsvp";
+import { removeRsvp, submitRsvp } from "@/lib/events/rsvp";
 import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function GET(
@@ -217,76 +217,31 @@ export async function DELETE(
       return Response.json({ message: "Not authorized" }, { status: 403 });
     }
 
-    await db
-      .delete(rsvps)
-      .where(and(eq(rsvps.id, body.rsvpId), eq(rsvps.eventId, eventId)));
+    await removeRsvp(eventId, eq(rsvps.id, body.rsvpId));
 
     return Response.json({ message: "RSVP removed" });
   }
 
-  // User cancelling their own RSVP
-  const cancelledRsvp = await db.query.rsvps.findFirst({
-    columns: { id: true, status: true },
-    where: and(eq(rsvps.eventId, eventId), eq(rsvps.userId, session.user.id)),
-  });
-
-  // Deleting a rejected RSVP would let the guest register again from scratch.
-  if (cancelledRsvp?.status === "rejected") {
-    return Response.json(
-      { message: "The host declined your RSVP for this event." },
-      { status: 403 }
-    );
-  }
-
-  await db
-    .delete(rsvps)
-    .where(and(eq(rsvps.eventId, eventId), eq(rsvps.userId, session.user.id)));
-
-  // Auto-promote oldest waitlisted RSVP when an approved seat opens up
-  if (cancelledRsvp?.status === "approved") {
-    const event = await db.query.events.findFirst({
-      columns: {
-        endTime: true,
-        id: true,
-        location: true,
-        slug: true,
-        startTime: true,
-        timezone: true,
-        title: true,
-      },
-      where: eq(events.id, eventId),
+  // User cancelling their own RSVP. Deleting a rejected RSVP would let the
+  // guest register again from scratch, so rejections are left in place.
+  const removed = await removeRsvp(
+    eventId,
+    and(eq(rsvps.userId, session.user.id), ne(rsvps.status, "rejected")) as SQL
+  );
+  if (!removed) {
+    const rejected = await db.query.rsvps.findFirst({
+      columns: { id: true },
+      where: and(
+        eq(rsvps.eventId, eventId),
+        eq(rsvps.userId, session.user.id),
+        eq(rsvps.status, "rejected")
+      ),
     });
-
-    const nextInLine = await db.query.rsvps.findFirst({
-      orderBy: [asc(rsvps.createdAt)],
-      where: and(eq(rsvps.eventId, eventId), eq(rsvps.status, "waitlisted")),
-      with: { user: { columns: { email: true, id: true } } },
-    });
-
-    if (nextInLine && event) {
-      await db
-        .update(rsvps)
-        .set({ status: "approved", updatedAt: new Date() })
-        .where(eq(rsvps.id, nextInLine.id));
-
-      if (nextInLine.user.email) {
-        sendRsvpConfirmationEmail(
-          nextInLine.user.email,
-          event.title,
-          "approved",
-          {
-            endTime: event.endTime,
-            id: event.id,
-            location: event.location,
-            slug: event.slug ?? undefined,
-            startTime: event.startTime,
-            timezone: event.timezone,
-            title: event.title,
-          }
-        ).catch((err) =>
-          console.error("Failed to send waitlist promotion email:", err)
-        );
-      }
+    if (rejected) {
+      return Response.json(
+        { message: "The host declined your RSVP for this event." },
+        { status: 403 }
+      );
     }
   }
 
