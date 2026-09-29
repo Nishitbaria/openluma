@@ -45,6 +45,10 @@ export function InviteForm({
         toast.error(data.message ?? "Failed to send invitation");
         return;
       }
+      if (data.failedEmails?.length) {
+        toast.error(`Couldn't deliver the invitation email to ${email}`);
+        return;
+      }
       toast.success(
         role === "cohost"
           ? `Co-host invitation sent to ${email}`

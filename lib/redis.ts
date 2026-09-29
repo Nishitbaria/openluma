@@ -40,3 +40,15 @@ export const chatRatelimit = redis
       timeout: 0,
     })
   : null;
+
+// Invitation emails go out from our domain; cap how many one account can send.
+// Each address counts as one unit.
+export const inviteRatelimit = redis
+  ? new Ratelimit({
+      analytics: true,
+      limiter: Ratelimit.slidingWindow(100, "1 h"),
+      prefix: "ratelimit:invite",
+      redis,
+      timeout: 0,
+    })
+  : null;

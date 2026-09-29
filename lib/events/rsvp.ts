@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import { db } from "@/lib/db";
 import { events, invitations, rsvps, rsvpTimeline } from "@/lib/db/schema";
 import { sendRsvpConfirmationEmail } from "@/lib/email";
+import { invitationEmailMatches } from "@/lib/events/invitations";
 
 interface RsvpUser {
   email: string;
@@ -63,7 +64,7 @@ export async function submitRsvp(
         columns: { status: true },
         where: and(
           eq(invitations.eventId, eventId),
-          eq(invitations.email, rsvpUser.email)
+          invitationEmailMatches(rsvpUser.email)
         ),
       })
     : undefined;

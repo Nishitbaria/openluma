@@ -96,6 +96,13 @@ function getErrorConfig(reason?: string, expected?: string) {
         icon: AlertCircle,
         title: "Already Declined",
       };
+    case "already-handled":
+      return {
+        description:
+          "This invitation has already been responded to. Open the event to see where things stand.",
+        icon: AlertCircle,
+        title: "Already Responded",
+      };
     case "already-expired":
       return {
         description:

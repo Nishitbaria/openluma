@@ -30,6 +30,7 @@ import {
   rsvps,
 } from "@/lib/db/schema";
 import { getEventBySlug } from "@/lib/events/get-event-by-slug";
+import { invitationEmailMatches } from "@/lib/events/invitations";
 import { redis } from "@/lib/redis";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 import {
@@ -126,7 +127,7 @@ export default async function PublicEventBySlugPage({
           columns: { status: true, token: true },
           where: and(
             eq(invitations.eventId, event.id),
-            eq(invitations.email, session.user.email)
+            invitationEmailMatches(session.user.email)
           ),
         })
       : Promise.resolve(undefined),
@@ -210,6 +211,7 @@ export default async function PublicEventBySlugPage({
               <Button asChild className="mt-6">
                 <Link
                   href={`/api/invitations/${pendingInvitation.token}?action=accept`}
+                  prefetch={false}
                 >
                   Accept invitation
                 </Link>
