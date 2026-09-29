@@ -345,12 +345,11 @@ function ChatSession({
                         };
                         const { toolCallId } = part as { toolCallId: string };
 
-                        let actionText = "";
-                        if (toolName === "deleteEvent") {
-                          actionText = `Permanently delete "${toolInput.eventTitle || "this event"}"?`;
-                        } else if (toolName === "sendInvitation") {
-                          actionText = `Send invitation to "${toolInput.email}"${toolInput.eventTitle ? ` for "${toolInput.eventTitle}"` : ""}?`;
-                        } else {
+                        const actionText = describeApproval(
+                          toolName,
+                          toolInput
+                        );
+                        if (!actionText) {
                           return null;
                         }
 
@@ -509,6 +508,45 @@ interface EventListArtifactType {
 }
 
 type ChatArtifact = EventCreatedArtifactType | EventListArtifactType;
+
+function formatApprovalDate(value: unknown) {
+  const date = new Date(String(value));
+  return Number.isNaN(date.getTime())
+    ? String(value)
+    : format(date, "EEE, MMM d 'at' h:mm a");
+}
+
+/** The confirmation text for a tool call awaiting the user's approval. */
+function describeApproval(
+  toolName: string,
+  input: Record<string, unknown>
+): string | null {
+  const title = `"${input.eventTitle || "this event"}"`;
+  switch (toolName) {
+    case "cloneEvent":
+      return `Duplicate ${title}?`;
+    case "createEvent":
+      return `Create ${input.visibility === "private" ? "private" : "public"} event "${input.title}" on ${formatApprovalDate(input.startTime)}?`;
+    case "deleteEvent":
+      return `Permanently delete ${title}?`;
+    case "editEvent": {
+      const changes = Object.entries(input)
+        .filter(([key]) => key !== "eventId" && key !== "eventTitle")
+        .map(([key, value]) =>
+          key === "startTime" || key === "endTime"
+            ? `${key}: ${value ? formatApprovalDate(value) : "none"}`
+            : `${key}: ${JSON.stringify(value)}`
+        );
+      return `Update ${title}: ${changes.join(", ") || "no changes"}?`;
+    }
+    case "sendInvitation":
+      return `Send invitation to "${input.email}"${input.eventTitle ? ` for "${input.eventTitle}"` : ""}?`;
+    case "submitRsvp":
+      return `RSVP to ${title}${input.message ? ` with the message "${input.message}"` : ""}?`;
+    default:
+      return null;
+  }
+}
 
 function ApprovalCard({
   actionText,
