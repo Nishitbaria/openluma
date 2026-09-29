@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import { and, desc, eq, gte } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, or } from "drizzle-orm";
 import { Calendar, CalendarCheck, Clock, ShieldCheck } from "lucide-react";
 import { headers } from "next/headers";
 import Link from "next/link";
@@ -17,8 +17,28 @@ export default async function DashboardPage() {
   }
 
   const now = new Date();
+  // Pending RSVPs on events the user hosts or co-hosts.
+  const pendingWhere = and(
+    eq(rsvps.status, "pending"),
+    or(
+      inArray(
+        rsvps.eventId,
+        db
+          .select({ id: events.id })
+          .from(events)
+          .where(eq(events.hostId, session.user.id))
+      ),
+      inArray(
+        rsvps.eventId,
+        db
+          .select({ id: eventCohosts.eventId })
+          .from(eventCohosts)
+          .where(eq(eventCohosts.userId, session.user.id))
+      )
+    )
+  );
 
-  const [allEvents, upcomingEvents, pendingRsvps, cohostingRows] =
+  const [allEvents, upcomingEvents, pendingRsvps, pendingCount, cohostingRows] =
     await Promise.all([
       db.query.events.findMany({
         columns: { id: true },
@@ -32,26 +52,16 @@ export default async function DashboardPage() {
           gte(events.startTime, now)
         ),
       }),
-      db.query.rsvps
-        .findMany({
-          limit: 20,
-          orderBy: [desc(rsvps.createdAt)],
-          where: eq(rsvps.status, "pending"),
-          with: {
-            event: {
-              columns: { hostId: true, title: true },
-              with: { cohosts: { columns: { userId: true } } },
-            },
-            user: { columns: { name: true } },
-          },
-        })
-        .then((r) =>
-          r.filter(
-            (rsvp) =>
-              rsvp.event.hostId === session.user.id ||
-              rsvp.event.cohosts.some((c) => c.userId === session.user.id)
-          )
-        ),
+      db.query.rsvps.findMany({
+        limit: 5,
+        orderBy: [desc(rsvps.createdAt)],
+        where: pendingWhere,
+        with: {
+          event: { columns: { title: true } },
+          user: { columns: { name: true } },
+        },
+      }),
+      db.$count(rsvps, pendingWhere),
       db.query.eventCohosts.findMany({
         where: eq(eventCohosts.userId, session.user.id),
         with: { event: true },
@@ -91,7 +101,7 @@ export default async function DashboardPage() {
       description: "Awaiting your approval",
       icon: CalendarCheck,
       title: "Pending RSVPs",
-      value: pendingRsvps.length.toString(),
+      value: pendingCount.toString(),
     },
   ];
 
@@ -182,7 +192,7 @@ export default async function DashboardPage() {
               </p>
             ) : (
               <div className="space-y-3">
-                {pendingRsvps.slice(0, 5).map((rsvp) => (
+                {pendingRsvps.map((rsvp) => (
                   <div
                     className="flex items-center justify-between text-sm"
                     key={rsvp.id}

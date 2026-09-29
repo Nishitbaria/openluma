@@ -243,9 +243,10 @@ export const invitations = pgTable(
     id: text("id")
       .primaryKey()
       .$defaultFn(() => crypto.randomUUID()),
-    invitedBy: text("invited_by")
-      .notNull()
-      .references(() => user.id),
+    // Nulled when the inviter deletes their account; the invitation stands.
+    invitedBy: text("invited_by").references(() => user.id, {
+      onDelete: "set null",
+    }),
     role: invitationRoleEnum("role").notNull().default("attendee"),
     status: invitationStatusEnum("status").notNull().default("pending"),
     token: text("token").notNull().unique(),
@@ -280,7 +281,9 @@ export const eventCohosts = pgTable(
 
 export const attendeeCheckins = pgTable("attendee_checkins", {
   checkedInAt: timestamp("checked_in_at").notNull().defaultNow(),
-  checkedInBy: text("checked_in_by").references(() => user.id),
+  checkedInBy: text("checked_in_by").references(() => user.id, {
+    onDelete: "set null",
+  }),
   eventId: text("event_id")
     .notNull()
     .references(() => events.id, { onDelete: "cascade" }),

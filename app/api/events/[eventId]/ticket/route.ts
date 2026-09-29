@@ -8,7 +8,7 @@ import { events, rsvps } from "@/lib/db/schema";
 import { createTicketCode } from "@/lib/tickets";
 
 export async function GET(
-  _request: NextRequest,
+  request: NextRequest,
   { params }: { params: Promise<{ eventId: string }> }
 ) {
   const { eventId } = await params;
@@ -17,13 +17,19 @@ export async function GET(
     return Response.json({ message: "Unauthorized" }, { status: 401 });
   }
 
+  // Hosts and co-hosts may open a guest's ticket (`?userId=`) from the guest
+  // list; everyone else only gets their own.
+  const guestId = request.nextUrl.searchParams.get("userId") ?? session.user.id;
+
   const [rsvp, event] = await Promise.all([
     db.query.rsvps.findFirst({
-      where: and(eq(rsvps.eventId, eventId), eq(rsvps.userId, session.user.id)),
+      where: and(eq(rsvps.eventId, eventId), eq(rsvps.userId, guestId)),
+      with: { user: { columns: { email: true, name: true } } },
     }),
     db.query.events.findFirst({
       columns: {
         endTime: true,
+        hostId: true,
         id: true,
         location: true,
         slug: true,
@@ -32,18 +38,26 @@ export async function GET(
         title: true,
       },
       where: eq(events.id, eventId),
+      with: { cohosts: { columns: { userId: true } } },
     }),
   ]);
+
+  if (!event) {
+    return Response.json({ message: "Event not found" }, { status: 404 });
+  }
+
+  const canManage =
+    event.hostId === session.user.id ||
+    event.cohosts.some((c) => c.userId === session.user.id);
+  if (guestId !== session.user.id && !canManage) {
+    return Response.json({ message: "Not authorized" }, { status: 403 });
+  }
 
   if (rsvp?.status !== "approved") {
     return Response.json(
       { message: "No approved RSVP found" },
       { status: 404 }
     );
-  }
-
-  if (!event) {
-    return Response.json({ message: "Event not found" }, { status: 404 });
   }
 
   // Signed so a ticket can't be forged from a guessable user or RSVP id.
@@ -64,8 +78,8 @@ export async function GET(
       rsvpId: rsvp.id,
       startTime: event.startTime,
       timezone: event.timezone,
-      userEmail: session.user.email,
-      userName: session.user.name,
+      userEmail: rsvp.user.email,
+      userName: rsvp.user.name,
     },
   });
 }
