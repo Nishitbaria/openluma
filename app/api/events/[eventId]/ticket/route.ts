@@ -2,12 +2,10 @@ import { and, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import type { NextRequest } from "next/server";
 import QRCode from "qrcode";
-import { getAppUrl } from "@/lib/app-url";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { events, rsvps } from "@/lib/db/schema";
-
-const appUrl = getAppUrl();
+import { createTicketCode } from "@/lib/tickets";
 
 export async function GET(
   _request: NextRequest,
@@ -48,14 +46,8 @@ export async function GET(
     return Response.json({ message: "Event not found" }, { status: 404 });
   }
 
-  // QR code payload: check-in URL the host scans
-  const checkInPayload = JSON.stringify({
-    eventId,
-    url: `${appUrl}/api/events/${eventId}/check-in`,
-    userId: session.user.id,
-  });
-
-  const qrDataUrl = await QRCode.toDataURL(checkInPayload, {
+  // Signed so a ticket can't be forged from a guessable user or RSVP id.
+  const qrDataUrl = await QRCode.toDataURL(createTicketCode(rsvp.id), {
     color: { dark: "#000000", light: "#ffffff" },
     margin: 2,
     width: 300,
