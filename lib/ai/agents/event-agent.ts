@@ -306,7 +306,7 @@ export function createEventWriteTools(userId: string) {
             where: eq(user.id, userId),
           }),
           db.query.events.findFirst({
-            columns: { title: true },
+            columns: { slug: true, title: true },
             where: eq(events.id, eventId),
           }),
         ]);
@@ -319,7 +319,16 @@ export function createEventWriteTools(userId: string) {
 
         const result = await submitRsvp(eventId, currentUser, { message });
         if (!result.ok) {
-          return { error: result.error };
+          // This tool can't collect registration answers; send the user to
+          // the event page, where the registration form asks for them.
+          return result.status === 400
+            ? {
+                error: result.error,
+                registerUrl: event?.slug
+                  ? `/e/${event.slug}`
+                  : `/events/${eventId}`,
+              }
+            : { error: result.error };
         }
         const rsvp = { id: result.rsvp.id, status: result.rsvp.status };
         return result.created

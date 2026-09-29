@@ -5,7 +5,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { events, rsvps, rsvpTimeline, user } from "@/lib/db/schema";
 import { sendRsvpConfirmationEmail } from "@/lib/email";
-import { removeRsvp, submitRsvp } from "@/lib/events/rsvp";
+import { removeRsvp, setRsvpStatus, submitRsvp } from "@/lib/events/rsvp";
 import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function GET(
@@ -126,25 +126,28 @@ export async function PATCH(
     return Response.json({ message: "Invalid data" }, { status: 400 });
   }
 
-  // Fetch existing status for timeline logging
-  const existingRsvp = await db.query.rsvps.findFirst({
-    columns: { status: true },
-    where: and(eq(rsvps.id, rsvpId), eq(rsvps.eventId, eventId)),
-  });
+  const outcome = await setRsvpStatus(eventId, rsvpId, status);
+  if (outcome.kind === "missing") {
+    return Response.json({ message: "RSVP not found" }, { status: 404 });
+  }
+  if (outcome.kind === "full") {
+    return Response.json(
+      {
+        message:
+          "This event is full. Raise the capacity or free a seat before approving more guests.",
+      },
+      { status: 409 }
+    );
+  }
 
-  const [updated] = await db
-    .update(rsvps)
-    .set({ status, updatedAt: new Date() })
-    .where(and(eq(rsvps.id, rsvpId), eq(rsvps.eventId, eventId)))
-    .returning();
-
+  const updated = outcome.rsvp;
   if (updated) {
     // Log timeline entry
     db.insert(rsvpTimeline)
       .values({
         changedByName: session.user.name,
         eventId,
-        fromStatus: existingRsvp?.status ?? null,
+        fromStatus: outcome.fromStatus,
         rsvpId,
         toStatus: status,
         type: "status_changed",

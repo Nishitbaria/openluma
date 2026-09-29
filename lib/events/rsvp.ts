@@ -1,4 +1,4 @@
-import { and, asc, eq, type SQL } from "drizzle-orm";
+import { and, asc, eq, ne, type SQL } from "drizzle-orm";
 import { z } from "zod/v4";
 import { db } from "@/lib/db";
 import {
@@ -22,6 +22,7 @@ type RsvpResult =
   | { error: string; ok: false; status: 400 | 403 | 404 }
   | { created: boolean; ok: true; rsvp: typeof rsvps.$inferSelect };
 
+type RsvpStatus = (typeof rsvps.$inferSelect)["status"];
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 type Question = Pick<
   typeof eventQuestions.$inferSelect,
@@ -68,12 +69,22 @@ function textError(q: Question, value: unknown) {
   if (text.length > MAX_ANSWER_LENGTH) {
     return `"${q.label}" is too long.`;
   }
-  if (q.type === "dropdown" && text && !q.options?.includes(text)) {
+  if (
+    q.type === "dropdown" &&
+    text &&
+    !q.options?.some((option) => option.trim() === text)
+  ) {
     return `"${q.label}" must be one of the listed options.`;
   }
   if (q.required && !text) {
     return `"${q.label}" is required.`;
   }
+}
+
+function fieldError(q: Question, value: unknown) {
+  return q.type === "checkbox" || q.type === "terms"
+    ? toggleError(q, value)
+    : textError(q, value);
 }
 
 /**
@@ -92,18 +103,22 @@ export function parseAnswers(
   const answers: Record<string, string | boolean> = {};
 
   for (const q of questions) {
-    const value = given[q.id];
-    const error =
-      q.type === "checkbox" || q.type === "terms"
-        ? toggleError(q, value)
-        : textError(q, value);
-    if (error) {
-      return error;
+    const fields: [string, Question][] = [[q.id, q]];
+    // The company question also asks for an optional job title.
+    if (q.type === "company") {
+      fields.push([`${q.id}_jobtitle`, { ...q, required: false }]);
     }
-    if (typeof value === "boolean") {
-      answers[q.id] = value;
-    } else if (typeof value === "string" && value.trim()) {
-      answers[q.id] = value.trim();
+    for (const [key, field] of fields) {
+      const value = given[key];
+      const error = fieldError(field, value);
+      if (error) {
+        return error;
+      }
+      if (typeof value === "boolean") {
+        answers[key] = value;
+      } else if (typeof value === "string" && value.trim()) {
+        answers[key] = value.trim();
+      }
     }
   }
   return answers;
@@ -288,47 +303,120 @@ export async function removeRsvp(eventId: string, match: SQL) {
       .delete(rsvps)
       .where(and(eq(rsvps.eventId, eventId), match))
       .returning({ status: rsvps.status });
-    if (!(locked && deleted?.status === "approved")) {
-      return { promoted: undefined, removed: !!deleted };
-    }
-    if (
-      locked.capacity &&
-      (await countApproved(tx, eventId)) >= locked.capacity
-    ) {
-      return { promoted: undefined, removed: true };
-    }
-
-    const next = await tx.query.rsvps.findFirst({
-      columns: { id: true, userId: true },
-      orderBy: [asc(rsvps.createdAt)],
-      where: and(eq(rsvps.eventId, eventId), eq(rsvps.status, "waitlisted")),
-    });
-    if (next) {
-      await tx
-        .update(rsvps)
-        .set({ status: "approved", updatedAt: new Date() })
-        .where(eq(rsvps.id, next.id));
-    }
-    return { promoted: next, removed: true };
+    return {
+      promoted:
+        locked && deleted?.status === "approved"
+          ? await promoteNext(tx, eventId, locked.capacity)
+          : undefined,
+      removed: !!deleted,
+    };
   });
 
   if (promoted) {
-    db.insert(rsvpTimeline)
-      .values({
-        eventId,
-        fromStatus: "waitlisted",
-        rsvpId: promoted.id,
-        toStatus: "approved",
-        type: "status_changed",
-      })
-      .catch(() => {
-        // ignore: best-effort timeline logging
-      });
-    notifyPromoted(eventId, promoted.userId).catch((err) =>
-      console.error("Failed to send waitlist promotion email:", err)
-    );
+    afterPromotion(eventId, promoted);
   }
   return removed;
+}
+
+/**
+ * The host's status change for one RSVP. Approving is refused once the event
+ * is full, and a guest leaving "approved" hands their seat to the waitlist.
+ */
+export async function setRsvpStatus(
+  eventId: string,
+  rsvpId: string,
+  status: RsvpStatus
+) {
+  const outcome = await db.transaction(async (tx) => {
+    const locked = await lockEvent(tx, eventId);
+    const [current] = await tx
+      .select({ status: rsvps.status })
+      .from(rsvps)
+      .where(and(eq(rsvps.id, rsvpId), eq(rsvps.eventId, eventId)));
+    if (!(locked && current)) {
+      return { kind: "missing" } as const;
+    }
+    if (
+      status === "approved" &&
+      current.status !== "approved" &&
+      locked.capacity &&
+      (await countApproved(tx, eventId)) >= locked.capacity
+    ) {
+      return { kind: "full" } as const;
+    }
+
+    const [rsvp] = await tx
+      .update(rsvps)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(rsvps.id, rsvpId))
+      .returning();
+    const promoted =
+      current.status === "approved" && status !== "approved"
+        ? await promoteNext(tx, eventId, locked.capacity, rsvpId)
+        : undefined;
+    return {
+      fromStatus: current.status,
+      kind: "updated",
+      promoted,
+      rsvp,
+    } as const;
+  });
+
+  if (outcome.kind === "updated" && outcome.promoted) {
+    afterPromotion(eventId, outcome.promoted);
+  }
+  return outcome;
+}
+
+/**
+ * Gives a free seat to the longest-waiting waitlisted guest (other than
+ * `skipId`), if the event has room. Call with the event locked.
+ */
+async function promoteNext(
+  tx: Tx,
+  eventId: string,
+  capacity: number | null,
+  skipId?: string
+) {
+  if (capacity && (await countApproved(tx, eventId)) >= capacity) {
+    return;
+  }
+  const next = await tx.query.rsvps.findFirst({
+    columns: { id: true, userId: true },
+    orderBy: [asc(rsvps.createdAt)],
+    where: and(
+      eq(rsvps.eventId, eventId),
+      eq(rsvps.status, "waitlisted"),
+      skipId ? ne(rsvps.id, skipId) : undefined
+    ),
+  });
+  if (next) {
+    await tx
+      .update(rsvps)
+      .set({ status: "approved", updatedAt: new Date() })
+      .where(eq(rsvps.id, next.id));
+  }
+  return next;
+}
+
+function afterPromotion(
+  eventId: string,
+  promoted: { id: string; userId: string }
+) {
+  db.insert(rsvpTimeline)
+    .values({
+      eventId,
+      fromStatus: "waitlisted",
+      rsvpId: promoted.id,
+      toStatus: "approved",
+      type: "status_changed",
+    })
+    .catch(() => {
+      // ignore: best-effort timeline logging
+    });
+  notifyPromoted(eventId, promoted.userId).catch((err) =>
+    console.error("Failed to send waitlist promotion email:", err)
+  );
 }
 
 async function notifyPromoted(eventId: string, userId: string) {
