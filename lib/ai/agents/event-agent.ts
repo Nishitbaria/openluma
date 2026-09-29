@@ -338,7 +338,11 @@ export function createEventWriteTools(userId: string) {
       inputSchema: z.object({
         eventId: z.string().describe("The event ID to RSVP to"),
         eventTitle: eventTitleInput,
-        message: z.string().optional().describe("Optional message to the host"),
+        message: z
+          .string()
+          .max(500)
+          .optional()
+          .describe("Optional message to the host"),
       }),
     }),
   };
