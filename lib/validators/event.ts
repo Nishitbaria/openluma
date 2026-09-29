@@ -1,6 +1,25 @@
 import { z } from "zod/v4";
 import { uploadedImageUrl } from "@/lib/validators/image";
 
+function isValidTimeZone(timeZone: string) {
+  try {
+    // Throws a RangeError for an unknown IANA zone.
+    return Boolean(
+      Intl.DateTimeFormat("en-US", { timeZone }).resolvedOptions().timeZone
+    );
+  } catch {
+    return false;
+  }
+}
+
+// Event pages and reminder emails format dates in this zone, so an unknown
+// zone would make them throw.
+const timezoneSchema = z
+  .string()
+  .refine(isValidTimeZone, { message: "Invalid timezone" });
+const eventTypeSchema = z.enum(["in_person", "virtual", "hybrid"]);
+const visibilitySchema = z.enum(["public", "private"]);
+
 export const createEventSchema = z.object({
   capacity: z.number().int().positive().optional(),
   categoryId: z.string().optional(),
@@ -13,14 +32,26 @@ export const createEventSchema = z.object({
   richDescription: z.string().optional(),
   startTime: z.string().min(1, "Start time is required"),
   tags: z.array(z.string()).optional(),
-  timezone: z.string().default("UTC"),
+  timezone: timezoneSchema.default("UTC"),
   title: z.string().min(1, "Title is required").max(200),
-  type: z.enum(["in_person", "virtual", "hybrid"]).default("in_person"),
-  visibility: z.enum(["public", "private"]).default("public"),
+  type: eventTypeSchema.default("in_person"),
+  visibility: visibilitySchema.default("public"),
 });
 
+// Every field is redeclared without .default(): Zod v4 still applies inner
+// defaults inside .partial(), so an omitted field would be reset (a private
+// event would silently become public). Clearable columns accept null.
 export const updateEventSchema = createEventSchema
   .extend({
+    capacity: z.number().int().positive().nullable(),
+    categoryId: z.string().nullable(),
+    coverImage: uploadedImageUrl.nullable(),
+    description: z.string().nullable(),
+    endTime: z.string().nullable(),
+    location: z.string().nullable(),
+    locationDetails: z.string().nullable(),
+    requiresApproval: z.boolean(),
+    richDescription: z.string().nullable(),
     slug: z
       .string()
       .min(3, "Slug must be at least 3 characters")
@@ -33,6 +64,9 @@ export const updateEventSchema = createEventSchema
         message: "Slug can only contain letters, numbers, hyphens, underscores",
       })
       .optional(),
+    timezone: timezoneSchema,
+    type: eventTypeSchema,
+    visibility: visibilitySchema,
   })
   .partial();
 
