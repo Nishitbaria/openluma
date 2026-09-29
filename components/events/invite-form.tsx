@@ -15,7 +15,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export function InviteForm({ eventId }: { eventId: string }) {
+export function InviteForm({
+  canInviteCohosts,
+  eventId,
+}: {
+  canInviteCohosts: boolean;
+  eventId: string;
+}) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"attendee" | "cohost">("attendee");
@@ -69,18 +75,20 @@ export function InviteForm({ eventId }: { eventId: string }) {
             type="email"
             value={email}
           />
-          <Select
-            onValueChange={(v) => setRole(v as "attendee" | "cohost")}
-            value={role}
-          >
-            <SelectTrigger className="w-[130px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="attendee">Attendee</SelectItem>
-              <SelectItem value="cohost">Co-host</SelectItem>
-            </SelectContent>
-          </Select>
+          {canInviteCohosts ? (
+            <Select
+              onValueChange={(v) => setRole(v as "attendee" | "cohost")}
+              value={role}
+            >
+              <SelectTrigger className="w-[130px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="attendee">Attendee</SelectItem>
+                <SelectItem value="cohost">Co-host</SelectItem>
+              </SelectContent>
+            </Select>
+          ) : null}
           <Button disabled={loading} type="submit">
             <Mail className="mr-2 h-4 w-4" />
             {loading ? "Sending..." : "Invite"}
