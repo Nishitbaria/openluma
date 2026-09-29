@@ -50,6 +50,7 @@ import {
   invitations,
   rsvps,
 } from "@/lib/db/schema";
+import { resolveDateRange } from "@/lib/events/analytics-range";
 
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: top-level page component orchestrating auth/host/cohost access checks and many conditional sections; complexity is inherent to server-rendering the full page
 export default async function EventDetailPage({
@@ -246,10 +247,10 @@ export default async function EventDetailPage({
   }
 
   if (tab === "insights" && canManage) {
-    const resolvedFrom = dateFrom
-      ? new Date(dateFrom)
-      : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const resolvedTo = dateTo ? new Date(dateTo) : new Date();
+    const { from: resolvedFrom, to: resolvedTo } = resolveDateRange(
+      dateFrom,
+      dateTo
+    );
 
     const [eventRsvps, checkins, views] = await Promise.all([
       db.query.rsvps.findMany({
@@ -280,12 +281,10 @@ export default async function EventDetailPage({
     // Views by day — fill every day in range with 0 if no data
     const dayMap = new Map<string, number>();
     const cursor = new Date(resolvedFrom);
-    cursor.setHours(0, 0, 0, 0);
-    const end = new Date(resolvedTo);
-    end.setHours(23, 59, 59, 999);
-    while (cursor <= end) {
+    cursor.setUTCHours(0, 0, 0, 0);
+    while (cursor <= resolvedTo) {
       dayMap.set(cursor.toISOString().slice(0, 10), 0);
-      cursor.setDate(cursor.getDate() + 1);
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
     }
     for (const v of views) {
       const day = new Date(v.createdAt).toISOString().slice(0, 10);
