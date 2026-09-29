@@ -138,17 +138,18 @@ export function EventForm({ event }: EventFormProps) {
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
+    // Updates must send null to clear a field (undefined means "leave as is");
+    // creates omit empty fields instead, since the create schema has no null.
+    const empty = isEditing ? null : undefined;
     const data = {
-      capacity: capacity ? Number(capacity) : undefined,
-      coverImage: coverImage || undefined,
-      description: plainDescription || undefined,
-      endTime: endTime
-        ? fromZonedTime(endTime, timezone).toISOString()
-        : undefined,
-      location: (formData.get("location") as string) || undefined,
-      locationDetails: locationDetails || undefined,
+      capacity: capacity ? Number(capacity) : empty,
+      coverImage: coverImage || empty,
+      description: plainDescription || empty,
+      endTime: endTime ? fromZonedTime(endTime, timezone).toISOString() : empty,
+      location: (formData.get("location") as string) || empty,
+      locationDetails: locationDetails || empty,
       requiresApproval,
-      richDescription: richDescription || undefined,
+      richDescription: richDescription || empty,
       startTime: fromZonedTime(startTime, timezone).toISOString(),
       timezone,
       title: formData.get("title") as string,
