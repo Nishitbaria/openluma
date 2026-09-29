@@ -510,11 +510,18 @@ interface EventListArtifactType {
 
 type ChatArtifact = EventCreatedArtifactType | EventListArtifactType;
 
-function formatApprovalDate(value: unknown) {
+/**
+ * Formats a date from tool output, or returns null if it isn't a valid date.
+ * Tool output is stored with the conversation, so it can't be trusted to
+ * parse; date-fns throws on invalid dates.
+ */
+function formatDate(value: unknown, pattern: string) {
   const date = new Date(String(value));
-  return Number.isNaN(date.getTime())
-    ? String(value)
-    : format(date, "EEE, MMM d 'at' h:mm a");
+  return Number.isNaN(date.getTime()) ? null : format(date, pattern);
+}
+
+function formatApprovalDate(value: unknown) {
+  return formatDate(value, "EEE, MMM d 'at' h:mm a") ?? String(value);
 }
 
 /** The confirmation text for a tool call awaiting the user's approval. */
@@ -639,7 +646,9 @@ function extractArtifacts(parts: OrchestratorMessage["parts"]): ChatArtifact[] {
         }
       }
     }
-    if (output.success && output.event) {
+    // Other write tools (e.g. editEvent) also return `event`, but only a
+    // created event carries the full details the card shows.
+    if (getToolName(part) === "createEvent" && output.success && output.event) {
       artifacts.push({
         event: parseEventData(output.event as Record<string, unknown>),
         kind: "event-created",
@@ -690,8 +699,7 @@ function ArtifactCard({ artifact }: { artifact: ChatArtifact }) {
 }
 
 function EventCreatedCard({ event }: { event: EventData }) {
-  const startDate = new Date(event.startTime);
-  const endDate = event.endTime ? new Date(event.endTime) : null;
+  const endTime = formatDate(event.endTime, "h:mm a");
   const eventUrl = event.slug ? `/e/${event.slug}` : `/events/${event.id}`;
   const dashboardUrl = `/dashboard/events/${event.id}`;
 
@@ -730,11 +738,12 @@ function EventCreatedCard({ event }: { event: EventData }) {
           <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" />
           <div>
             <p className="font-medium">
-              {format(startDate, "EEEE, MMMM d, yyyy")}
+              {formatDate(event.startTime, "EEEE, MMMM d, yyyy") ??
+                "Date not set"}
             </p>
             <p className="text-muted-foreground text-xs">
-              {format(startDate, "h:mm a")}
-              {endDate ? ` – ${format(endDate, "h:mm a")}` : null}
+              {formatDate(event.startTime, "h:mm a")}
+              {endTime ? ` – ${endTime}` : null}
             </p>
           </div>
         </div>
@@ -795,7 +804,6 @@ function EventListCard({ events }: { events: EventData[] }) {
       <ArtifactContent className="p-0">
         <div className="divide-y">
           {events.map((event) => {
-            const startDate = new Date(event.startTime);
             const eventUrl = event.slug
               ? `/e/${event.slug}`
               : `/events/${event.id}`;
@@ -813,7 +821,8 @@ function EventListCard({ events }: { events: EventData[] }) {
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium text-sm">{event.title}</p>
                   <p className="text-muted-foreground text-xs">
-                    {format(startDate, "MMM d, yyyy · h:mm a")}
+                    {formatDate(event.startTime, "MMM d, yyyy · h:mm a") ??
+                      "Date not set"}
                     {event.location ? ` · ${event.location}` : null}
                   </p>
                 </div>

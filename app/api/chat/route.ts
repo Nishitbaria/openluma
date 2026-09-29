@@ -94,18 +94,18 @@ export async function POST(req: Request) {
   }
   const messages = body.messages as OrchestratorMessage[];
 
-  const existing = await db.query.chatConversations.findFirst({
+  // Insert-then-check so two first requests for the same id can't both try
+  // to create the conversation.
+  await db
+    .insert(chatConversations)
+    .values({ id, title: deriveTitle(messages), userId })
+    .onConflictDoNothing();
+  const conversation = await db.query.chatConversations.findFirst({
+    columns: { userId: true },
     where: eq(chatConversations.id, id),
   });
-  if (existing && existing.userId !== userId) {
+  if (conversation?.userId !== userId) {
     return Response.json({ error: "Not found" }, { status: 404 });
-  }
-  if (!existing) {
-    await db.insert(chatConversations).values({
-      id,
-      title: deriveTitle(messages),
-      userId,
-    });
   }
 
   const orchestrator = createOrchestrator(userId);
@@ -117,6 +117,13 @@ export async function POST(req: Request) {
       // Full resync each turn: tool-approval continuations extend an
       // existing assistant message id, so per-row diffing can't be trusted.
       await db.transaction(async (tx) => {
+        // Serialize saves for this conversation; overlapping turns would
+        // otherwise both reinsert the same message ids and one would fail.
+        await tx
+          .select({ id: chatConversations.id })
+          .from(chatConversations)
+          .where(eq(chatConversations.id, id))
+          .for("update");
         // Preserve original createdAt for messages that already exist —
         // otherwise the delete+reinsert below would reset every message's
         // timestamp to "now" on every turn.
