@@ -121,7 +121,7 @@ export default async function PublicEventBySlugPage({
       orderBy: (q, { asc }) => [asc(q.order)],
       where: eq(eventQuestions.eventId, event.id),
     }),
-    session?.user?.email && event.visibility === "private"
+    session?.user?.emailVerified && event.visibility === "private"
       ? db.query.invitations.findFirst({
           columns: { status: true, token: true },
           where: and(

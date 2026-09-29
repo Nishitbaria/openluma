@@ -4,6 +4,7 @@ import { cache } from "react";
 import { createSecondaryStorage } from "./auth-secondary-storage";
 import { db } from "./db";
 import { account, session, user, verification } from "./db/schema";
+import { sendVerificationEmail } from "./email";
 import { redis } from "./redis";
 
 /** Per-request cached session lookup — safe to call from layout + page + components. */
@@ -23,6 +24,17 @@ export const auth = betterAuth({
   }),
   emailAndPassword: {
     enabled: true,
+    // Invitations and private-event access are matched by email, so an
+    // account must prove it owns its address before it can get a session.
+    requireEmailVerification: true,
+  },
+  emailVerification: {
+    autoSignInAfterVerification: true,
+    sendOnSignIn: true,
+    sendOnSignUp: true,
+    sendVerificationEmail: async ({ user: unverifiedUser, url, token }) => {
+      await sendVerificationEmail(unverifiedUser.email, url, token);
+    },
   },
   ...(redis ? { secondaryStorage: createSecondaryStorage(redis) } : {}),
   rateLimit: {

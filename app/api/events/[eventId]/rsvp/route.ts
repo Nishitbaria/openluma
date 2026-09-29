@@ -103,7 +103,8 @@ export async function POST(
 
   // Look up this user's invitation once — used both to gate private-event
   // access and to auto-approve invited guests once they complete registration.
-  const userInvitation = session.user.email
+  // Invitations are matched by email, which only proves identity once verified.
+  const userInvitation = session.user.emailVerified
     ? await db.query.invitations.findFirst({
         columns: { status: true },
         where: and(

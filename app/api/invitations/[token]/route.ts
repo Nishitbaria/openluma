@@ -75,6 +75,13 @@ export async function GET(
     );
   }
 
+  // The email match is only proof of identity once the address is verified.
+  if (!session.user.emailVerified) {
+    return redirect(
+      `/invitation-error?reason=unverified-email&invite=${encodeURIComponent(token)}`
+    );
+  }
+
   // Attendees invited to an event with registration questions must answer them
   // before an RSVP is created. Grant access by accepting the invitation, then
   // send them to the event page to complete registration (which creates the

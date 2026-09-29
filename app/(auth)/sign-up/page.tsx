@@ -1,8 +1,13 @@
 "use client";
 
-import { AtSignIcon, Loader2Icon, LockIcon, UserIcon } from "lucide-react";
+import {
+  AtSignIcon,
+  Loader2Icon,
+  LockIcon,
+  MailCheckIcon,
+  UserIcon,
+} from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -23,8 +28,10 @@ import { authClient } from "@/lib/auth-client";
 import { cn } from "@/lib/utils";
 
 export default function SignUpPage() {
-  const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [verificationSentTo, setVerificationSentTo] = useState<string | null>(
+    null
+  );
   const [socialLoading, setSocialLoading] = useState(false);
   const { resolvedTheme } = useTheme();
   const gridColor =
@@ -40,6 +47,7 @@ export default function SignUpPage() {
     const password = formData.get("password") as string;
 
     const { error } = await authClient.signUp.email({
+      callbackURL: "/dashboard",
       email,
       name,
       password,
@@ -51,9 +59,9 @@ export default function SignUpPage() {
       return;
     }
 
-    toast.success("Account created! Redirecting...");
-    router.push("/dashboard");
-    router.refresh();
+    // Email/password accounts can't sign in until the address is verified.
+    setLoading(false);
+    setVerificationSentTo(email);
   }
 
   async function handleGoogleSignIn() {
@@ -125,57 +133,68 @@ export default function SignUpPage() {
               text="Create your OpenLuma account to get started."
             />
           </div>
-          <form className="space-y-2" onSubmit={handleSubmit}>
-            <InputGroup>
-              <InputGroupInput
-                name="name"
-                placeholder="Your name"
-                required
-                type="text"
-              />
-              <InputGroupAddon align="inline-start">
-                <UserIcon />
-              </InputGroupAddon>
-            </InputGroup>
+          {verificationSentTo ? (
+            <div className="flex flex-col items-center gap-2 rounded-lg border p-6 text-center">
+              <MailCheckIcon className="size-8 text-muted-foreground" />
+              <p className="font-medium">Check your inbox</p>
+              <p className="text-muted-foreground text-sm">
+                We sent a verification link to {verificationSentTo}. Open it to
+                finish creating your account.
+              </p>
+            </div>
+          ) : (
+            <form className="space-y-2" onSubmit={handleSubmit}>
+              <InputGroup>
+                <InputGroupInput
+                  name="name"
+                  placeholder="Your name"
+                  required
+                  type="text"
+                />
+                <InputGroupAddon align="inline-start">
+                  <UserIcon />
+                </InputGroupAddon>
+              </InputGroup>
 
-            <InputGroup>
-              <InputGroupInput
-                name="email"
-                placeholder="your.email@example.com"
-                required
-                type="email"
-              />
-              <InputGroupAddon align="inline-start">
-                <AtSignIcon />
-              </InputGroupAddon>
-            </InputGroup>
+              <InputGroup>
+                <InputGroupInput
+                  name="email"
+                  placeholder="your.email@example.com"
+                  required
+                  type="email"
+                />
+                <InputGroupAddon align="inline-start">
+                  <AtSignIcon />
+                </InputGroupAddon>
+              </InputGroup>
 
-            <InputGroup>
-              <InputGroupInput
-                minLength={8}
-                name="password"
-                placeholder="Password (min 8 characters)"
-                required
-                type="password"
-              />
-              <InputGroupAddon align="inline-start">
-                <LockIcon />
-              </InputGroupAddon>
-            </InputGroup>
+              <InputGroup>
+                <InputGroupInput
+                  minLength={8}
+                  name="password"
+                  placeholder="Password (min 8 characters)"
+                  required
+                  type="password"
+                />
+                <InputGroupAddon align="inline-start">
+                  <LockIcon />
+                </InputGroupAddon>
+              </InputGroup>
 
-            <MetalButton
-              className="w-full"
-              disabled={loading || socialLoading}
-              metalFxClassName="w-full"
-              size="sm"
-              type="submit"
-            >
-              {loading ? (
-                <Loader2Icon className="mr-2 size-4 animate-spin" />
-              ) : null}
-              {loading ? "Creating account..." : "Continue With Email"}
-            </MetalButton>
-          </form>
+              <MetalButton
+                className="w-full"
+                disabled={loading || socialLoading}
+                metalFxClassName="w-full"
+                size="sm"
+                type="submit"
+              >
+                {loading ? (
+                  <Loader2Icon className="mr-2 size-4 animate-spin" />
+                ) : null}
+                {loading ? "Creating account..." : "Continue With Email"}
+              </MetalButton>
+            </form>
+          )}
           <AuthDivider>OR CONTINUE WITH</AuthDivider>
           <div className="space-y-2">
             <Button
