@@ -398,10 +398,11 @@ RULES:
 
           if (event.visibility === "private" && event.hostId !== userId) {
             const currentUser = await db.query.user.findFirst({
-              columns: { email: true },
+              columns: { email: true, emailVerified: true },
               where: eq(user.id, userId),
             });
-            const invitation = currentUser
+            // Email-matched invitations only count for a verified address.
+            const invitation = currentUser?.emailVerified
               ? await db.query.invitations.findFirst({
                   where: and(
                     eq(invitations.eventId, eventId),

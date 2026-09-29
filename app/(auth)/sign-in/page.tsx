@@ -43,9 +43,19 @@ export default function SignInPage() {
     const password = formData.get("password") as string;
 
     const { error } = await authClient.signIn.email({
+      callbackURL: callbackUrl,
       email,
       password,
     });
+
+    // Signing in with an unverified email re-sends the verification link.
+    if (error?.code === "EMAIL_NOT_VERIFIED") {
+      toast.info(
+        "Please verify your email. We've sent a new link to your inbox."
+      );
+      setLoading(false);
+      return;
+    }
 
     if (error) {
       toast.error(error.message ?? "Failed to sign in");
