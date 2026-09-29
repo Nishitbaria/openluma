@@ -9,6 +9,37 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { chatConversations, chatMessages } from "@/lib/db/schema";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { chatRatelimit } from "@/lib/redis";
+
+// The client resends the whole conversation each turn, and all of it becomes
+// paid LLM input, so bound it.
+const MAX_BODY_BYTES = 1024 * 1024;
+
+/** Reads the body as text, stopping as soon as it exceeds `maxBytes`. */
+async function readBodyWithLimit(
+  req: Request,
+  maxBytes: number
+): Promise<string | null> {
+  if (!req.body) {
+    return "";
+  }
+  const reader = req.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    // biome-ignore lint/performance/noAwaitInLoops: stream chunks arrive in order; each read depends on the previous one
+    const { done, value } = await reader.read();
+    if (done) {
+      return Buffer.concat(chunks).toString("utf8");
+    }
+    size += value.byteLength;
+    if (size > maxBytes) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+}
 
 function deriveTitle(messages: UIMessage[]): string {
   const firstUserText = messages
@@ -33,18 +64,35 @@ export async function POST(req: Request) {
 
   // LLM calls cost money per turn — throttle to prevent a single user from
   // driving unbounded spend.
-  const limited = await checkRateLimit(req, `chat:${userId}`);
+  const limited = await checkRateLimit(req, "chat", {
+    limiter: chatRatelimit,
+    userId,
+  });
   if (limited) {
     return limited;
   }
 
-  const { id, messages } = (await req.json()) as {
-    id?: string;
-    messages: OrchestratorMessage[];
-  };
-  if (!id) {
+  const raw = await readBodyWithLimit(req, MAX_BODY_BYTES);
+  if (raw === null) {
+    return Response.json(
+      { error: "Conversation is too long. Start a new chat." },
+      { status: 413 }
+    );
+  }
+  let body: { id?: unknown; messages?: unknown };
+  try {
+    body = JSON.parse(raw);
+  } catch {
+    return Response.json({ error: "Invalid JSON" }, { status: 400 });
+  }
+  const { id } = body;
+  if (typeof id !== "string" || !id) {
     return Response.json({ error: "Missing conversation id" }, { status: 400 });
   }
+  if (!Array.isArray(body.messages)) {
+    return Response.json({ error: "Missing messages" }, { status: 400 });
+  }
+  const messages = body.messages as OrchestratorMessage[];
 
   const existing = await db.query.chatConversations.findFirst({
     where: eq(chatConversations.id, id),

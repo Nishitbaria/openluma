@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { cache } from "react";
-import { createSecondaryStorage } from "./auth-secondary-storage";
+import { createRateLimitStorage } from "./auth-rate-limit-storage";
 import { db } from "./db";
 import { account, session, user, verification } from "./db/schema";
 import { sendVerificationEmail } from "./email";
@@ -36,7 +36,8 @@ export const auth = betterAuth({
       await sendVerificationEmail(unverifiedUser.email, url, token);
     },
   },
-  ...(redis ? { secondaryStorage: createSecondaryStorage(redis) } : {}),
+  // No secondaryStorage: sessions are read from Postgres only. A Redis session
+  // cache served revoked sessions whenever a cache delete failed.
   rateLimit: {
     // Enabled in all environments (Better Auth defaults this to production
     // only). 20 requests / 10s window per IP across auth endpoints, with a
@@ -44,15 +45,12 @@ export const auth = betterAuth({
     customRules: {
       "/sign-in/email": { max: 5, window: 60 },
     },
+    ...(redis
+      ? { customStorage: createRateLimitStorage(redis) }
+      : { storage: "memory" }),
     enabled: true,
     max: 20,
-    storage: redis ? "secondary-storage" : "memory",
     window: 10,
-  },
-  session: {
-    // Redis is an acceleration layer, not the source of truth. Keeping sessions
-    // in Postgres lets authentication continue during a Redis outage.
-    storeSessionInDatabase: true,
   },
   socialProviders: {
     google: {
@@ -66,8 +64,4 @@ export const auth = betterAuth({
   trustedOrigins: process.env.TRUSTED_ORIGINS
     ? process.env.TRUSTED_ORIGINS.split(",")
     : [],
-  verification: {
-    // OAuth state must remain available from Postgres if Redis is unreachable.
-    storeInDatabase: true,
-  },
 });
