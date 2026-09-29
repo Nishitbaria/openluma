@@ -19,7 +19,7 @@ export async function GET(
 
   // Hosts and co-hosts may open a guest's ticket (`?userId=`) from the guest
   // list; everyone else only gets their own.
-  const guestId = request.nextUrl.searchParams.get("userId") ?? session.user.id;
+  const guestId = request.nextUrl.searchParams.get("userId") || session.user.id;
 
   const [rsvp, event] = await Promise.all([
     db.query.rsvps.findFirst({
