@@ -195,9 +195,13 @@ function DangerZone() {
 
       if (error?.code === "SESSION_EXPIRED") {
         // Deleting needs a recent sign-in; bring the user back here after.
-        toast.info("Please sign in again to confirm it's you.");
-        await authClient.signOut();
-        router.push("/sign-in?callbackUrl=/dashboard/settings");
+        const signOut = await authClient.signOut();
+        if (signOut.error) {
+          toast.error("Couldn't sign you out. Sign in again, then retry.");
+        } else {
+          toast.info("Please sign in again to confirm it's you.");
+          router.push("/sign-in?callbackUrl=/dashboard/settings");
+        }
       } else if (error) {
         toast.error(error.message ?? "Failed to delete account");
       } else {
