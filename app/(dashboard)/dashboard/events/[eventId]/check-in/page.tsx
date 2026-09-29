@@ -46,31 +46,23 @@ export default function CheckInPage() {
   }, [eventId]);
 
   const handleCheckIn = useCallback(
-    async (userId: string) => {
+    async (ticket: string) => {
       if (loading) {
         return;
       }
       setLoading(true);
       try {
         const res = await fetch(`/api/events/${eventId}/check-in`, {
-          body: JSON.stringify({ userId }),
+          body: JSON.stringify({ ticket }),
           headers: { "Content-Type": "application/json" },
           method: "POST",
         });
 
         const data = await res.json();
 
-        if (res.ok || data.message === "Already checked in") {
-          const isAlready = data.message === "Already checked in";
-          setLastResult({
-            message: isAlready
-              ? "Already checked in"
-              : "Checked in successfully!",
-            success: true,
-          });
-          toast.success(
-            isAlready ? "Already checked in" : "Checked in successfully!"
-          );
+        if (res.ok) {
+          setLastResult({ message: "Checked in successfully!", success: true });
+          toast.success("Checked in successfully!");
 
           // Refresh check-in list
           const listRes = await fetch(`/api/events/${eventId}/check-in`);
@@ -105,25 +97,17 @@ export default function CheckInPage() {
         { facingMode: "environment" },
         { fps: 10, qrbox: { height: 250, width: 250 } },
         (decodedText) => {
-          try {
-            const payload = JSON.parse(decodedText);
-            if (payload.userId && payload.eventId === eventId) {
-              handleCheckIn(payload.userId);
-              // Pause briefly to prevent duplicate scans
-              scanner.pause(true);
-              setTimeout(() => {
-                try {
-                  scanner.resume();
-                } catch {
-                  // scanner may have been stopped
-                }
-              }, 2000);
-            } else {
-              toast.error("Invalid QR code for this event");
+          // The server verifies the ticket's signature and event.
+          handleCheckIn(decodedText);
+          // Pause briefly to prevent duplicate scans
+          scanner.pause(true);
+          setTimeout(() => {
+            try {
+              scanner.resume();
+            } catch {
+              // scanner may have been stopped
             }
-          } catch {
-            toast.error("Invalid QR code format");
-          }
+          }, 2000);
         },
         () => {
           // Ignore scan failures (no QR detected)
