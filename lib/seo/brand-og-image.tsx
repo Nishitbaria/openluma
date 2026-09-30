@@ -12,9 +12,12 @@ import { OG_SIZE } from "@/lib/seo/event-og-image";
 const background = readFile(join(process.cwd(), "public/og-bg.png"), "base64");
 
 export async function renderBrandOgImage({
+  cta,
   title,
   subtitle,
 }: {
+  /** Short call to action rendered as a pill under the subtitle. */
+  cta: string;
   title: string;
   subtitle: string;
 }): Promise<ImageResponse> {
@@ -90,6 +93,21 @@ export async function renderBrandOgImage({
         </div>
         <div style={{ color: "#aaaaaa", fontSize: 28, lineHeight: 1.4 }}>
           {subtitle}
+        </div>
+        <div style={{ display: "flex", marginTop: 12 }}>
+          <div
+            style={{
+              background: "#ffffff",
+              borderRadius: 999,
+              color: "#0a0a0a",
+              display: "flex",
+              fontSize: 26,
+              fontWeight: 700,
+              padding: "14px 30px",
+            }}
+          >
+            {cta}
+          </div>
         </div>
       </div>
     </div>,

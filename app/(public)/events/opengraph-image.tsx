@@ -8,6 +8,7 @@ export const alt = "Discover events on OpenLuma";
 
 export default function Image() {
   return renderBrandOgImage({
+    cta: "Browse events & RSVP →",
     subtitle: "Browse upcoming events hosted on OpenLuma.",
     title: "Discover events.",
   });

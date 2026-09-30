@@ -14,6 +14,7 @@ import { JsonLd } from "@/components/seo/json-ld";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { getAppUrl } from "@/lib/app-url";
+import { SITE_TITLE } from "@/lib/seo/metadata";
 import {
   buildOrganizationJsonLd,
   buildWebSiteJsonLd,
@@ -34,7 +35,6 @@ const geistMono = Geist_Mono({
 });
 
 const SITE_NAME = "OpenLuma";
-const SITE_TITLE = "OpenLuma | Open Source Event Platform";
 const SITE_DESCRIPTION =
   "Create, manage, and discover events. Open source alternative to Luma with AI-powered event management, RSVPs, invitations, and check-in.";
 

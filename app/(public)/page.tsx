@@ -15,8 +15,8 @@ export const metadata: Metadata = buildPageMetadata({
   // this page's own `openGraph` unless pointed at explicitly.
   images: ["/opengraph-image"],
   path: "/",
-  // Title is intentionally omitted: the root layout supplies the default
-  // (untemplated) one, and setting it here would render "… · OpenLuma".
+  // Title is intentionally omitted: the builder falls back to the untemplated
+  // site title, where setting it here would render "… · OpenLuma".
 });
 
 export default function HomePage() {

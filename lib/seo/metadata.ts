@@ -17,6 +17,7 @@ import type { Metadata } from "next";
  */
 
 const SITE_NAME = "OpenLuma";
+export const SITE_TITLE = "OpenLuma | Open Source Event Platform";
 const OG_LOCALE = "en_US";
 
 interface PageMetadataInput {
@@ -26,7 +27,7 @@ interface PageMetadataInput {
   ogType?: "website" | "profile";
   /** Root-relative, e.g. `/events`. Used for both canonical and `og:url`. */
   path: string;
-  /** Omit to keep the root layout's untemplated default title. */
+  /** Omit to use the untemplated site title (`SITE_TITLE`). */
   title?: string;
   twitterCard?: "summary" | "summary_large_image";
 }
@@ -39,6 +40,11 @@ export function buildPageMetadata({
   title,
   twitterCard = "summary_large_image",
 }: PageMetadataInput): Metadata {
+  // An explicit `title: undefined` wipes the inherited title instead of
+  // falling back to the root default, and `openGraph`/`twitter` replace the
+  // root's objects wholesale — so always emit a concrete title.
+  const socialTitle = title ?? SITE_TITLE;
+
   // `images` is spread conditionally rather than passed as `undefined`: Next
   // treats the key's mere presence as an override and stops merging in the
   // segment's `opengraph-image` file.
@@ -50,16 +56,16 @@ export function buildPageMetadata({
       ...(images ? { images } : {}),
       locale: OG_LOCALE,
       siteName: SITE_NAME,
-      title,
+      title: socialTitle,
       type: ogType,
       url: path,
     },
-    title,
+    title: title ?? { absolute: SITE_TITLE },
     twitter: {
       card: twitterCard,
       description,
       ...(images ? { images } : {}),
-      title,
+      title: socialTitle,
     },
   };
 }

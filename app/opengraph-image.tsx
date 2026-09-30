@@ -8,6 +8,7 @@ export const alt = "OpenLuma | Open Source Event Platform";
 
 export default function Image() {
   return renderBrandOgImage({
+    cta: "Create your event free →",
     subtitle:
       "Create, manage, and discover events. The open source alternative to Luma.",
     title: "Events, end to end.",
