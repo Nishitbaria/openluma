@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { BrandMark } from "@/components/seo/brand-mark";
 import { OG_SIZE } from "@/lib/seo/event-og-image";
@@ -5,18 +7,23 @@ import { OG_SIZE } from "@/lib/seo/event-og-image";
 /**
  * Branded 1200×630 card for pages without per-record artwork (landing page,
  * event directory). Matches the visual language of the event card renderer.
+ * Callers must run on the Node.js runtime — the background is read from disk.
  */
-export function renderBrandOgImage({
+const background = readFile(join(process.cwd(), "public/og-bg.png"), "base64");
+
+export async function renderBrandOgImage({
   title,
   subtitle,
 }: {
   title: string;
   subtitle: string;
-}): ImageResponse {
+}): Promise<ImageResponse> {
+  const bgSrc = `data:image/png;base64,${await background}`;
+
   return new ImageResponse(
     <div
       style={{
-        background: "linear-gradient(135deg, #0f0f0f 0%, #1c1c1c 100%)",
+        background: "#0a0a0a",
         display: "flex",
         flexDirection: "column",
         fontFamily: "sans-serif",
@@ -27,6 +34,14 @@ export function renderBrandOgImage({
         width: OG_SIZE.width,
       }}
     >
+      <img
+        alt=""
+        height={OG_SIZE.height}
+        src={bgSrc}
+        style={{ left: 0, position: "absolute", top: 0 }}
+        width={OG_SIZE.width}
+      />
+
       {/* Left accent bar */}
       <div
         style={{
