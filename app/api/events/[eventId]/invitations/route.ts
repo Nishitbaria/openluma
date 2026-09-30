@@ -1,11 +1,10 @@
 import { and, eq } from "drizzle-orm";
-import { nanoid } from "nanoid";
 import { headers } from "next/headers";
 import type { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { events, invitations } from "@/lib/db/schema";
-import { sendInvitationEmail } from "@/lib/email";
+import { createInvitations } from "@/lib/events/invitations";
 
 export async function GET(
   _request: NextRequest,
@@ -68,57 +67,31 @@ export async function POST(
     return Response.json({ message: "Not authorized" }, { status: 403 });
   }
 
-  const body = await request.json();
-  const emails: string[] = Array.isArray(body.emails)
-    ? body.emails
-    : [body.email].filter(Boolean);
+  const body = await request.json().catch(() => null);
+  const emails = Array.isArray(body?.emails) ? body.emails : [body?.email];
   const role: "attendee" | "cohost" =
-    body.role === "cohost" ? "cohost" : "attendee";
+    body?.role === "cohost" ? "cohost" : "attendee";
 
-  // Filter out the host's own email
-  const filteredEmails = emails.filter(
-    (email) => email.toLowerCase() !== session.user.email?.toLowerCase()
-  );
-
-  if (filteredEmails.length === 0 && emails.length > 0) {
+  // Cohost management is host-only; otherwise a cohost could mint extra
+  // cohost seats that survive the host removing them.
+  if (role === "cohost" && !isHost) {
     return Response.json(
-      { message: "You cannot invite yourself to your own event" },
-      { status: 400 }
+      { message: "Only the host can invite co-hosts" },
+      { status: 403 }
     );
   }
 
-  const failed: string[] = [];
-
-  const results = await Promise.all(
-    filteredEmails.map(async (email) => {
-      const token = nanoid(32);
-
-      const [invitation] = await db
-        .insert(invitations)
-        .values({
-          email,
-          eventId,
-          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-          invitedBy: session.user.id,
-          role,
-          token,
-        })
-        .returning();
-
-      // Fire-and-forget email — don't block other invitations
-      sendInvitationEmail(email, event.title, token, role).catch((err) => {
-        console.error(`Failed to send invitation email to ${email}:`, err);
-        failed.push(email);
-      });
-
-      return invitation;
-    })
-  );
+  const result = await createInvitations(event, session.user, emails, role);
+  if (!result.ok) {
+    return Response.json({ message: result.error }, { status: result.status });
+  }
 
   return Response.json(
     {
-      invitations: results,
-      ...(failed.length > 0 && { failedEmails: failed }),
+      invitations: result.invitations,
+      ...(result.failedEmails.length > 0 && {
+        failedEmails: result.failedEmails,
+      }),
     },
     { status: 201 }
   );
@@ -155,6 +128,22 @@ export async function DELETE(
 
   if (!invitationId) {
     return Response.json({ message: "Missing invitationId" }, { status: 400 });
+  }
+
+  if (!isHost) {
+    const invitation = await db.query.invitations.findFirst({
+      columns: { role: true },
+      where: and(
+        eq(invitations.id, invitationId),
+        eq(invitations.eventId, eventId)
+      ),
+    });
+    if (invitation?.role === "cohost") {
+      return Response.json(
+        { message: "Only the host can revoke co-host invitations" },
+        { status: 403 }
+      );
+    }
   }
 
   await db

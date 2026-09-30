@@ -3,7 +3,9 @@ import { Resend } from "resend";
 import EventReminderEmail from "@/emails/event-reminder-email";
 import InvitationEmail from "@/emails/invitation-email";
 import RsvpStatusEmail from "@/emails/rsvp-status-email";
+import VerifyEmail from "@/emails/verify-email";
 import { getAppUrl } from "@/lib/app-url";
+import { icsText } from "@/lib/utils/export";
 
 const apiKey = process.env.RESEND_API_KEY;
 export const resend = apiKey ? new Resend(apiKey) : null;
@@ -151,8 +153,8 @@ function generateICS(event: {
     "BEGIN:VEVENT",
     `DTSTART:${formatDate(event.startTime)}`,
     `DTEND:${formatDate(end)}`,
-    `SUMMARY:${event.title}`,
-    `LOCATION:${event.location ?? ""}`,
+    `SUMMARY:${icsText(event.title)}`,
+    `LOCATION:${icsText(event.location)}`,
     `URL:${eventLink(event)}`,
     `DESCRIPTION:View your ticket: ${appUrl}/ticket/${event.id}`,
     "END:VEVENT",
@@ -326,4 +328,38 @@ export async function sendEventReminderEmail(
     });
   }
   return { data };
+}
+
+export async function sendVerificationEmail(
+  to: string,
+  verifyUrl: string,
+  token: string
+) {
+  if (!resend) {
+    // Without an email provider there is no other way to finish sign-up
+    // locally; never log the link in production, it is a credential.
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("Resend is not configured, cannot verify email");
+    }
+    console.warn(`Resend not configured. Verify ${to} at: ${verifyUrl}`);
+    return;
+  }
+
+  const html = await render(VerifyEmail({ verifyUrl }));
+
+  const { error } = await sendWithReliability(
+    {
+      from: fromEmail,
+      html,
+      subject: "Verify your email for OpenLuma",
+      to,
+    },
+    `verify-${token}`
+  );
+
+  if (error) {
+    throw Object.assign(new Error("Failed to send verification email"), {
+      cause: error,
+    });
+  }
 }

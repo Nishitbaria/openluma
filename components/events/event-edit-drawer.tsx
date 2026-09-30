@@ -67,17 +67,19 @@ export function EventEditDrawer({ event, trigger }: EventEditDrawerProps) {
     setLoading(true);
 
     const formData = new FormData(e.currentTarget);
+    // Cleared fields are sent as null; undefined would be dropped from the
+    // JSON body and leave the old value in place.
     const data = {
       capacity: formData.get("capacity")
         ? Number(formData.get("capacity"))
-        : undefined,
-      coverImage: coverImage || undefined,
-      description: plainDescription || undefined,
-      endTime: (formData.get("endTime") as string) || undefined,
-      location: (formData.get("location") as string) || undefined,
-      locationDetails: (formData.get("locationDetails") as string) || undefined,
+        : null,
+      coverImage: coverImage || null,
+      description: plainDescription || null,
+      endTime: (formData.get("endTime") as string) || null,
+      location: (formData.get("location") as string) || null,
+      locationDetails: (formData.get("locationDetails") as string) || null,
       requiresApproval: formData.get("requiresApproval") === "on",
-      richDescription: richDescription || undefined,
+      richDescription: richDescription || null,
       startTime: formData.get("startTime") as string,
       timezone: formData.get("timezone") as string,
       title: formData.get("title") as string,

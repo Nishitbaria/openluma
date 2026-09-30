@@ -1,16 +1,11 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, eq, ne, type SQL } from "drizzle-orm";
 import { headers } from "next/headers";
 import type { NextRequest } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import {
-  events,
-  invitations,
-  rsvps,
-  rsvpTimeline,
-  user,
-} from "@/lib/db/schema";
+import { events, rsvps, rsvpTimeline, user } from "@/lib/db/schema";
 import { sendRsvpConfirmationEmail } from "@/lib/email";
+import { removeRsvp, setRsvpStatus, submitRsvp } from "@/lib/events/rsvp";
 import { checkRateLimit } from "@/lib/rate-limit";
 
 export async function GET(
@@ -61,137 +56,26 @@ export async function POST(
     return Response.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  const limited = await checkRateLimit(request, `rsvp:${session.user.id}`);
+  const limited = await checkRateLimit(request, "rsvp", {
+    userId: session.user.id,
+  });
   if (limited) {
     return limited;
   }
 
-  const event = await db.query.events.findFirst({
-    columns: {
-      capacity: true,
-      endTime: true,
-      hostId: true,
-      id: true,
-      location: true,
-      requiresApproval: true,
-      slug: true,
-      startTime: true,
-      timezone: true,
-      title: true,
-      visibility: true,
-    },
-    where: eq(events.id, eventId),
-    with: {
-      rsvps: {
-        columns: { id: true },
-        where: eq(rsvps.status, "approved"),
-      },
-    },
-  });
-
-  if (!event) {
-    return Response.json({ message: "Event not found" }, { status: 404 });
-  }
-
-  // Host cannot RSVP to their own event
-  if (event.hostId === session.user.id) {
-    return Response.json(
-      { message: "You are the host of this event" },
-      { status: 400 }
-    );
-  }
-
-  // Look up this user's invitation once — used both to gate private-event
-  // access and to auto-approve invited guests once they complete registration.
-  const userInvitation = session.user.email
-    ? await db.query.invitations.findFirst({
-        columns: { status: true },
-        where: and(
-          eq(invitations.eventId, eventId),
-          eq(invitations.email, session.user.email)
-        ),
-      })
-    : undefined;
-  const hasAcceptedInvite = userInvitation?.status === "accepted";
-
-  // Private events require an accepted invitation to RSVP
-  if (
-    event.visibility === "private" &&
-    event.hostId !== session.user.id &&
-    !hasAcceptedInvite
-  ) {
-    return Response.json(
-      { message: "This is a private event. You need an invitation to RSVP." },
-      { status: 403 }
-    );
-  }
-
-  const isFull = !!(event.capacity && event.rsvps.length >= event.capacity);
-  // Invited guests who accepted are approved outright; everyone else follows
-  // the event's approval and capacity rules.
-  const resolveStatus = () => {
-    if (hasAcceptedInvite) {
-      return "approved";
-    }
-    if (isFull) {
-      return "waitlisted";
-    }
-    return event.requiresApproval ? "pending" : "approved";
-  };
-
-  const existing = await db.query.rsvps.findFirst({
-    where: and(eq(rsvps.eventId, eventId), eq(rsvps.userId, session.user.id)),
-  });
-
-  if (existing) {
-    // Allow re-RSVP if previously rejected
-    if (existing.status === "rejected") {
-      const newStatus = resolveStatus();
-      const [updated] = await db
-        .update(rsvps)
-        .set({ status: newStatus, updatedAt: new Date() })
-        .where(eq(rsvps.id, existing.id))
-        .returning();
-      return Response.json(updated, { status: 200 });
-    }
-    return Response.json({ message: "Already RSVP'd", rsvp: existing });
-  }
-
   const body = await request.json().catch(() => ({}));
-  const status = resolveStatus();
+  const result = await submitRsvp(eventId, session.user, {
+    customAnswers: body.customAnswers,
+    message: body.message,
+  });
 
-  const [rsvp] = await db
-    .insert(rsvps)
-    .values({
-      customAnswers: body.customAnswers ?? null,
-      eventId,
-      message: body.message,
-      status,
-      userId: session.user.id,
-    })
-    .returning();
-
-  // Log timeline entry
-  db.insert(rsvpTimeline)
-    .values({ eventId, rsvpId: rsvp.id, toStatus: status, type: "registered" })
-    .catch(() => {
-      // ignore: best-effort timeline logging, must not block RSVP creation
-    });
-
-  // Send confirmation email (ticket if auto-approved, pending notice otherwise)
-  if ((status === "approved" || status === "pending") && session.user.email) {
-    await sendRsvpConfirmationEmail(session.user.email, event.title, status, {
-      endTime: event.endTime,
-      id: event.id,
-      location: event.location,
-      slug: event.slug ?? undefined,
-      startTime: event.startTime,
-      timezone: event.timezone,
-      title: event.title,
-    }).catch((err) => console.error("Failed to send ticket email:", err));
+  if (!result.ok) {
+    return Response.json({ message: result.error }, { status: result.status });
   }
-
-  return Response.json(rsvp, { status: 201 });
+  if (!result.created) {
+    return Response.json({ message: "Already RSVP'd", rsvp: result.rsvp });
+  }
+  return Response.json(result.rsvp, { status: 201 });
 }
 
 export async function PATCH(
@@ -242,25 +126,28 @@ export async function PATCH(
     return Response.json({ message: "Invalid data" }, { status: 400 });
   }
 
-  // Fetch existing status for timeline logging
-  const existingRsvp = await db.query.rsvps.findFirst({
-    columns: { status: true },
-    where: and(eq(rsvps.id, rsvpId), eq(rsvps.eventId, eventId)),
-  });
+  const outcome = await setRsvpStatus(eventId, rsvpId, status);
+  if (outcome.kind === "missing") {
+    return Response.json({ message: "RSVP not found" }, { status: 404 });
+  }
+  if (outcome.kind === "full") {
+    return Response.json(
+      {
+        message:
+          "This event is full. Raise the capacity or free a seat before approving more guests.",
+      },
+      { status: 409 }
+    );
+  }
 
-  const [updated] = await db
-    .update(rsvps)
-    .set({ status, updatedAt: new Date() })
-    .where(and(eq(rsvps.id, rsvpId), eq(rsvps.eventId, eventId)))
-    .returning();
-
+  const updated = outcome.rsvp;
   if (updated) {
     // Log timeline entry
     db.insert(rsvpTimeline)
       .values({
         changedByName: session.user.name,
         eventId,
-        fromStatus: existingRsvp?.status ?? null,
+        fromStatus: outcome.fromStatus,
         rsvpId,
         toStatus: status,
         type: "status_changed",
@@ -333,68 +220,31 @@ export async function DELETE(
       return Response.json({ message: "Not authorized" }, { status: 403 });
     }
 
-    await db
-      .delete(rsvps)
-      .where(and(eq(rsvps.id, body.rsvpId), eq(rsvps.eventId, eventId)));
+    await removeRsvp(eventId, eq(rsvps.id, body.rsvpId));
 
     return Response.json({ message: "RSVP removed" });
   }
 
-  // User cancelling their own RSVP
-  const cancelledRsvp = await db.query.rsvps.findFirst({
-    columns: { id: true, status: true },
-    where: and(eq(rsvps.eventId, eventId), eq(rsvps.userId, session.user.id)),
-  });
-
-  await db
-    .delete(rsvps)
-    .where(and(eq(rsvps.eventId, eventId), eq(rsvps.userId, session.user.id)));
-
-  // Auto-promote oldest waitlisted RSVP when an approved seat opens up
-  if (cancelledRsvp?.status === "approved") {
-    const event = await db.query.events.findFirst({
-      columns: {
-        endTime: true,
-        id: true,
-        location: true,
-        slug: true,
-        startTime: true,
-        timezone: true,
-        title: true,
-      },
-      where: eq(events.id, eventId),
+  // User cancelling their own RSVP. Deleting a rejected RSVP would let the
+  // guest register again from scratch, so rejections are left in place.
+  const removed = await removeRsvp(
+    eventId,
+    and(eq(rsvps.userId, session.user.id), ne(rsvps.status, "rejected")) as SQL
+  );
+  if (!removed) {
+    const rejected = await db.query.rsvps.findFirst({
+      columns: { id: true },
+      where: and(
+        eq(rsvps.eventId, eventId),
+        eq(rsvps.userId, session.user.id),
+        eq(rsvps.status, "rejected")
+      ),
     });
-
-    const nextInLine = await db.query.rsvps.findFirst({
-      orderBy: [asc(rsvps.createdAt)],
-      where: and(eq(rsvps.eventId, eventId), eq(rsvps.status, "waitlisted")),
-      with: { user: { columns: { email: true, id: true } } },
-    });
-
-    if (nextInLine && event) {
-      await db
-        .update(rsvps)
-        .set({ status: "approved", updatedAt: new Date() })
-        .where(eq(rsvps.id, nextInLine.id));
-
-      if (nextInLine.user.email) {
-        sendRsvpConfirmationEmail(
-          nextInLine.user.email,
-          event.title,
-          "approved",
-          {
-            endTime: event.endTime,
-            id: event.id,
-            location: event.location,
-            slug: event.slug ?? undefined,
-            startTime: event.startTime,
-            timezone: event.timezone,
-            title: event.title,
-          }
-        ).catch((err) =>
-          console.error("Failed to send waitlist promotion email:", err)
-        );
-      }
+    if (rejected) {
+      return Response.json(
+        { message: "The host declined your RSVP for this event." },
+        { status: 403 }
+      );
     }
   }
 

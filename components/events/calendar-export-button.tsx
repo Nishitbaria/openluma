@@ -2,6 +2,7 @@
 
 import { Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { icsText } from "@/lib/utils/export";
 
 const DASH_COLON_RE = /[-:]/g;
 const MILLISECONDS_RE = /\.\d{3}/;
@@ -40,9 +41,9 @@ export function CalendarExportButton({
       "BEGIN:VEVENT",
       `DTSTART:${formatICSDate(start)}`,
       `DTEND:${formatICSDate(end)}`,
-      `SUMMARY:${event.title}`,
-      `DESCRIPTION:${event.description ?? ""}`,
-      `LOCATION:${event.location ?? ""}`,
+      `SUMMARY:${icsText(event.title)}`,
+      `DESCRIPTION:${icsText(event.description)}`,
+      `LOCATION:${icsText(event.location)}`,
       `URL:${window.location.origin}${event.slug ? `/e/${event.slug}` : `/events/${event.id}`}`,
       "END:VEVENT",
       "END:VCALENDAR",

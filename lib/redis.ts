@@ -19,10 +19,36 @@ function createRedis() {
 
 export const redis = createRedis();
 
+// timeout: 0 turns off Upstash's fail-open timeout (it allows the request when
+// Redis is slow); errors reach checkRateLimit, which rejects instead.
 export const ratelimit = redis
   ? new Ratelimit({
       analytics: true,
       limiter: Ratelimit.slidingWindow(10, "10 s"),
       redis,
+      timeout: 0,
+    })
+  : null;
+
+// Each chat turn is a paid LLM call, so it gets a tighter per-user budget.
+export const chatRatelimit = redis
+  ? new Ratelimit({
+      analytics: true,
+      limiter: Ratelimit.slidingWindow(20, "1 m"),
+      prefix: "ratelimit:chat",
+      redis,
+      timeout: 0,
+    })
+  : null;
+
+// Invitation emails go out from our domain; cap how many one account can send.
+// Each address counts as one unit.
+export const inviteRatelimit = redis
+  ? new Ratelimit({
+      analytics: true,
+      limiter: Ratelimit.slidingWindow(100, "1 h"),
+      prefix: "ratelimit:invite",
+      redis,
+      timeout: 0,
     })
   : null;

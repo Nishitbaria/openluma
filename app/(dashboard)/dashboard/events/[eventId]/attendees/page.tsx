@@ -86,7 +86,9 @@ export default async function AttendeesPage({
         </div>
       </div>
 
-      {isHost || isCohost ? <InviteForm eventId={eventId} /> : null}
+      {isHost || isCohost ? (
+        <InviteForm canInviteCohosts={isHost} eventId={eventId} />
+      ) : null}
 
       <AttendeeList
         attendees={attendees.map((a) => ({

@@ -174,15 +174,10 @@ export function RsvpButton({
           <X className="h-4 w-4" />
           RSVP Declined
         </div>
-        <Button
-          className="w-full text-muted-foreground"
-          disabled={loading}
-          onClick={() => handleRsvp()}
-          size="sm"
-          variant="ghost"
-        >
-          {loading ? "Submitting..." : "Request Again"}
-        </Button>
+        <p className="text-center text-muted-foreground text-xs">
+          The host declined your RSVP. Contact them if you think this is a
+          mistake.
+        </p>
       </div>
     );
   }

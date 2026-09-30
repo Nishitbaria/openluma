@@ -1,0 +1,26 @@
+# OpenLuma
+
+> OpenLuma is an open-source event management platform inspired by Lu.ma. Hosts create, manage, and share events — by hand or by chatting with an AI agent — and guests discover events, RSVP, and get QR code tickets. Built with Next.js 16, PostgreSQL + Drizzle, Better Auth, and the Vercel AI SDK. MIT licensed.
+
+## Key features
+
+- AI event agent: create, edit, search, and manage events in natural language
+- Public event discovery with filtering by type and date
+- RSVPs with approval, capacity limits, waitlists, and QR code tickets
+- Host, co-host, and attendee roles; private invite-only events
+- Email invitations and confirmations with calendar (.ics) attachments
+- QR code check-in for attendees
+
+## Key pages
+
+- [Home](https://openluma.vercel.app/): What OpenLuma is and how to get started
+- [Discover events](https://openluma.vercel.app/events): Upcoming public events
+- Event page (`/e/{slug}`): Details, host, location, and RSVP for a single public event
+- Host profile (`/u/{userId}`): A host's public profile and their public events
+- [Sign in](https://openluma.vercel.app/sign-in): Email or Google sign-in to host or RSVP
+
+## Source
+
+- [GitHub repository](https://github.com/Nishitbaria/openluma): Source code, setup guide, and issues
+- [Contributing](https://github.com/Nishitbaria/openluma/blob/main/CONTRIBUTING.md)
+- [License (MIT)](https://github.com/Nishitbaria/openluma/blob/main/LICENSE)

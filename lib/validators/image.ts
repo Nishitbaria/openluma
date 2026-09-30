@@ -1,4 +1,5 @@
 import { z } from "zod/v4";
+import { isLocalPath } from "@/lib/utils";
 
 // Hosts we accept image URLs from. These match the remotePatterns allowlist in
 // next.config.ts — an image URL persisted to the DB must originate from our
@@ -19,9 +20,8 @@ function isAllowedUploadHost(hostname: string): boolean {
  */
 export const uploadedImageUrl = z.string().refine(
   (value) => {
-    // App-local asset: a single-slash root-relative path, not "//host" (which
-    // browsers treat as protocol-relative and would fetch cross-origin).
-    if (value.startsWith("/") && !value.startsWith("//")) {
+    // App-local asset: a root-relative path that stays on our origin.
+    if (isLocalPath(value)) {
       return true;
     }
     try {

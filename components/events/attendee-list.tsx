@@ -36,6 +36,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { csvCell } from "@/lib/utils/export";
 
 interface TimelineEntry {
   changedByName: string | null;
@@ -169,31 +170,37 @@ export function AttendeeList({
 
   // ── CSV Export ──────────────────────────────────────────────────────────
   function exportCsv() {
-    const questionHeaders = questions
-      .map((q) => `"${q.label.replace(/"/g, '""')}"`)
-      .join(",");
-    const header = `Name,Email,Status,Role,Date${questions.length > 0 ? `,${questionHeaders}` : ""}`;
-
-    const attendeeAnswers = (entry: Attendee) =>
-      questions
-        .map((q) => {
-          const ans = entry.customAnswers?.[q.id];
-          if (ans === undefined || ans === null) {
-            return `""`;
-          }
-          return `"${String(ans).replace(/"/g, '""')}"`;
-        })
-        .join(",");
+    const row = (cells: unknown[]) => cells.map(csvCell).join(",");
+    const blankAnswers = questions.map(() => "");
 
     const rows = [
-      header,
-      ...cohosts.map(
-        (c) =>
-          `"${c.user.name}","${c.user.email ?? ""}","active","Co-host","—"${questions.length > 0 ? `,${questions.map(() => `""`).join(",")}` : ""}`
+      row([
+        "Name",
+        "Email",
+        "Status",
+        "Role",
+        "Date",
+        ...questions.map((q) => q.label),
+      ]),
+      ...cohosts.map((c) =>
+        row([
+          c.user.name,
+          c.user.email,
+          "active",
+          "Co-host",
+          "—",
+          ...blankAnswers,
+        ])
       ),
-      ...attendees.map(
-        (entry) =>
-          `"${entry.user.name}","${entry.user.email}","${entry.status}","Attendee","${new Date(entry.createdAt).toLocaleDateString()}"${questions.length > 0 ? `,${attendeeAnswers(entry)}` : ""}`
+      ...attendees.map((entry) =>
+        row([
+          entry.user.name,
+          entry.user.email,
+          entry.status,
+          "Attendee",
+          new Date(entry.createdAt).toLocaleDateString(),
+          ...questions.map((q) => entry.customAnswers?.[q.id]),
+        ])
       ),
     ].join("\n");
 

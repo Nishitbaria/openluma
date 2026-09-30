@@ -1,7 +1,17 @@
-import { AlertCircle, ArrowLeft, Clock, MailX, XCircle } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowLeft,
+  Clock,
+  MailCheck,
+  MailX,
+  XCircle,
+} from "lucide-react";
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import Link from "next/link";
+import { ResendVerificationButton } from "@/components/auth/resend-verification-button";
 import { Button } from "@/components/ui/button";
+import { getSession } from "@/lib/auth";
 
 export const metadata: Metadata = {
   robots: { follow: false, index: false },
@@ -11,11 +21,22 @@ export const metadata: Metadata = {
 export default async function InvitationErrorPage({
   searchParams,
 }: {
-  searchParams: Promise<{ reason?: string; event?: string; expected?: string }>;
+  searchParams: Promise<{
+    reason?: string;
+    event?: string;
+    expected?: string;
+    invite?: string;
+  }>;
 }) {
-  const { reason, event, expected } = await searchParams;
+  const { reason, event, expected, invite } = await searchParams;
 
   const config = getErrorConfig(reason, expected);
+  const session =
+    reason === "unverified-email" ? await getSession(await headers()) : null;
+  // After verifying, send the invitee straight back to accept the invitation.
+  const verifyCallbackUrl = invite
+    ? `/api/invitations/${encodeURIComponent(invite)}?action=accept`
+    : "/dashboard";
 
   return (
     <div className="mx-auto w-full max-w-lg px-4 py-24 text-center">
@@ -23,6 +44,12 @@ export default async function InvitationErrorPage({
       <h1 className="mt-4 font-bold text-2xl">{config.title}</h1>
       <p className="mt-2 text-muted-foreground">{config.description}</p>
       <div className="mt-8 flex justify-center gap-3">
+        {session && !session.user.emailVerified ? (
+          <ResendVerificationButton
+            callbackURL={verifyCallbackUrl}
+            email={session.user.email}
+          />
+        ) : null}
         {event ? (
           <Button asChild variant="outline">
             <Link href={`/events/${event}`}>View Event</Link>
@@ -69,6 +96,13 @@ function getErrorConfig(reason?: string, expected?: string) {
         icon: AlertCircle,
         title: "Already Declined",
       };
+    case "already-handled":
+      return {
+        description:
+          "This invitation has already been responded to. Open the event to see where things stand.",
+        icon: AlertCircle,
+        title: "Already Responded",
+      };
     case "already-expired":
       return {
         description:
@@ -83,6 +117,13 @@ function getErrorConfig(reason?: string, expected?: string) {
           : "This invitation was sent to a different email address. Please sign in with the correct account.",
         icon: MailX,
         title: "Wrong Account",
+      };
+    case "unverified-email":
+      return {
+        description:
+          "Verify your email address to accept this invitation. We'll email you a link that brings you back here.",
+        icon: MailCheck,
+        title: "Verify Your Email",
       };
     default:
       return {

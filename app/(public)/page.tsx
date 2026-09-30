@@ -7,7 +7,7 @@ import { PixelParagraph } from "@/components/ui/pixel-paragraph-words";
 import { buildPageMetadata } from "@/lib/seo/metadata";
 
 const HOME_DESCRIPTION =
-  "Run events end to end on OpenLuma: create them with AI, share a public page, collect RSVPs, send invitations, and check attendees in — all open source.";
+  "Run events end to end on OpenLuma: create them with AI, share a public page, collect RSVPs, send invitations, and check attendees in. All open source.";
 
 export const metadata: Metadata = buildPageMetadata({
   description: HOME_DESCRIPTION,

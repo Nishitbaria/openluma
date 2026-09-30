@@ -2,7 +2,6 @@ import { eq } from "drizzle-orm";
 import { ImageResponse } from "next/og";
 import { getAppUrl } from "@/lib/app-url";
 import { events } from "@/lib/db/schema";
-import { redis } from "@/lib/redis";
 
 /**
  * Renders the 1200×630 social card for an event.
@@ -15,8 +14,6 @@ import { redis } from "@/lib/redis";
 export const OG_SIZE = { height: 630, width: 1200 };
 export const OG_CONTENT_TYPE = "image/png";
 
-const CACHE_TTL = 60 * 60; // 1 hour
-
 interface OGEventData {
   coverImage: string | null;
   description: string | null;
@@ -26,23 +23,9 @@ interface OGEventData {
   title: string;
 }
 
+// Read straight from Postgres on every render. A cache keyed by slug served
+// the old card for up to an hour after an event was made private or edited.
 async function getEventData(slug: string): Promise<OGEventData | null> {
-  const cacheKey = `og:event:${slug}`;
-
-  // Redis is a nice-to-have here. If Upstash is unreachable, fall through to
-  // the database rather than 500 — an unrendered social card is a far worse
-  // outcome than an uncached one.
-  if (redis) {
-    try {
-      const cached = await redis.get<OGEventData>(cacheKey);
-      if (cached) {
-        return cached;
-      }
-    } catch {
-      // Ignore and read through to Postgres.
-    }
-  }
-
   // `lib/db` throws at module scope without `DATABASE_URL`, and Next collects
   // page data for this segment at build time. Importing it lazily keeps the
   // database out of the static graph so a build never needs a live connection.
@@ -74,7 +57,7 @@ async function getEventData(slug: string): Promise<OGEventData | null> {
     ? `${getAppUrl()}${event.coverImage}`
     : event.coverImage;
 
-  const data: OGEventData = {
+  return {
     coverImage,
     description: event.description,
     hostName: event.host.name,
@@ -82,16 +65,6 @@ async function getEventData(slug: string): Promise<OGEventData | null> {
     startTime: event.startTime.toISOString(),
     title: event.title,
   };
-
-  if (redis) {
-    try {
-      await redis.set(cacheKey, data, { ex: CACHE_TTL });
-    } catch {
-      // Caching is best-effort; still serve the image.
-    }
-  }
-
-  return data;
 }
 
 function formatDate(iso: string): string {

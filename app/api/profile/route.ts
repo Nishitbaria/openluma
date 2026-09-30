@@ -26,7 +26,8 @@ export async function PATCH(request: NextRequest) {
     updates.name = parsed.data.name;
   }
   if (parsed.data.bio !== undefined) {
-    updates.bio = parsed.data.bio;
+    // An empty bio clears it.
+    updates.bio = parsed.data.bio || null;
   }
   if (parsed.data.image) {
     updates.image = parsed.data.image;

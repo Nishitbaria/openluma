@@ -1,10 +1,17 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { APIError, createAuthMiddleware } from "better-auth/api";
 import { cache } from "react";
-import { createSecondaryStorage } from "./auth-secondary-storage";
+import { createRateLimitStorage } from "./auth-rate-limit-storage";
 import { db } from "./db";
 import { account, session, user, verification } from "./db/schema";
+import { sendVerificationEmail } from "./email";
 import { redis } from "./redis";
+import { uploadedImageUrl } from "./validators/image";
+
+// Endpoints that let the caller set their own avatar URL. OAuth avatars come
+// from the provider, not the request, so they aren't checked here.
+const USER_IMAGE_PATHS = new Set(["/sign-up/email", "/update-user"]);
 
 /** Per-request cached session lookup — safe to call from layout + page + components. */
 export const getSession = cache((hdrs: Headers) =>
@@ -21,10 +28,38 @@ export const auth = betterAuth({
       verification,
     },
   }),
+  hooks: {
+    // Same allowlist as /api/profile: an avatar is shown to other users, so it
+    // must come from our upload storage (or be cleared with null).
+    before: createAuthMiddleware(async (ctx) => {
+      const image = ctx.body?.image;
+      if (
+        USER_IMAGE_PATHS.has(ctx.path) &&
+        image != null &&
+        !uploadedImageUrl.safeParse(image).success
+      ) {
+        throw new APIError("BAD_REQUEST", {
+          message: "Image must be an allowed upload URL",
+        });
+      }
+    }),
+  },
   emailAndPassword: {
     enabled: true,
+    // Invitations and private-event access are matched by email, so an
+    // account must prove it owns its address before it can get a session.
+    requireEmailVerification: true,
   },
-  ...(redis ? { secondaryStorage: createSecondaryStorage(redis) } : {}),
+  emailVerification: {
+    autoSignInAfterVerification: true,
+    sendOnSignIn: true,
+    sendOnSignUp: true,
+    sendVerificationEmail: async ({ user: unverifiedUser, url, token }) => {
+      await sendVerificationEmail(unverifiedUser.email, url, token);
+    },
+  },
+  // No secondaryStorage: sessions are read from Postgres only. A Redis session
+  // cache served revoked sessions whenever a cache delete failed.
   rateLimit: {
     // Enabled in all environments (Better Auth defaults this to production
     // only). 20 requests / 10s window per IP across auth endpoints, with a
@@ -32,15 +67,12 @@ export const auth = betterAuth({
     customRules: {
       "/sign-in/email": { max: 5, window: 60 },
     },
+    ...(redis
+      ? { customStorage: createRateLimitStorage(redis) }
+      : { storage: "memory" }),
     enabled: true,
     max: 20,
-    storage: redis ? "secondary-storage" : "memory",
     window: 10,
-  },
-  session: {
-    // Redis is an acceleration layer, not the source of truth. Keeping sessions
-    // in Postgres lets authentication continue during a Redis outage.
-    storeSessionInDatabase: true,
   },
   socialProviders: {
     google: {
@@ -51,11 +83,10 @@ export const auth = betterAuth({
       ),
     },
   },
+  // Settings > Delete Account. Better Auth requires a recent sign-in (or the
+  // password) before deleting.
+  user: { deleteUser: { enabled: true } },
   trustedOrigins: process.env.TRUSTED_ORIGINS
     ? process.env.TRUSTED_ORIGINS.split(",")
     : [],
-  verification: {
-    // OAuth state must remain available from Postgres if Redis is unreachable.
-    storeInDatabase: true,
-  },
 });

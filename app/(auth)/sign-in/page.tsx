@@ -20,14 +20,13 @@ import { MetalButton } from "@/components/ui/metal-button";
 import { PixelHeading } from "@/components/ui/pixel-heading-character";
 import { PixelParagraph } from "@/components/ui/pixel-paragraph-words";
 import { authClient } from "@/lib/auth-client";
-import { cn } from "@/lib/utils";
+import { cn, isLocalPath } from "@/lib/utils";
 
 export default function SignInPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const raw = searchParams.get("callbackUrl") ?? "/dashboard";
-  const callbackUrl =
-    raw.startsWith("/") && !raw.startsWith("//") ? raw : "/dashboard";
+  const callbackUrl = isLocalPath(raw) ? raw : "/dashboard";
   const [loading, setLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState(false);
   const { resolvedTheme } = useTheme();
@@ -43,9 +42,19 @@ export default function SignInPage() {
     const password = formData.get("password") as string;
 
     const { error } = await authClient.signIn.email({
+      callbackURL: callbackUrl,
       email,
       password,
     });
+
+    // Signing in with an unverified email re-sends the verification link.
+    if (error?.code === "EMAIL_NOT_VERIFIED") {
+      toast.info(
+        "Please verify your email. We've sent a new link to your inbox."
+      );
+      setLoading(false);
+      return;
+    }
 
     if (error) {
       toast.error(error.message ?? "Failed to sign in");
