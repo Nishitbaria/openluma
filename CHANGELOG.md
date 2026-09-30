@@ -6,6 +6,43 @@ The format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
 
+## [0.4.0](https://github.com/Nishitbaria/openluma/compare/v0.3.0...v0.4.0) (2026-09-30)
+
+
+### Features
+
+* **chat:** stream model reasoning with shimmer loading states ([078868a](https://github.com/Nishitbaria/openluma/commit/078868a11e7afe1ce70f41b58a4b3510a725f0f4))
+* **seo:** refresh brand mark, favicons and og background ([a74996c](https://github.com/Nishitbaria/openluma/commit/a74996c5cbab3a5a0b90affe9f26840e6efd039d))
+
+
+### Bug Fixes
+
+* **ai:** scope event agent tools to caller permissions ([#39](https://github.com/Nishitbaria/openluma/issues/39)) ([194b830](https://github.com/Nishitbaria/openluma/commit/194b83001d150113f76d70108ec7b8d99c47e8bb))
+* **api:** validate query params ([#42](https://github.com/Nishitbaria/openluma/issues/42)) ([cffd920](https://github.com/Nishitbaria/openluma/commit/cffd9209f7725731a28ca3cfac66b6dc32bbab70))
+* **auth:** require email verification for email-bound invitations ([#30](https://github.com/Nishitbaria/openluma/issues/30)) ([89992c7](https://github.com/Nishitbaria/openluma/commit/89992c785b6abad93d4d1f5b6553b6301c14f67d))
+* **chat:** block injected images and verify approval targets ([#44](https://github.com/Nishitbaria/openluma/issues/44)) ([fbec307](https://github.com/Nishitbaria/openluma/commit/fbec307ec566a8ab9cb77e46a916b50df34f1b1f))
+* **chat:** handle concurrent first messages and bad tool dates ([#46](https://github.com/Nishitbaria/openluma/issues/46)) ([e3da8ab](https://github.com/Nishitbaria/openluma/commit/e3da8ab6153b2cb8cf87277611fd1bab21433726))
+* **dashboard:** correct pending rsvps, profile and guest ticket link ([#47](https://github.com/Nishitbaria/openluma/issues/47)) ([e870a21](https://github.com/Nishitbaria/openluma/commit/e870a21325c9e7f6faced293fff03b576a10d9b1))
+* **events:** let cohosts view their private event page ([#43](https://github.com/Nishitbaria/openluma/issues/43)) ([76162ec](https://github.com/Nishitbaria/openluma/commit/76162ec39c099dd7252ac2eca3265d2f5124cdf8))
+* **events:** stop partial updates from resetting visibility to public ([#32](https://github.com/Nishitbaria/openluma/issues/32)) ([5fd3d5c](https://github.com/Nishitbaria/openluma/commit/5fd3d5c89329d0def6312c0fd679bd0548d3098b))
+* **rsvp:** make capacity and waitlist updates atomic ([#45](https://github.com/Nishitbaria/openluma/issues/45)) ([afdeb0e](https://github.com/Nishitbaria/openluma/commit/afdeb0e056e3569e88f6ef247e0168cd7d9bad41))
+* **security:** enforce image url allowlist on profile updates ([#41](https://github.com/Nishitbaria/openluma/issues/41)) ([84eaa91](https://github.com/Nishitbaria/openluma/commit/84eaa91474531d0e44cd046e4715c68e94a85c26))
+* **security:** enforce rsvp rules on every entry point ([#33](https://github.com/Nishitbaria/openluma/issues/33)) ([e08c898](https://github.com/Nishitbaria/openluma/commit/e08c8985aa2d229da98e69341b8bfd8b20021297))
+* **security:** escape csv and ics exports ([#40](https://github.com/Nishitbaria/openluma/issues/40)) ([a042326](https://github.com/Nishitbaria/openluma/commit/a042326805d02d3a15bd52225308ea9b45935e82))
+* **security:** harden redirect and local path validation ([#35](https://github.com/Nishitbaria/openluma/issues/35)) ([4461fc8](https://github.com/Nishitbaria/openluma/commit/4461fc8ebe88e689d1c96eaecf6369cd0e1b44fe))
+* **security:** hide private-event registration questions from non-members ([#27](https://github.com/Nishitbaria/openluma/issues/27)) ([96234e5](https://github.com/Nishitbaria/openluma/commit/96234e597eda74a2731aa1da8c80fd5877bfa85d)), closes [#26](https://github.com/Nishitbaria/openluma/issues/26)
+* **security:** make rate limits fail closed and use trusted client ip ([#36](https://github.com/Nishitbaria/openluma/issues/36)) ([00d11b7](https://github.com/Nishitbaria/openluma/commit/00d11b7946d73a1a0240438105c23ccc2008594a))
+* **security:** restrict cohost management to hosts ([#31](https://github.com/Nishitbaria/openluma/issues/31)) ([f6c1188](https://github.com/Nishitbaria/openluma/commit/f6c1188894768e5ab67f83336ebc31bfcdc02815))
+* **security:** scope registration-question edits and deletes to their event ([#28](https://github.com/Nishitbaria/openluma/issues/28)) ([c538667](https://github.com/Nishitbaria/openluma/commit/c538667c8b71c27cf48594aa6d8fd4bb5ee38bcf))
+* **security:** sign qr ticket payloads ([#37](https://github.com/Nishitbaria/openluma/issues/37)) ([b8d91d7](https://github.com/Nishitbaria/openluma/commit/b8d91d7f167e7db89d77348a8c0fb8ae88a1c9da))
+* **security:** stop private event details leaking via metadata and og ([#34](https://github.com/Nishitbaria/openluma/issues/34)) ([0a6a67c](https://github.com/Nishitbaria/openluma/commit/0a6a67c2cf40bb100dbdcabc60954f1f35006a62))
+* **security:** validate and rate-limit invitations ([#38](https://github.com/Nishitbaria/openluma/issues/38)) ([c197db4](https://github.com/Nishitbaria/openluma/commit/c197db4b7c1578a4e6d6b0e8826f48a03b994aba))
+
+
+### Documentation
+
+* remove em dashes from landing page and readme ([35c569d](https://github.com/Nishitbaria/openluma/commit/35c569d028077f58e5c8224acf5c224d86d704d0))
+
 ## [0.3.0](https://github.com/Nishitbaria/openluma/compare/v0.2.0...v0.3.0) (2026-08-08)
 
 
