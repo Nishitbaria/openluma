@@ -1,5 +1,5 @@
 import { formatInTimeZone } from "date-fns-tz";
-import { and, asc, eq, gte, ilike } from "drizzle-orm";
+import { and, asc, desc, eq, gte, ilike } from "drizzle-orm";
 import { CalendarX } from "lucide-react";
 import type { Metadata } from "next";
 import { EventCard } from "@/components/events/event-card";
@@ -48,7 +48,7 @@ function dayLabel(date: Date, timezone: string) {
 export default async function PublicEventsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; type?: string }>;
+  searchParams: Promise<{ search?: string; type?: string; sort?: string }>;
 }) {
   const params = await searchParams;
 
@@ -66,9 +66,11 @@ export default async function PublicEventsPage({
     conditions.push(eq(events.type, type));
   }
 
+  const sortOrder = params.sort === "desc" ? desc : asc;
+
   const publicEvents = await db.query.events.findMany({
     limit: 30,
-    orderBy: [asc(events.startTime)],
+    orderBy: [sortOrder(events.startTime)],
     where: and(...conditions),
     with: {
       host: { columns: { id: true, image: true, name: true } },
