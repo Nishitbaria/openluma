@@ -1,7 +1,11 @@
 <!-- BEGIN:nextjs-agent-rules -->
+
 # This is NOT the Next.js you know
 
-This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
+This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` (resolved from this file's directory; in monorepos the `next` package may not be visible from the repo root) before writing any code. Heed deprecation notices.
+
+This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
+
 <!-- END:nextjs-agent-rules -->
 
 # OpenLuma
@@ -202,3 +206,13 @@ Rules: present tense, lowercase, under 72 chars, no trailing period.
 2. Follow design system rules for any UI change
 3. One feature or fix per PR
 4. Add screenshots for UI changes
+
+## Cursor Cloud specific instructions
+
+Cloud Agents use Bun 1.3.13 (`bun` and `bunx` on `PATH`) and a local PostgreSQL 16 cluster. Systemd is not running, so Postgres is started with `pg_ctlcluster`.
+
+The dev role and database are both named `openluma`, with password `openluma`. When `.env.local` is missing it is created with `DATABASE_URL`, `BETTER_AUTH_SECRET`, `BETTER_AUTH_URL`, and `NEXT_PUBLIC_APP_URL`, then `bun run db:migrate` applies `lib/db/migrations`.
+
+Email/password sign-up and event creation work with that file. Google OAuth, Upstash Redis, Resend, Uploadthing, and OpenAI are optional. `bun dev` unsets `OPENAI_API_KEY`, so the in-app AI chat does not call OpenAI in local development.
+
+Canonical commands are in the README: `bun dev`, `bun run lint`, `bunx tsc --noEmit`, and `bun run build`.
