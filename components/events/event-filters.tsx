@@ -63,6 +63,18 @@ export function EventFilters() {
           <SelectItem value="hybrid">Hybrid</SelectItem>
         </SelectContent>
       </Select>
+      <Select
+        defaultValue={searchParams.get("sort") ?? "asc"}
+        onValueChange={(value) => updateParam("sort", value)}
+      >
+        <SelectTrigger className="w-[150px]">
+          <SelectValue placeholder="Sort by" />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="asc">Soonest first</SelectItem>
+          <SelectItem value="desc">Latest first</SelectItem>
+        </SelectContent>
+      </Select>
     </div>
   );
 }
