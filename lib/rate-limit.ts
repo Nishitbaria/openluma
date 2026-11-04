@@ -1,4 +1,4 @@
-import { getIp } from "@better-auth/core/utils/ip";
+import { getIP } from "@better-auth/core/utils/ip";
 import type { Ratelimit } from "@upstash/ratelimit";
 import { ratelimit } from "@/lib/redis";
 
@@ -31,7 +31,7 @@ export async function checkRateLimit(
 
   const key = options.userId
     ? `${scope}:user:${options.userId}`
-    : `${scope}:ip:${getIp(request, {}) ?? "unknown"}`;
+    : `${scope}:ip:${getIP(request, {}) ?? "unknown"}`;
 
   let result: Awaited<ReturnType<Ratelimit["limit"]>>;
   try {

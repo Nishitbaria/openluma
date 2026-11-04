@@ -77,8 +77,5 @@ export function createRateLimitStorage(
         ? { allowed: true, retryAfter: null }
         : { allowed: false, retryAfter: Math.max(ttl, 1) };
     },
-    // Better Auth only uses get/set for storages without `consume`.
-    get: async () => null,
-    set: async () => undefined,
   };
 }

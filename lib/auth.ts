@@ -28,22 +28,6 @@ export const auth = betterAuth({
       verification,
     },
   }),
-  hooks: {
-    // Same allowlist as /api/profile: an avatar is shown to other users, so it
-    // must come from our upload storage (or be cleared with null).
-    before: createAuthMiddleware(async (ctx) => {
-      const image = ctx.body?.image;
-      if (
-        USER_IMAGE_PATHS.has(ctx.path) &&
-        image != null &&
-        !uploadedImageUrl.safeParse(image).success
-      ) {
-        throw new APIError("BAD_REQUEST", {
-          message: "Image must be an allowed upload URL",
-        });
-      }
-    }),
-  },
   emailAndPassword: {
     enabled: true,
     // Invitations and private-event access are matched by email, so an
@@ -57,6 +41,24 @@ export const auth = betterAuth({
     sendVerificationEmail: async ({ user: unverifiedUser, url, token }) => {
       await sendVerificationEmail(unverifiedUser.email, url, token);
     },
+  },
+  hooks: {
+    // Same allowlist as /api/profile: an avatar is shown to other users, so it
+    // must come from our upload storage (or be cleared with null).
+    // biome-ignore lint/suspicious/useAwait: createAuthMiddleware requires a Promise-returning handler
+    before: createAuthMiddleware(async (ctx) => {
+      const image = ctx.body?.image;
+      if (
+        USER_IMAGE_PATHS.has(ctx.path) &&
+        image !== undefined &&
+        image !== null &&
+        !uploadedImageUrl.safeParse(image).success
+      ) {
+        throw new APIError("BAD_REQUEST", {
+          message: "Image must be an allowed upload URL",
+        });
+      }
+    }),
   },
   // No secondaryStorage: sessions are read from Postgres only. A Redis session
   // cache served revoked sessions whenever a cache delete failed.
@@ -83,10 +85,10 @@ export const auth = betterAuth({
       ),
     },
   },
-  // Settings > Delete Account. Better Auth requires a recent sign-in (or the
-  // password) before deleting.
-  user: { deleteUser: { enabled: true } },
   trustedOrigins: process.env.TRUSTED_ORIGINS
     ? process.env.TRUSTED_ORIGINS.split(",")
     : [],
+  // Settings > Delete Account. Better Auth requires a recent sign-in (or the
+  // password) before deleting.
+  user: { deleteUser: { enabled: true } },
 });
